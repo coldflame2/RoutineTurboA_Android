@@ -1,0 +1,61 @@
+[versions]
+agp = "8.3.2"
+kotlin = "1.9.0"
+coreKtx = "1.13.1"
+junit = "4.13.2"
+junitVersion = "1.1.5"
+espressoCore = "3.5.1"
+lifecycleRuntimeKtx = "2.8.0"
+
+activityCompose = "1.8.2"
+composeBom = "2024.05.00"
+sqlite = "2.4.0"
+lifecycleViewModelCompose = "2.8.0"
+
+
+[libraries]
+# Jetpack Compose Libraries
+    ## Core Compose Libraries
+androidx-compose-runtime = { group = "androidx.compose.runtime", name = "runtime" }  # Core runtime for Compose
+androidx-ui = { group = "androidx.compose.ui", name = "ui" }  # Basic UI elements
+androidx-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }  # Graphics support for UI elements
+androidx-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }  # Tools to aid in Compose UI development
+androidx-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }  # Tools for previewing Compose UI elements
+androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }  # Testing utilities for UI manifests
+androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }  # JUnit4 support for testing Compose UIs
+androidx-material3 = { group = "androidx.compose.material3", name = "material3" }  # Material Design components for Compose
+
+   ## Compose Integration Libraries
+androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }  # Integrates Compose with Android activity lifecycle
+androidx-lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "lifecycleRuntimeKtx" }  # Adds lifecycle awareness to Compose components
+androidx-lifecycle-viewmodel-compose = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "lifecycleViewModelCompose" }  # Integrates ViewModel with Compose
+androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }  # Bill of Materials to manage versions of Compose libraries
+
+    ## Material Icons
+androidx-material-icons-core = { group = "androidx.compose.material", name = "material-icons-core" }
+androidx-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
+
+
+# Android Core Libraries
+    ## Core Kotlin Extensions
+androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }  # Kotlin extensions for core Android libraries
+
+    ## Lifecycle Management
+androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }  # Kotlin extensions for lifecycle-aware components
+
+# Persistence Libraries
+    ## SQLite
+sqlite = { module = "androidx.sqlite:sqlite", version.ref = "sqlite" }  # SQLite database support
+
+# Testing Libraries
+
+    ## JUnit
+junit = { group = "junit", name = "junit", version.ref = "junit" }  # Core JUnit library for testing
+androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }  # JUnit support for Android tests
+androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }  # Espresso framework for UI testing
+
+
+[plugins]
+androidApplication = { id = "com.android.application", version.ref = "agp" }
+jetbrainsKotlinAndroid = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+
