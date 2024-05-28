@@ -21,18 +21,19 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             RoutineTurboATheme {
-                Surface(color = MaterialTheme.colorScheme.background) {
+                Surface{
                     Column {
-                        Greeting("Welcome to Routine Turbo!")
+                        Greeting()
                         MainScreen()
                     }
                 }
             }
+
         }
     }
 }
 
 @Composable
-fun Greeting(message: String) {
-    Text(text = message, style = MaterialTheme.typography.bodyLarge)
+fun Greeting(){
+    Text(text = "Routine", style = MaterialTheme.typography.headlineLarge)
 }

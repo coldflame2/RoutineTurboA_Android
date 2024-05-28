@@ -1,5 +1,6 @@
 package com.app.routineturboa.ui.components
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -7,6 +8,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Task
 import androidx.compose.material3.Card
@@ -28,12 +30,15 @@ fun TaskItem(task: Task) {
     // Card to hold the task details
     Card(
         modifier = Modifier
-            .padding(8.dp)
-            .fillMaxWidth(),
+            .padding(1.dp)
+            .fillMaxWidth()
+            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp)), // Adding a border to the Card
+
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
+            containerColor = MaterialTheme.colorScheme.background
         ),
-        elevation = CardDefaults.cardElevation(5.dp)  // Like shadow
+
+        elevation = CardDefaults.cardElevation(3.dp)  // Like shadow
     ) {
 
         // vertical layout container inside the Card
@@ -55,7 +60,7 @@ fun TaskItem(task: Task) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     ),
                     modifier = Modifier
-                        .weight(1f)
+                        .weight(3f)
                         .graphicsLayer {
                             this.alpha = 0.99f // Trigger anti-aliasing
                         },
@@ -66,7 +71,7 @@ fun TaskItem(task: Task) {
                 Icon(
                     imageVector = Icons.Default.Task,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
+                    tint = MaterialTheme.colorScheme.secondary
                 )
             }
 

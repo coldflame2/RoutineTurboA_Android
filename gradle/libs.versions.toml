@@ -7,17 +7,12 @@ junitVersion = "1.1.5"
 espressoCore = "3.5.1"
 lifecycleRuntimeKtx = "2.8.0"
 
-activityCompose = "1.8.2"
+activityCompose = "1.9.0"
 composeBom = "2024.05.00"
 sqlite = "2.4.0"
 lifecycleViewModelCompose = "2.8.0"
 
-msalVersion = "5.4.0"
-
 [libraries]
-# OneDrive, Microsoft
-client-msal = { module = "com.microsoft.identity.client:msal", version.ref = "msalVersion" }
-
 # Jetpack Compose Libraries
     ## Core Compose Libraries
 androidx-compose-runtime = { group = "androidx.compose.runtime", name = "runtime" }  # Core runtime for Compose
