@@ -1,4 +1,4 @@
-package com.app.routineturbo_android.ui.theme
+package com.app.routineturboa.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

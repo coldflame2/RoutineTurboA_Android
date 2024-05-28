@@ -1,13 +1,16 @@
-package com.app.routineturbo_android
+package com.app.routineturboa
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.app.routineturboa.data.local.DatabaseHelper
+import com.app.routineturboa.ui.MainScreen
+import com.app.routineturboa.ui.theme.RoutineTurboATheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -17,7 +20,7 @@ class MainActivity : ComponentActivity() {
         DatabaseHelper(this).readableDatabase
 
         setContent {
-            MaterialTheme {
+            RoutineTurboATheme {
                 Surface(color = MaterialTheme.colorScheme.background) {
                     Column {
                         Greeting("Welcome to Routine Turbo!")

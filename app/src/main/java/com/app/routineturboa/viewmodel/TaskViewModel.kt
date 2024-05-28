@@ -1,8 +1,9 @@
-package com.app.routineturbo_android
+package com.app.routineturboa.viewmodel
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.app.routineturboa.data.local.RoutineRepository
+import com.app.routineturboa.data.model.Task
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -25,12 +26,3 @@ class TaskViewModel(private val repository: RoutineRepository) : ViewModel() {
     }
 }
 
-class TaskViewModelFactory(private val repository: RoutineRepository) : ViewModelProvider.Factory {
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(TaskViewModel::class.java)) {
-            @Suppress("UNCHECKED_CAST")
-            return TaskViewModel(repository) as T
-        }
-        throw IllegalArgumentException("Unknown ViewModel class")
-    }
-}

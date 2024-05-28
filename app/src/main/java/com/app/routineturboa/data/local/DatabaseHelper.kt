@@ -1,4 +1,4 @@
-package com.app.routineturbo_android
+package com.app.routineturboa.data.local
 
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
@@ -10,7 +10,8 @@ import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 
-class DatabaseHelper(private val context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
+class DatabaseHelper(private val context: Context) : SQLiteOpenHelper(
+    context, DATABASE_NAME, null, DATABASE_VERSION) {
 
     companion object {
         const val DATABASE_VERSION = 1
@@ -28,7 +29,8 @@ class DatabaseHelper(private val context: Context) : SQLiteOpenHelper(context, D
         const val COLUMN_NAME_POSITION = "position"
     }
 
-    private val SQL_CREATE_ENTRIES =
+    private val createEntries =
+
         """CREATE TABLE IF NOT EXISTS ${DailyRoutine.TABLE_NAME} (
             ${BaseColumns._ID} INTEGER PRIMARY KEY AUTOINCREMENT,
             ${DailyRoutine.COLUMN_NAME_START_TIME} DATETIME,
@@ -39,14 +41,14 @@ class DatabaseHelper(private val context: Context) : SQLiteOpenHelper(context, D
             ${DailyRoutine.COLUMN_NAME_TYPE} TEXT,
             ${DailyRoutine.COLUMN_NAME_POSITION} INTEGER)"""
 
-    private val SQL_DELETE_ENTRIES = "DROP TABLE IF EXISTS ${DailyRoutine.TABLE_NAME}"
+    private val deleteEntries = "DROP TABLE IF EXISTS ${DailyRoutine.TABLE_NAME}"
 
     override fun onCreate(db: SQLiteDatabase) {
-        db.execSQL(SQL_CREATE_ENTRIES)
+        db.execSQL(createEntries)
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        db.execSQL(SQL_DELETE_ENTRIES)
+        db.execSQL(deleteEntries)
         onCreate(db)
     }
 

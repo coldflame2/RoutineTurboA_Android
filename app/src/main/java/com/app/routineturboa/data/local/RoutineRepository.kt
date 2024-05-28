@@ -1,9 +1,10 @@
-package com.app.routineturbo_android
+package com.app.routineturboa.data.local
 
 import android.content.Context
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.provider.BaseColumns
+import com.app.routineturboa.data.model.Task
 
 class RoutineRepository(context: Context) {
     private val dbHelper = DatabaseHelper(context)

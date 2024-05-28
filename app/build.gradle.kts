@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace = "com.app.routineturbo_android"
+    namespace = "com.app.routineturboa"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.app.routineturbo_android"
+        applicationId = "com.app.routineturboa"
         minSdk = 30
         targetSdk = 34
         versionCode = 1
@@ -18,6 +18,7 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+        versionNameSuffix = "1"
     }
 
     buildTypes {
@@ -50,6 +51,7 @@ android {
 }
 
 dependencies {
+
     implementation(libs.sqlite)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
 
@@ -73,4 +75,5 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+
 }

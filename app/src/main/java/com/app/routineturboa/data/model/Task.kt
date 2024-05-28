@@ -1,4 +1,4 @@
-package com.app.routineturbo_android
+package com.app.routineturboa.data.model
 
 data class Task(
     val id: Int,
