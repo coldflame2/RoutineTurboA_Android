@@ -28,6 +28,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.app.routineturboa.MainActivity
+import com.app.routineturboa.data.local.DatabaseHelper
 import com.app.routineturboa.data.local.RoutineRepository
 import com.app.routineturboa.services.MSALAuthManager
 import com.app.routineturboa.services.OneDriveManager
@@ -35,17 +36,18 @@ import com.app.routineturboa.ui.components.TaskItem
 import com.app.routineturboa.viewmodel.TaskViewModel
 import com.microsoft.graph.models.DriveItem
 import com.microsoft.identity.client.AuthenticationCallback
+import com.microsoft.identity.client.IAccount
 import com.microsoft.identity.client.IAuthenticationResult
+import com.microsoft.identity.client.ISingleAccountPublicClientApplication
 import com.microsoft.identity.client.exception.MsalException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+
 @Composable
-fun MainScreen(taskViewModel: TaskViewModel = viewModel(factory = TaskViewModelFactory(
-    RoutineRepository(LocalContext.current)
-)
-)) {
+fun MainScreen(taskViewModel: TaskViewModel = viewModel(factory = TaskViewModelFactory(RoutineRepository(LocalContext.current)
+))) {
 
     val tasks by taskViewModel.tasks.collectAsState()
     val context = LocalContext.current
@@ -55,16 +57,31 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel(factory = TaskViewModelF
     val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(authenticationResult) {
-        authenticationResult?.let {
-            val authProvider = OneDriveManager.MsalAuthProvider(it)
+        authenticationResult?.let { authResult ->
+            val authProvider = OneDriveManager.MsalAuthProvider(authResult)
             val oneDriveManager = OneDriveManager(authProvider)
             coroutineScope.launch {
                 withContext(Dispatchers.IO) {
-                    oneDriveFiles = oneDriveManager.listFiles()
+                    val files = oneDriveManager.listFiles() // List root directory files
+                    val routineTurboDir = files.find { it.name == "RoutineTurbo" && it.folder != null }
+
+                    routineTurboDir?.let { dir ->
+                        val dirFiles = oneDriveManager.listFiles(dir.id) // List files in RoutineTurbo directory
+                        oneDriveFiles = dirFiles
+                        val dbFile = dirFiles.find { it.name == "routine_dev_data_onedrive.db" }
+                        dbFile?.let { driveItem ->
+                            driveItem.id?.let { driveItemId ->
+                                val localDbFile = context.getDatabasePath(DatabaseHelper.DATABASE_NAME)
+                                oneDriveManager.downloadFile(driveItemId, localDbFile)
+                                taskViewModel.loadTasks()
+                            }
+                        }
+                    }
                 }
             }
         }
     }
+
 
     DisposableEffect(Unit) {
         Log.d("MainScreen", "Starting sign-in process")
@@ -126,20 +143,35 @@ fun SignInButton(
         onClick = {
             Log.d("SignInButton", "Sign-in button clicked")
             isSigningIn = true
-            msalAuthManager.signIn(context as MainActivity, object : AuthenticationCallback {
-                override fun onSuccess(result: IAuthenticationResult) {
-                    Log.d("SignInButton", "Sign-in successful")
-                    isSigningIn = false
-                    onSignInSuccess(result)
+
+            // Check if an account is already signed in
+            msalAuthManager.singleAccountApp?.getCurrentAccountAsync(object : ISingleAccountPublicClientApplication.CurrentAccountCallback {
+                override fun onAccountLoaded(activeAccount: IAccount?) {
+                    if (activeAccount != null) {
+                        // An account is already signed in, sign out first
+                        msalAuthManager.signOut(object : ISingleAccountPublicClientApplication.SignOutCallback {
+                            override fun onSignOut() {
+                                Log.d("SignInButton", "Signed out successfully, now signing in again.")
+                                signIn(msalAuthManager, context as MainActivity, onSignInSuccess)
+                            }
+
+                            override fun onError(exception: MsalException) {
+                                Log.e("SignInButton", "Sign-out error: ${exception.message}")
+                                isSigningIn = false
+                            }
+                        })
+                    } else {
+                        // No account is signed in, proceed with sign-in
+                        signIn(msalAuthManager, context as MainActivity, onSignInSuccess)
+                    }
+                }
+
+                override fun onAccountChanged(priorAccount: IAccount?, currentAccount: IAccount?) {
+                    // Handle account change if needed
                 }
 
                 override fun onError(exception: MsalException) {
-                    Log.e("SignInButton", "Sign-in error: ${exception.message}")
-                    isSigningIn = false
-                }
-
-                override fun onCancel() {
-                    Log.d("SignInButton", "Sign-in canceled")
+                    Log.e("SignInButton", "Error loading current account: ${exception.message}")
                     isSigningIn = false
                 }
             })
@@ -149,6 +181,24 @@ fun SignInButton(
         Text(text = if (authenticationResult != null) "Signed In" else "Sign In")
     }
 }
+
+fun signIn(msalAuthManager: MSALAuthManager, activity: MainActivity, onSignInSuccess: (IAuthenticationResult) -> Unit) {
+    msalAuthManager.signIn(activity, object : AuthenticationCallback {
+        override fun onSuccess(result: IAuthenticationResult) {
+            Log.d("SignInButton", "Sign-in successful")
+            onSignInSuccess(result)
+        }
+
+        override fun onError(exception: MsalException) {
+            Log.e("SignInButton", "Sign-in error: ${exception.message}")
+        }
+
+        override fun onCancel() {
+            Log.d("SignInButton", "Sign-in canceled")
+        }
+    })
+}
+
 
 @Preview(showBackground = true)
 @Composable

@@ -18,7 +18,7 @@ class TaskViewModel(private val repository: RoutineRepository) : ViewModel() {
         loadTasks()
     }
 
-    private fun loadTasks() {
+    fun loadTasks() {
         viewModelScope.launch(Dispatchers.IO) {
             val taskList = repository.getAllTasks()
             _tasks.value = taskList
