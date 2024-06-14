@@ -3,8 +3,10 @@ package com.app.routineturboa.data.local
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
+import android.os.Environment
 import android.provider.BaseColumns
 import java.io.File
+import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.IOException
 import java.io.InputStream
@@ -66,9 +68,19 @@ class DatabaseHelper(private val context: Context) : SQLiteOpenHelper(
         val dbPath: String = context.getDatabasePath(DATABASE_NAME).absolutePath
         val dbFile = File(dbPath)
         if (!dbFile.exists()) {
-            context.assets.open(DATABASE_NAME).use { inputStream: InputStream ->
-                FileOutputStream(dbPath).use { outputStream: OutputStream ->
-                    copyStream(inputStream, outputStream)
+            val externalDbPath = Environment.getExternalStorageDirectory().absolutePath + "/$DATABASE_NAME"
+            val externalDbFile = File(externalDbPath)
+            if (externalDbFile.exists()) {
+                FileInputStream(externalDbFile).use { inputStream: InputStream ->
+                    FileOutputStream(dbPath).use { outputStream: OutputStream ->
+                        copyStream(inputStream, outputStream)
+                    }
+                }
+            } else {
+                context.assets.open(DATABASE_NAME).use { inputStream: InputStream ->
+                    FileOutputStream(dbPath).use { outputStream: OutputStream ->
+                        copyStream(inputStream, outputStream)
+                    }
                 }
             }
         }

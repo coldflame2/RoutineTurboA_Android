@@ -43,14 +43,22 @@ android {
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.1"
     }
+
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "META-INF/NOTICE.md"
+            excludes += "META-INF/LICENSE.md"
+            excludes += "META-INF/LICENSE.txt"
+            excludes += "META-INF/NOTICE.txt"
         }
     }
 }
 
 dependencies {
+    implementation(libs.msal)
+    implementation(libs.volley)
+    implementation(libs.graph)
 
     implementation(libs.sqlite)
     implementation(libs.androidx.lifecycle.viewmodel.compose)

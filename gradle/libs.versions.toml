@@ -12,7 +12,16 @@ composeBom = "2024.05.00"
 sqlite = "2.4.0"
 lifecycleViewModelCompose = "2.8.0"
 
+msalVersion = "5.3.1"  # Define the version for MSAL
+volley = "1.2.1"
+graphVersion = "5.10.0"
+
 [libraries]
+#msal
+msal = { group = "com.microsoft.identity.client", name = "msal", version.ref = "msalVersion" }  # Define the MSAL library
+graph = { group = "com.microsoft.graph", name = "microsoft-graph", version.ref = "graphVersion" }
+
+
 # Jetpack Compose Libraries
     ## Core Compose Libraries
 androidx-compose-runtime = { group = "androidx.compose.runtime", name = "runtime" }  # Core runtime for Compose
@@ -52,6 +61,7 @@ sqlite = { module = "androidx.sqlite:sqlite", version.ref = "sqlite" }  # SQLite
 junit = { group = "junit", name = "junit", version.ref = "junit" }  # Core JUnit library for testing
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }  # JUnit support for Android tests
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }  # Espresso framework for UI testing
+volley = { module = "com.android.volley:volley", version.ref = "volley" }
 
 
 [plugins]

@@ -1,0 +1,746 @@
+I need help with my Android Studio App. It's built using Kotlin and Compose.
+
+But first, I will share all of the code.
+
+Let me start with build.gradle.kts file (note how it references libraries from libs file)
+
+plugins {
+    alias(libs.plugins.androidApplication)
+    alias(libs.plugins.jetbrainsKotlinAndroid)
+}
+
+android {
+    namespace = "com.app.routineturboa"
+    compileSdk = 34
+
+    defaultConfig {
+        applicationId = "com.app.routineturboa"
+        minSdk = 30
+        targetSdk = 34
+        versionCode = 1
+        versionName = "1.0"
+
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        vectorDrawables {
+            useSupportLibrary = true
+        }
+        versionNameSuffix = "1"
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+        }
+    }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
+    }
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
+    buildFeatures {
+        compose = true
+    }
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.1"
+    }
+
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "META-INF/NOTICE.md"
+            excludes += "META-INF/LICENSE.md"
+            excludes += "META-INF/LICENSE.txt"
+            excludes += "META-INF/NOTICE.txt"
+        }
+    }
+}
+
+dependencies {
+    implementation(libs.msal)
+    implementation(libs.volley)
+    implementation(libs.graph)
+
+    implementation(libs.sqlite)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+
+    implementation(libs.androidx.material.icons.core)
+    implementation(libs.androidx.material.icons.extended)
+
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.activity.compose)
+    implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.ui)
+    implementation(libs.androidx.ui.graphics)
+    implementation(libs.androidx.ui.tooling.preview)
+    implementation(libs.androidx.material3)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.compose.runtime)
+    testImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation(libs.androidx.ui.test.junit4)
+    debugImplementation(libs.androidx.ui.tooling)
+    debugImplementation(libs.androidx.ui.test.manifest)
+
+}
+
+Now, Android Manifest File:
+
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+xmlns:tools="http://schemas.android.com/tools">
+
+<application
+android:allowBackup="true"
+android:dataExtractionRules="@xml/data_extraction_rules"
+android:fullBackupContent="@xml/backup_rules"
+android:icon="@mipmap/ic_launcher"
+android:label="@string/app_name"
+android:roundIcon="@mipmap/ic_launcher_round"
+android:supportsRtl="true"
+tools:targetApi="31">
+<activity
+android:name=".MainActivity"
+android:exported="true">
+<intent-filter>
+<action android:name="android.intent.action.MAIN" />
+<category android:name="android.intent.category.LAUNCHER" />
+</intent-filter>
+</activity>
+
+<!--Intent filter to capture System Browser or Authenticator calling back to our app after sign-in-->
+<activity
+android:name="com.microsoft.identity.client.BrowserTabActivity"
+android:exported="true">
+<intent-filter>
+<action android:name="android.intent.action.VIEW" />
+<category android:name="android.intent.category.DEFAULT" />
+<category android:name="android.intent.category.BROWSABLE" />
+<data android:scheme="msauth"
+android:host="com.app.routineturboa"
+android:path="/a0VHP+Yc7DrhJPus83+LbjsqzHY=" />
+</intent-filter>
+</activity>
+
+</application>
+
+</manifest>
+
+Now MainActivity:
+
+package com.app.routineturboa
+
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Column
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import com.app.routineturboa.data.local.DatabaseHelper
+import com.app.routineturboa.services.MSALAuthManager
+import com.app.routineturboa.ui.MainScreen
+import com.app.routineturboa.ui.theme.RoutineTurboATheme
+
+class MainActivity : ComponentActivity() {
+    private lateinit var msalAuthManager: MSALAuthManager
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        // Initialize DatabaseHelper to ensure database is copied and set up
+        DatabaseHelper(this).readableDatabase
+
+        setContent {
+            RoutineTurboATheme {
+                Surface {
+                    Column {
+                        Greeting()
+                        MainScreen()
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun Greeting(){
+    Text(text = "Routine", style = MaterialTheme.typography.headlineLarge)
+}
+
+
+Now MainScreen.kt:
+
+package com.app.routineturboa.ui
+
+import TaskViewModelFactory
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.app.routineturboa.MainActivity
+import com.app.routineturboa.data.local.RoutineRepository
+import com.app.routineturboa.services.MSALAuthManager
+import com.app.routineturboa.services.OneDriveManager
+import com.app.routineturboa.ui.components.TaskItem
+import com.app.routineturboa.viewmodel.TaskViewModel
+import com.microsoft.graph.models.DriveItem
+import com.microsoft.identity.client.AuthenticationCallback
+import com.microsoft.identity.client.IAuthenticationResult
+import com.microsoft.identity.client.exception.MsalException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+@Composable
+fun MainScreen(taskViewModel: TaskViewModel = viewModel(factory = TaskViewModelFactory(
+    RoutineRepository(LocalContext.current)
+)
+)) {
+
+    val tasks by taskViewModel.tasks.collectAsState()
+    val context = LocalContext.current
+    val msalAuthManager = remember { MSALAuthManager(context) }
+    var oneDriveFiles by remember { mutableStateOf<List<DriveItem>>(emptyList()) }
+    var authenticationResult by remember { mutableStateOf<IAuthenticationResult?>(null) }
+    val coroutineScope = rememberCoroutineScope()
+
+    LaunchedEffect(authenticationResult) {
+        authenticationResult?.let {
+            val authProvider = OneDriveManager.MsalAuthProvider(it)
+            val oneDriveManager = OneDriveManager(authProvider)
+            // Fetch OneDrive files on a background thread
+            coroutineScope.launch {
+                withContext(Dispatchers.IO) {
+                    oneDriveFiles = oneDriveManager.listFiles()
+                }
+            }
+        }
+    }
+
+    DisposableEffect(Unit) {
+        msalAuthManager.signIn(context as MainActivity, object : AuthenticationCallback {
+            override fun onSuccess(result: IAuthenticationResult) {
+                authenticationResult = result
+            }
+
+            override fun onError(exception: MsalException) {
+                // Handle error
+            }
+
+            override fun onCancel() {
+                // Handle cancel
+            }
+        })
+        onDispose { }
+    }
+
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            SignInButton(msalAuthManager, authenticationResult) { result ->
+                authenticationResult = result
+            }
+            LazyColumn(
+                contentPadding = PaddingValues(5.dp),
+                verticalArrangement = Arrangement.spacedBy(3.dp)
+            ) {
+                items(tasks) { task ->
+                    TaskItem(task)
+                }
+                items(oneDriveFiles) { file ->
+                    Text(text = file.name ?: "No name")
+                }
+            }
+        }
+    }
+
+}
+
+@Composable
+fun SignInButton(
+    msalAuthManager: MSALAuthManager,
+    authenticationResult: IAuthenticationResult?,
+    onSignInSuccess: (IAuthenticationResult) -> Unit
+) {
+    val context = LocalContext.current
+    var isSigningIn by remember { mutableStateOf(false) }
+
+    Button(
+        onClick = {
+            isSigningIn = true
+            msalAuthManager.signIn(context as MainActivity, object : AuthenticationCallback {
+                override fun onSuccess(result: IAuthenticationResult) {
+                    isSigningIn = false
+                    onSignInSuccess(result)
+                }
+
+                override fun onError(exception: MsalException) {
+                    isSigningIn = false
+                    // Handle error
+                }
+
+                override fun onCancel() {
+                    isSigningIn = false
+                    // Handle cancel
+                }
+            })
+        },
+        enabled = authenticationResult == null && !isSigningIn
+    ) {
+        Text(text = if (authenticationResult != null) "Signed In" else "Sign In")
+    }
+}
+
+
+@Preview(showBackground = true)
+@Composable
+fun MainScreenPreview() {
+    MainScreen()
+}
+
+
+Now DatabaseHelper.kt:
+
+package com.app.routineturboa.data.local
+
+import android.content.Context
+import android.database.sqlite.SQLiteDatabase
+import android.database.sqlite.SQLiteOpenHelper
+import android.os.Environment
+import android.provider.BaseColumns
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
+import java.io.IOException
+import java.io.InputStream
+import java.io.OutputStream
+
+class DatabaseHelper(private val context: Context) : SQLiteOpenHelper(
+    context, DATABASE_NAME, null, DATABASE_VERSION) {
+
+    companion object {
+        const val DATABASE_VERSION = 1
+        const val DATABASE_NAME = "RoutineTurbo.db"
+    }
+
+    object DailyRoutine : BaseColumns {
+        const val TABLE_NAME = "daily_routine"
+        const val COLUMN_NAME_START_TIME = "start_time"
+        const val COLUMN_NAME_END_TIME = "end_time"
+        const val COLUMN_NAME_DURATION = "duration"
+        const val COLUMN_NAME_TASK_NAME = "task_name"
+        const val COLUMN_NAME_REMINDERS = "reminders"
+        const val COLUMN_NAME_TYPE = "type"
+        const val COLUMN_NAME_POSITION = "position"
+    }
+
+    private val createEntries =
+
+        """CREATE TABLE IF NOT EXISTS ${DailyRoutine.TABLE_NAME} (
+            ${BaseColumns._ID} INTEGER PRIMARY KEY AUTOINCREMENT,
+            ${DailyRoutine.COLUMN_NAME_START_TIME} DATETIME,
+            ${DailyRoutine.COLUMN_NAME_END_TIME} DATETIME,
+            ${DailyRoutine.COLUMN_NAME_DURATION} INTEGER,
+            ${DailyRoutine.COLUMN_NAME_TASK_NAME} TEXT,
+            ${DailyRoutine.COLUMN_NAME_REMINDERS} DATETIME,
+            ${DailyRoutine.COLUMN_NAME_TYPE} TEXT,
+            ${DailyRoutine.COLUMN_NAME_POSITION} INTEGER)"""
+
+    private val deleteEntries = "DROP TABLE IF EXISTS ${DailyRoutine.TABLE_NAME}"
+
+    override fun onCreate(db: SQLiteDatabase) {
+        db.execSQL(createEntries)
+    }
+
+    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+        db.execSQL(deleteEntries)
+        onCreate(db)
+    }
+
+    override fun getReadableDatabase(): SQLiteDatabase {
+        copyDatabase()
+        return super.getReadableDatabase()
+    }
+
+    override fun getWritableDatabase(): SQLiteDatabase {
+        copyDatabase()
+        return super.getWritableDatabase()
+    }
+
+    private fun copyDatabase() {
+        val dbPath: String = context.getDatabasePath(DATABASE_NAME).absolutePath
+        val dbFile = File(dbPath)
+        if (!dbFile.exists()) {
+            val externalDbPath = Environment.getExternalStorageDirectory().absolutePath + "/$DATABASE_NAME"
+            val externalDbFile = File(externalDbPath)
+            if (externalDbFile.exists()) {
+                FileInputStream(externalDbFile).use { inputStream: InputStream ->
+                    FileOutputStream(dbPath).use { outputStream: OutputStream ->
+                        copyStream(inputStream, outputStream)
+                    }
+                }
+            } else {
+                context.assets.open(DATABASE_NAME).use { inputStream: InputStream ->
+                    FileOutputStream(dbPath).use { outputStream: OutputStream ->
+                        copyStream(inputStream, outputStream)
+                    }
+                }
+            }
+        }
+    }
+
+    @Throws(IOException::class)
+    private fun copyStream(inputStream: InputStream, outputStream: OutputStream) {
+        val buffer = ByteArray(1024)
+        var length: Int
+        while (inputStream.read(buffer).also { length = it } > 0) {
+            outputStream.write(buffer, 0, length)
+        }
+    }
+}
+
+
+now, RoutineRepository:
+
+package com.app.routineturboa.data.local
+
+import android.content.Context
+import android.database.Cursor
+import android.database.sqlite.SQLiteDatabase
+import android.provider.BaseColumns
+import com.app.routineturboa.data.model.Task
+import com.app.routineturboa.utils.TimeUtils
+
+class RoutineRepository(context: Context) {
+    private val dbHelper = DatabaseHelper(context)
+    private val db: SQLiteDatabase = dbHelper.readableDatabase
+
+    fun getAllTasks(): List<Task> {
+        val tasks = mutableListOf<Task>()
+        val cursor: Cursor = db.query(
+            DatabaseHelper.DailyRoutine.TABLE_NAME,
+            null,
+            null,
+            null,
+            null,
+            null,
+            "${DatabaseHelper.DailyRoutine.COLUMN_NAME_POSITION} ASC"
+        )
+        with(cursor) {
+            while (moveToNext()) {
+                val startTime = getString(getColumnIndexOrThrow(DatabaseHelper.DailyRoutine.COLUMN_NAME_START_TIME))
+                val endTime = getString(getColumnIndexOrThrow(DatabaseHelper.DailyRoutine.COLUMN_NAME_END_TIME))
+
+                // Convert to 12-hour format
+                val formattedStartTime = TimeUtils.convertTo12HourFormat(startTime.split(" ")[1])
+                val formattedEndTime = TimeUtils.convertTo12HourFormat(endTime.split(" ")[1])
+
+                val task = Task(
+                    getInt(getColumnIndexOrThrow(BaseColumns._ID)),
+                    formattedStartTime,
+                    formattedEndTime,
+                    getInt(getColumnIndexOrThrow(DatabaseHelper.DailyRoutine.COLUMN_NAME_DURATION)),
+                    getString(getColumnIndexOrThrow(DatabaseHelper.DailyRoutine.COLUMN_NAME_TASK_NAME)),
+                    getString(getColumnIndexOrThrow(DatabaseHelper.DailyRoutine.COLUMN_NAME_REMINDERS)),
+                    getString(getColumnIndexOrThrow(DatabaseHelper.DailyRoutine.COLUMN_NAME_TYPE)),
+                    getInt(getColumnIndexOrThrow(DatabaseHelper.DailyRoutine.COLUMN_NAME_POSITION))
+                )
+                tasks.add(task)
+            }
+        }
+        cursor.close()
+        return tasks
+    }
+}
+
+Now task.kt:
+
+package com.app.routineturboa.data.model
+
+data class Task(
+    val id: Int,
+    val startTime: String,
+    val endTime: String,
+    val duration: Int,
+    val taskName: String,
+    val reminders: String,
+    val type: String,
+    val position: Int
+)
+
+
+
+Now MSALAuthManager:
+
+package com.app.routineturboa.services
+
+import android.app.Activity
+import android.content.Context
+import com.app.routineturboa.R
+import com.microsoft.identity.client.AuthenticationCallback
+import com.microsoft.identity.client.IPublicClientApplication
+import com.microsoft.identity.client.ISingleAccountPublicClientApplication
+import com.microsoft.identity.client.PublicClientApplication
+import com.microsoft.identity.client.exception.MsalException
+
+class MSALAuthManager(context: Context) {
+
+    private val appContext = context.applicationContext
+    private var singleAccountApp: ISingleAccountPublicClientApplication? = null
+
+    init {
+        PublicClientApplication.createSingleAccountPublicClientApplication(
+            appContext,
+            R.raw.auth_config_single_account,
+            object : IPublicClientApplication.ISingleAccountApplicationCreatedListener {
+                override fun onCreated(application: ISingleAccountPublicClientApplication) {
+                    singleAccountApp = application
+                }
+
+                override fun onError(exception: MsalException) {
+                    // Handle the error
+                }
+            })
+    }
+
+    fun signIn(activity: Activity, callback: AuthenticationCallback) {
+        singleAccountApp?.signIn(activity, null, arrayOf("User.Read", "Files.Read"), callback)
+    }
+
+    fun signOut(callback: ISingleAccountPublicClientApplication.SignOutCallback) {
+        singleAccountApp?.signOut(callback)
+    }
+}
+
+now, OneDriveManager.kt
+
+package com.app.routineturboa.services
+
+import com.microsoft.graph.authentication.IAuthenticationProvider
+import com.microsoft.graph.models.DriveItem
+import com.microsoft.graph.requests.GraphServiceClient
+import com.microsoft.identity.client.IAuthenticationResult
+import java.net.URL
+import java.util.concurrent.CompletableFuture
+
+class OneDriveManager(private val authProvider: IAuthenticationProvider) {
+
+    private val graphClient = GraphServiceClient.builder()
+        .authenticationProvider(authProvider)
+        .buildClient()
+
+    fun listFiles(driveItemId: String? = null): List<DriveItem> {
+        val request = if (driveItemId == null) {
+            graphClient.me().drive().root().children().buildRequest()
+        } else {
+            graphClient.me().drive().items(driveItemId).children().buildRequest()
+        }
+
+        return request.get()?.currentPage ?: emptyList()
+    }
+
+    class MsalAuthProvider(private val authenticationResult: IAuthenticationResult) : IAuthenticationProvider {
+        override fun getAuthorizationTokenAsync(requestUrl: URL): CompletableFuture<String> {
+            return CompletableFuture.completedFuture(authenticationResult.accessToken)
+        }
+    }
+}
+
+
+
+now TaskItem.kt:
+
+package com.app.routineturboa.ui.components
+
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Task
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import com.app.routineturboa.data.model.Task
+
+@Composable
+fun TaskItem(task: Task) {
+    // Card to hold the task details
+    Card(
+        modifier = Modifier
+            .padding(1.dp)
+            .fillMaxWidth()
+            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp)), // Adding a border to the Card
+
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.background
+        ),
+
+        elevation = CardDefaults.cardElevation(3.dp)  // Like shadow
+    ) {
+
+        // vertical layout container inside the Card
+        Column(
+            modifier = Modifier
+                .padding(25.dp)
+        ) {
+
+            // Row for task name and icon
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+
+                // Task name
+                Text(
+                    text = task.taskName,
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    ),
+                    modifier = Modifier
+                        .weight(3f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                // Task icon
+                Icon(
+                    imageVector = Icons.Default.Task,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.secondary
+                )
+            }
+
+            // Spacer between task name and start time
+            Spacer(modifier = Modifier.height(18.dp))
+
+            // Row for start time and duration
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                // Start time
+                Text(
+                    text = "${task.startTime} - ${task.endTime}",
+                    style = MaterialTheme.typography.bodyLarge.copy(
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                )
+
+
+                // Duration
+                Text(
+                    text = "${task.duration} minutes",
+                    style = MaterialTheme.typography.bodyLarge.copy(
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                )
+            }
+        }
+    }
+}
+
+
+Now, TaskViewModel.kt:
+
+package com.app.routineturboa.viewmodel
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.app.routineturboa.data.local.RoutineRepository
+import com.app.routineturboa.data.model.Task
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+
+class TaskViewModel(private val repository: RoutineRepository) : ViewModel() {
+    private val _tasks = MutableStateFlow<List<Task>>(emptyList())
+    val tasks: StateFlow<List<Task>> = _tasks.asStateFlow()
+
+    init {
+        loadTasks()
+    }
+
+    private fun loadTasks() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val taskList = repository.getAllTasks()
+            _tasks.value = taskList
+        }
+    }
+}
+
+
+
+And Finally, TaskViewModelFactory.kt:
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import com.app.routineturboa.data.local.RoutineRepository
+import com.app.routineturboa.viewmodel.TaskViewModel
+
+class TaskViewModelFactory(private val repository: RoutineRepository) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(TaskViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return TaskViewModel(repository) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
+    }
+}
+
+Now, here's the thing. I don't know how to develop an android app. I am a newbie. I built this app so far with the help of AI tools such as yourself. I built it not in one go, but in fragments. Which is why I am not sure if this codebase of my app is correct.
+
+Can you tell me where exactly is it incorrect and wrong? I am not talking about optimization or anything like that. I am asking if there's something that's just wrong or incorrect, like syntax error or essential items not in use, logic problem, library issue, etc.
+

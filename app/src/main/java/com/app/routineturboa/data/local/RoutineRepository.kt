@@ -5,6 +5,7 @@ import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.provider.BaseColumns
 import com.app.routineturboa.data.model.Task
+import com.app.routineturboa.utils.TimeUtils
 
 class RoutineRepository(context: Context) {
     private val dbHelper = DatabaseHelper(context)
@@ -23,10 +24,17 @@ class RoutineRepository(context: Context) {
         )
         with(cursor) {
             while (moveToNext()) {
+                val startTime = getString(getColumnIndexOrThrow(DatabaseHelper.DailyRoutine.COLUMN_NAME_START_TIME))
+                val endTime = getString(getColumnIndexOrThrow(DatabaseHelper.DailyRoutine.COLUMN_NAME_END_TIME))
+
+                // Convert to 12-hour format
+                val formattedStartTime = TimeUtils.convertTo12HourFormat(startTime.split(" ")[1])
+                val formattedEndTime = TimeUtils.convertTo12HourFormat(endTime.split(" ")[1])
+
                 val task = Task(
                     getInt(getColumnIndexOrThrow(BaseColumns._ID)),
-                    getString(getColumnIndexOrThrow(DatabaseHelper.DailyRoutine.COLUMN_NAME_START_TIME)),
-                    getString(getColumnIndexOrThrow(DatabaseHelper.DailyRoutine.COLUMN_NAME_END_TIME)),
+                    formattedStartTime,
+                    formattedEndTime,
                     getInt(getColumnIndexOrThrow(DatabaseHelper.DailyRoutine.COLUMN_NAME_DURATION)),
                     getString(getColumnIndexOrThrow(DatabaseHelper.DailyRoutine.COLUMN_NAME_TASK_NAME)),
                     getString(getColumnIndexOrThrow(DatabaseHelper.DailyRoutine.COLUMN_NAME_REMINDERS)),

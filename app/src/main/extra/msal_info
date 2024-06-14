@@ -1,0 +1,5 @@
+    <!-- IMPORTANT: Azure client and tenant IDs must use hyphens exactly as provided -->
+    <string name="onedrive_client_id" tools:ignore="TypographyDashes">39cf31a7-1440-4a2f-810c-815cbe26d733</string>
+    <string name="onedrive_client_secret">jVX8Q~0uI4ovv~QbmM42RkH2RtP-aXqFU~tgRaay</string>
+    <string name="onedrive_tenant_id" tools:ignore="TypographyDashes">251d9bea-d9f5-4fb2-9306-5410d4a5906e</string>
+    <string name="onedrive_redirect_uri">http://localhost:5000/getAToken</string>

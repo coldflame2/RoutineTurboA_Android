@@ -9,10 +9,13 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import com.app.routineturboa.data.local.DatabaseHelper
+import com.app.routineturboa.services.MSALAuthManager
 import com.app.routineturboa.ui.MainScreen
 import com.app.routineturboa.ui.theme.RoutineTurboATheme
 
 class MainActivity : ComponentActivity() {
+    private lateinit var msalAuthManager: MSALAuthManager
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -21,14 +24,13 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             RoutineTurboATheme {
-                Surface{
+                Surface {
                     Column {
                         Greeting()
                         MainScreen()
                     }
                 }
             }
-
         }
     }
 }

@@ -19,11 +19,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.app.routineturboa.data.model.Task
-import com.app.routineturboa.utils.TimeUtils.convertTo12HourFormat
 
 @Composable
 fun TaskItem(task: Task) {
@@ -60,10 +58,7 @@ fun TaskItem(task: Task) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     ),
                     modifier = Modifier
-                        .weight(3f)
-                        .graphicsLayer {
-                            this.alpha = 0.99f // Trigger anti-aliasing
-                        },
+                        .weight(3f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -83,30 +78,23 @@ fun TaskItem(task: Task) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-
                 // Start time
                 Text(
-                    text = "${convertTo12HourFormat(task.startTime.split(" ")[1])} - ${convertTo12HourFormat(task.endTime.split(" ")[1])}",
+                    text = "${task.startTime} - ${task.endTime}",
                     style = MaterialTheme.typography.bodyLarge.copy(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
-                    ),
-                    modifier = Modifier.graphicsLayer {
-                        this.alpha = 0.99f // Trigger anti-aliasing
-                    }
+                    )
                 )
+
 
                 // Duration
                 Text(
                     text = "${task.duration} minutes",
                     style = MaterialTheme.typography.bodyLarge.copy(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
-                    ),
-                    modifier = Modifier.graphicsLayer {
-                        this.alpha = 0.99f // Trigger anti-aliasing
-                    }
+                    )
                 )
             }
         }
-
     }
 }
