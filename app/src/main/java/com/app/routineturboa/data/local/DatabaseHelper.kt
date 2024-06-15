@@ -4,7 +4,6 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import android.os.Environment
-import android.provider.BaseColumns
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -20,8 +19,9 @@ class DatabaseHelper(private val context: Context) : SQLiteOpenHelper(
         const val DATABASE_NAME = "RoutineTurbo.db"
     }
 
-    object DailyRoutine : BaseColumns {
+    object DailyRoutine {
         const val TABLE_NAME = "daily_routine"
+        const val COLUMN_NAME_ID = "id"
         const val COLUMN_NAME_START_TIME = "start_time"
         const val COLUMN_NAME_END_TIME = "end_time"
         const val COLUMN_NAME_DURATION = "duration"
@@ -31,17 +31,17 @@ class DatabaseHelper(private val context: Context) : SQLiteOpenHelper(
         const val COLUMN_NAME_POSITION = "position"
     }
 
-    private val createEntries =
-
-        """CREATE TABLE IF NOT EXISTS ${DailyRoutine.TABLE_NAME} (
-            ${BaseColumns._ID} INTEGER PRIMARY KEY AUTOINCREMENT,
+    private val createEntries = """
+        CREATE TABLE IF NOT EXISTS ${DailyRoutine.TABLE_NAME} (
+            ${DailyRoutine.COLUMN_NAME_ID} INTEGER PRIMARY KEY AUTOINCREMENT,
             ${DailyRoutine.COLUMN_NAME_START_TIME} DATETIME,
             ${DailyRoutine.COLUMN_NAME_END_TIME} DATETIME,
             ${DailyRoutine.COLUMN_NAME_DURATION} INTEGER,
             ${DailyRoutine.COLUMN_NAME_TASK_NAME} TEXT,
             ${DailyRoutine.COLUMN_NAME_REMINDERS} DATETIME,
             ${DailyRoutine.COLUMN_NAME_TYPE} TEXT,
-            ${DailyRoutine.COLUMN_NAME_POSITION} INTEGER)"""
+            ${DailyRoutine.COLUMN_NAME_POSITION} INTEGER)
+    """
 
     private val deleteEntries = "DROP TABLE IF EXISTS ${DailyRoutine.TABLE_NAME}"
 

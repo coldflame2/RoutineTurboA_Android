@@ -24,5 +24,13 @@ class TaskViewModel(private val repository: RoutineRepository) : ViewModel() {
             _tasks.value = taskList
         }
     }
+
+    fun updateTask(task: Task) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.updateTask(task)
+            loadTasks()
+        }
+    }
+
 }
 

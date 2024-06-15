@@ -10,84 +10,62 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Task
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.app.routineturboa.data.model.Task
 
 @Composable
-fun TaskItem(task: Task) {
-    // Card to hold the task details
+fun TaskItem(task: Task, onEditClick: (Task) -> Unit) {
     Card(
         modifier = Modifier
             .padding(1.dp)
             .fillMaxWidth()
-            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp)), // Adding a border to the Card
-
+            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp)),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.background
         ),
-
-        elevation = CardDefaults.cardElevation(3.dp)  // Like shadow
+        elevation = CardDefaults.cardElevation(3.dp)
     ) {
-
-        // vertical layout container inside the Card
         Column(
-            modifier = Modifier
-                .padding(25.dp)
+            modifier = Modifier.padding(16.dp)
         ) {
-
-            // Row for task name and icon
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
             ) {
-
-                // Task name
                 Text(
                     text = task.taskName,
                     style = MaterialTheme.typography.titleLarge.copy(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     ),
-                    modifier = Modifier
-                        .weight(3f),
+                    modifier = Modifier.weight(3f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                // Task icon
-                Icon(
-                    imageVector = Icons.Default.Task,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.secondary
-                )
+                IconButton(onClick = { onEditClick(task) }) {
+                    Icon(Icons.Default.Edit, contentDescription = "Edit Task")
+                }
             }
-
-            // Spacer between task name and start time
-            Spacer(modifier = Modifier.height(18.dp))
-
-            // Row for start time and duration
+            Spacer(modifier = Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                // Start time
                 Text(
                     text = "${task.startTime} - ${task.endTime}",
                     style = MaterialTheme.typography.bodyLarge.copy(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 )
-
-
-                // Duration
                 Text(
                     text = "${task.duration} minutes",
                     style = MaterialTheme.typography.bodyLarge.copy(

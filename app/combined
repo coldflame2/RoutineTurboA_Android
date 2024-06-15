@@ -139,7 +139,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import com.app.routineturboa.data.local.DatabaseHelper
 import com.app.routineturboa.services.MSALAuthManager
 import com.app.routineturboa.ui.MainScreen
 import com.app.routineturboa.ui.theme.RoutineTurboATheme
@@ -150,8 +149,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Initialize DatabaseHelper to ensure database is copied and set up
-        DatabaseHelper(this).readableDatabase
+        // Initialize MSALAuthManager
+        msalAuthManager = MSALAuthManager(this)
 
         setContent {
             RoutineTurboATheme {
@@ -179,7 +178,6 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import android.os.Environment
-import android.provider.BaseColumns
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -195,8 +193,9 @@ class DatabaseHelper(private val context: Context) : SQLiteOpenHelper(
         const val DATABASE_NAME = "RoutineTurbo.db"
     }
 
-    object DailyRoutine : BaseColumns {
+    object DailyRoutine {
         const val TABLE_NAME = "daily_routine"
+        const val COLUMN_NAME_ID = "id"
         const val COLUMN_NAME_START_TIME = "start_time"
         const val COLUMN_NAME_END_TIME = "end_time"
         const val COLUMN_NAME_DURATION = "duration"
@@ -206,17 +205,17 @@ class DatabaseHelper(private val context: Context) : SQLiteOpenHelper(
         const val COLUMN_NAME_POSITION = "position"
     }
 
-    private val createEntries =
-
-        """CREATE TABLE IF NOT EXISTS ${DailyRoutine.TABLE_NAME} (
-            ${BaseColumns._ID} INTEGER PRIMARY KEY AUTOINCREMENT,
+    private val createEntries = """
+        CREATE TABLE IF NOT EXISTS ${DailyRoutine.TABLE_NAME} (
+            ${DailyRoutine.COLUMN_NAME_ID} INTEGER PRIMARY KEY AUTOINCREMENT,
             ${DailyRoutine.COLUMN_NAME_START_TIME} DATETIME,
             ${DailyRoutine.COLUMN_NAME_END_TIME} DATETIME,
             ${DailyRoutine.COLUMN_NAME_DURATION} INTEGER,
             ${DailyRoutine.COLUMN_NAME_TASK_NAME} TEXT,
             ${DailyRoutine.COLUMN_NAME_REMINDERS} DATETIME,
             ${DailyRoutine.COLUMN_NAME_TYPE} TEXT,
-            ${DailyRoutine.COLUMN_NAME_POSITION} INTEGER)"""
+            ${DailyRoutine.COLUMN_NAME_POSITION} INTEGER)
+    """
 
     private val deleteEntries = "DROP TABLE IF EXISTS ${DailyRoutine.TABLE_NAME}"
 
@@ -278,7 +277,6 @@ package com.app.routineturboa.data.local
 import android.content.Context
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
-import android.provider.BaseColumns
 import com.app.routineturboa.data.model.Task
 import com.app.routineturboa.utils.TimeUtils
 
@@ -307,7 +305,7 @@ class RoutineRepository(context: Context) {
                 val formattedEndTime = TimeUtils.convertTo12HourFormat(endTime.split(" ")[1])
 
                 val task = Task(
-                    getInt(getColumnIndexOrThrow(BaseColumns._ID)),
+                    getInt(getColumnIndexOrThrow(DatabaseHelper.DailyRoutine.COLUMN_NAME_ID)),
                     formattedStartTime,
                     formattedEndTime,
                     getInt(getColumnIndexOrThrow(DatabaseHelper.DailyRoutine.COLUMN_NAME_DURATION)),
@@ -348,6 +346,7 @@ import android.content.Context
 import android.util.Log
 import com.app.routineturboa.R
 import com.microsoft.identity.client.AuthenticationCallback
+import com.microsoft.identity.client.IAccount
 import com.microsoft.identity.client.IPublicClientApplication
 import com.microsoft.identity.client.ISingleAccountPublicClientApplication
 import com.microsoft.identity.client.PublicClientApplication
@@ -356,7 +355,7 @@ import com.microsoft.identity.client.exception.MsalException
 class MSALAuthManager(context: Context) {
 
     private val appContext = context.applicationContext
-    private var singleAccountApp: ISingleAccountPublicClientApplication? = null
+    var singleAccountApp: ISingleAccountPublicClientApplication? = null
 
     init {
         PublicClientApplication.createSingleAccountPublicClientApplication(
@@ -366,12 +365,33 @@ class MSALAuthManager(context: Context) {
                 override fun onCreated(application: ISingleAccountPublicClientApplication) {
                     Log.d("MSALAuthManager", "MSAL client created")
                     singleAccountApp = application
+                    checkCurrentAccount()
                 }
 
                 override fun onError(exception: MsalException) {
                     Log.e("MSALAuthManager", "MSAL client creation error: ${exception.message}")
                 }
             })
+    }
+
+    private fun checkCurrentAccount() {
+        singleAccountApp?.getCurrentAccountAsync(object : ISingleAccountPublicClientApplication.CurrentAccountCallback {
+            override fun onAccountLoaded(activeAccount: IAccount?) {
+                if (activeAccount != null) {
+                    Log.d("MSALAuthManager", "An account is already signed in.")
+                } else {
+                    Log.d("MSALAuthManager", "No account is signed in.")
+                }
+            }
+
+            override fun onAccountChanged(priorAccount: IAccount?, currentAccount: IAccount?) {
+                // Handle account change if needed
+            }
+
+            override fun onError(exception: MsalException) {
+                Log.e("MSALAuthManager", "Error loading current account: ${exception.message}")
+            }
+        })
     }
 
     fun signIn(activity: Activity, callback: AuthenticationCallback) {
@@ -393,6 +413,8 @@ import com.microsoft.graph.authentication.IAuthenticationProvider
 import com.microsoft.graph.models.DriveItem
 import com.microsoft.graph.requests.GraphServiceClient
 import com.microsoft.identity.client.IAuthenticationResult
+import java.io.File
+import java.io.FileOutputStream
 import java.net.URL
 import java.util.concurrent.CompletableFuture
 
@@ -411,6 +433,25 @@ class OneDriveManager(private val authProvider: IAuthenticationProvider) {
 
         return request.get()?.currentPage ?: emptyList()
     }
+
+    fun downloadFile(driveItemId: String, destinationFile: File): Boolean {
+        val request = graphClient.me().drive().items(driveItemId).content().buildRequest()
+        return try {
+            val inputStream = request.get()
+            if (inputStream != null) {
+                FileOutputStream(destinationFile).use { outputStream ->
+                    inputStream.copyTo(outputStream)
+                }
+                true
+            } else {
+                false
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
 
     class MsalAuthProvider(private val authenticationResult: IAuthenticationResult) : IAuthenticationProvider {
         override fun getAuthorizationTokenAsync(requestUrl: URL): CompletableFuture<String> {
@@ -451,6 +492,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.app.routineturboa.MainActivity
+import com.app.routineturboa.data.local.DatabaseHelper
 import com.app.routineturboa.data.local.RoutineRepository
 import com.app.routineturboa.services.MSALAuthManager
 import com.app.routineturboa.services.OneDriveManager
@@ -458,17 +500,18 @@ import com.app.routineturboa.ui.components.TaskItem
 import com.app.routineturboa.viewmodel.TaskViewModel
 import com.microsoft.graph.models.DriveItem
 import com.microsoft.identity.client.AuthenticationCallback
+import com.microsoft.identity.client.IAccount
 import com.microsoft.identity.client.IAuthenticationResult
+import com.microsoft.identity.client.ISingleAccountPublicClientApplication
 import com.microsoft.identity.client.exception.MsalException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+
 @Composable
-fun MainScreen(taskViewModel: TaskViewModel = viewModel(factory = TaskViewModelFactory(
-    RoutineRepository(LocalContext.current)
-)
-)) {
+fun MainScreen(taskViewModel: TaskViewModel = viewModel(factory = TaskViewModelFactory(RoutineRepository(LocalContext.current)
+))) {
 
     val tasks by taskViewModel.tasks.collectAsState()
     val context = LocalContext.current
@@ -478,16 +521,31 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel(factory = TaskViewModelF
     val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(authenticationResult) {
-        authenticationResult?.let {
-            val authProvider = OneDriveManager.MsalAuthProvider(it)
+        authenticationResult?.let { authResult ->
+            val authProvider = OneDriveManager.MsalAuthProvider(authResult)
             val oneDriveManager = OneDriveManager(authProvider)
             coroutineScope.launch {
                 withContext(Dispatchers.IO) {
-                    oneDriveFiles = oneDriveManager.listFiles()
+                    val files = oneDriveManager.listFiles() // List root directory files
+                    val routineTurboDir = files.find { it.name == "RoutineTurbo" && it.folder != null }
+
+                    routineTurboDir?.let { dir ->
+                        val dirFiles = oneDriveManager.listFiles(dir.id) // List files in RoutineTurbo directory
+                        oneDriveFiles = dirFiles
+                        val dbFile = dirFiles.find { it.name == "RoutineTurbo.db" }
+                        dbFile?.let { driveItem ->
+                            driveItem.id?.let { driveItemId ->
+                                val localDbFile = context.getDatabasePath(DatabaseHelper.DATABASE_NAME)
+                                oneDriveManager.downloadFile(driveItemId, localDbFile)
+                                taskViewModel.loadTasks()
+                            }
+                        }
+                    }
                 }
             }
         }
     }
+
 
     DisposableEffect(Unit) {
         Log.d("MainScreen", "Starting sign-in process")
@@ -549,20 +607,35 @@ fun SignInButton(
         onClick = {
             Log.d("SignInButton", "Sign-in button clicked")
             isSigningIn = true
-            msalAuthManager.signIn(context as MainActivity, object : AuthenticationCallback {
-                override fun onSuccess(result: IAuthenticationResult) {
-                    Log.d("SignInButton", "Sign-in successful")
-                    isSigningIn = false
-                    onSignInSuccess(result)
+
+            // Check if an account is already signed in
+            msalAuthManager.singleAccountApp?.getCurrentAccountAsync(object : ISingleAccountPublicClientApplication.CurrentAccountCallback {
+                override fun onAccountLoaded(activeAccount: IAccount?) {
+                    if (activeAccount != null) {
+                        // An account is already signed in, sign out first
+                        msalAuthManager.signOut(object : ISingleAccountPublicClientApplication.SignOutCallback {
+                            override fun onSignOut() {
+                                Log.d("SignInButton", "Signed out successfully, now signing in again.")
+                                signIn(msalAuthManager, context as MainActivity, onSignInSuccess)
+                            }
+
+                            override fun onError(exception: MsalException) {
+                                Log.e("SignInButton", "Sign-out error: ${exception.message}")
+                                isSigningIn = false
+                            }
+                        })
+                    } else {
+                        // No account is signed in, proceed with sign-in
+                        signIn(msalAuthManager, context as MainActivity, onSignInSuccess)
+                    }
+                }
+
+                override fun onAccountChanged(priorAccount: IAccount?, currentAccount: IAccount?) {
+                    // Handle account change if needed
                 }
 
                 override fun onError(exception: MsalException) {
-                    Log.e("SignInButton", "Sign-in error: ${exception.message}")
-                    isSigningIn = false
-                }
-
-                override fun onCancel() {
-                    Log.d("SignInButton", "Sign-in canceled")
+                    Log.e("SignInButton", "Error loading current account: ${exception.message}")
                     isSigningIn = false
                 }
             })
@@ -572,6 +645,24 @@ fun SignInButton(
         Text(text = if (authenticationResult != null) "Signed In" else "Sign In")
     }
 }
+
+fun signIn(msalAuthManager: MSALAuthManager, activity: MainActivity, onSignInSuccess: (IAuthenticationResult) -> Unit) {
+    msalAuthManager.signIn(activity, object : AuthenticationCallback {
+        override fun onSuccess(result: IAuthenticationResult) {
+            Log.d("SignInButton", "Sign-in successful")
+            onSignInSuccess(result)
+        }
+
+        override fun onError(exception: MsalException) {
+            Log.e("SignInButton", "Sign-in error: ${exception.message}")
+        }
+
+        override fun onCancel() {
+            Log.d("SignInButton", "Sign-in canceled")
+        }
+    })
+}
+
 
 @Preview(showBackground = true)
 @Composable
@@ -843,7 +934,7 @@ class TaskViewModel(private val repository: RoutineRepository) : ViewModel() {
         loadTasks()
     }
 
-    private fun loadTasks() {
+    fun loadTasks() {
         viewModelScope.launch(Dispatchers.IO) {
             val taskList = repository.getAllTasks()
             _tasks.value = taskList

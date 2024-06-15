@@ -30,8 +30,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.app.routineturboa.MainActivity
 import com.app.routineturboa.data.local.DatabaseHelper
 import com.app.routineturboa.data.local.RoutineRepository
+import com.app.routineturboa.data.model.Task
 import com.app.routineturboa.services.MSALAuthManager
 import com.app.routineturboa.services.OneDriveManager
+import com.app.routineturboa.ui.components.EditTaskScreen
 import com.app.routineturboa.ui.components.TaskItem
 import com.app.routineturboa.viewmodel.TaskViewModel
 import com.microsoft.graph.models.DriveItem
@@ -44,12 +46,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-
 @Composable
-fun MainScreen(taskViewModel: TaskViewModel = viewModel(factory = TaskViewModelFactory(RoutineRepository(LocalContext.current)
-))) {
-
+fun MainScreen(taskViewModel: TaskViewModel = viewModel(factory = TaskViewModelFactory(RoutineRepository(LocalContext.current)))) {
     val tasks by taskViewModel.tasks.collectAsState()
+    var selectedTask by remember { mutableStateOf<Task?>(null) }
     val context = LocalContext.current
     val msalAuthManager = remember { MSALAuthManager(context) }
     var oneDriveFiles by remember { mutableStateOf<List<DriveItem>>(emptyList()) }
@@ -62,13 +62,12 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel(factory = TaskViewModelF
             val oneDriveManager = OneDriveManager(authProvider)
             coroutineScope.launch {
                 withContext(Dispatchers.IO) {
-                    val files = oneDriveManager.listFiles() // List root directory files
+                    val files = oneDriveManager.listFiles()
                     val routineTurboDir = files.find { it.name == "RoutineTurbo" && it.folder != null }
-
                     routineTurboDir?.let { dir ->
-                        val dirFiles = oneDriveManager.listFiles(dir.id) // List files in RoutineTurbo directory
+                        val dirFiles = oneDriveManager.listFiles(dir.id)
                         oneDriveFiles = dirFiles
-                        val dbFile = dirFiles.find { it.name == "routine_dev_data_onedrive.db" }
+                        val dbFile = dirFiles.find { it.name == "RoutineTurbo.db" }
                         dbFile?.let { driveItem ->
                             driveItem.id?.let { driveItemId ->
                                 val localDbFile = context.getDatabasePath(DatabaseHelper.DATABASE_NAME)
@@ -81,7 +80,6 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel(factory = TaskViewModelF
             }
         }
     }
-
 
     DisposableEffect(Unit) {
         Log.d("MainScreen", "Starting sign-in process")
@@ -106,26 +104,41 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel(factory = TaskViewModelF
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            SignInButton(msalAuthManager, authenticationResult) { result ->
-                authenticationResult = result
-            }
-            LazyColumn(
-                contentPadding = PaddingValues(5.dp),
-                verticalArrangement = Arrangement.spacedBy(3.dp)
+        if (selectedTask == null) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(tasks) { task ->
-                    TaskItem(task)
+                SignInButton(msalAuthManager, authenticationResult) { result ->
+                    authenticationResult = result
                 }
-                items(oneDriveFiles) { file ->
-                    Text(text = file.name ?: "No name")
+                LazyColumn(
+                    contentPadding = PaddingValues(5.dp),
+                    verticalArrangement = Arrangement.spacedBy(3.dp)
+                ) {
+                    items(tasks, key = { it.id }) { task ->
+                        TaskItem(task) {
+                            selectedTask = it
+                        }
+                    }
+                    items(oneDriveFiles, key = { it.id!! }) { file ->
+                        Text(text = file.name ?: "No name")
+                    }
                 }
             }
+        } else {
+            EditTaskScreen(
+                task = selectedTask!!,
+                onSave = { updatedTask ->
+                    taskViewModel.updateTask(updatedTask)
+                    selectedTask = null
+                },
+                onCancel = {
+                    selectedTask = null
+                }
+            )
         }
     }
 }
@@ -143,12 +156,9 @@ fun SignInButton(
         onClick = {
             Log.d("SignInButton", "Sign-in button clicked")
             isSigningIn = true
-
-            // Check if an account is already signed in
             msalAuthManager.singleAccountApp?.getCurrentAccountAsync(object : ISingleAccountPublicClientApplication.CurrentAccountCallback {
                 override fun onAccountLoaded(activeAccount: IAccount?) {
                     if (activeAccount != null) {
-                        // An account is already signed in, sign out first
                         msalAuthManager.signOut(object : ISingleAccountPublicClientApplication.SignOutCallback {
                             override fun onSignOut() {
                                 Log.d("SignInButton", "Signed out successfully, now signing in again.")
@@ -161,13 +171,11 @@ fun SignInButton(
                             }
                         })
                     } else {
-                        // No account is signed in, proceed with sign-in
                         signIn(msalAuthManager, context as MainActivity, onSignInSuccess)
                     }
                 }
 
                 override fun onAccountChanged(priorAccount: IAccount?, currentAccount: IAccount?) {
-                    // Handle account change if needed
                 }
 
                 override fun onError(exception: MsalException) {
@@ -198,7 +206,6 @@ fun signIn(msalAuthManager: MSALAuthManager, activity: MainActivity, onSignInSuc
         }
     })
 }
-
 
 @Preview(showBackground = true)
 @Composable

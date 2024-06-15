@@ -32,7 +32,7 @@ def combine_kt_files(source_directory, main_source_directory, output_file):
 
 source_directory = r'C:\Users\Vivid\AndroidStudioProjects\RoutineTurbo_android\app'
 main_source_directory = os.path.join(source_directory, 'src', 'main')
-output_file = 'combined.kt'
+output_file = 'combined'
 
 combine_kt_files(source_directory, main_source_directory, output_file)
 print(f"All relevant files have been combined into {output_file}")
