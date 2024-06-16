@@ -131,13 +131,22 @@ class MSALAuthManager(context: Context) {
         preferences.edit().putString("accountName", authResult.account?.username).apply()
     }
 
+
     private fun loadAuthResult() {
         val accessToken = preferences.getString("accessToken", null)
         val idToken = preferences.getString("idToken", null)
         val accountName = preferences.getString("accountName", null)
+
         if (accessToken != null && idToken != null && accountName != null) {
-            // You can create a mock IAuthenticationResult and set it to currentAccount
-            Log.d("MSALAuthManager", "Authentication result loaded from preferences")
+            // Using stored information to set current account
+            currentAccount = object : IAccount {
+                override fun getId(): String = "storedId"
+                override fun getUsername(): String = accountName
+                override fun getAuthority(): String = "storedAuthority"
+                override fun getClaims(): MutableMap<String, *>? = null
+                override fun getIdToken(): String = idToken
+                override fun getTenantId(): String = "storedTenantId" // Implementing the tenant ID method
+            }
         }
     }
 

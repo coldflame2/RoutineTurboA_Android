@@ -80,6 +80,7 @@ fun SignInButton(
                 }
             })
         },
+
         enabled = !isSigningIn // Disable button during sign-in process
     ) {
         Row {
@@ -99,6 +100,8 @@ fun SignInButton(
 
 fun signIn(msalAuthManager: MSALAuthManager, activity: MainActivity, onSignInSuccess: (IAuthenticationResult) -> Unit) {
     msalAuthManager.signIn(activity, object : AuthenticationCallback {
+
+
         override fun onSuccess(result: IAuthenticationResult) {
             Log.d("SignInButton", "Sign-in successful")
             onSignInSuccess(result)
