@@ -51,21 +51,50 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel(factory = TaskViewModelF
 
     LaunchedEffect(authenticationResult) {
         authenticationResult?.let { authResult ->
-            val authProvider = OneDriveManager.MsalAuthProvider(authResult)
-            val oneDriveManager = OneDriveManager(authProvider)
-            coroutineScope.launch(Dispatchers.IO) {
-                val files = oneDriveManager.listFiles()
+            coroutineScope.launch {
+                // Initialize OneDriveManager with the authentication result
+                val authProvider = OneDriveManager.MsalAuthProvider(authResult)
+                val oneDriveManager = OneDriveManager(authProvider)
+
+                // Fetch the list of files from the root directory of OneDrive
+                val files = withContext(Dispatchers.IO) {
+                    oneDriveManager.listFiles()
+                }
+
+                // Find the directory named "RoutineTurbo" that is also a folder
                 val routineTurboDir = files.find { it.name == "RoutineTurbo" && it.folder != null }
+
                 routineTurboDir?.let { dir ->
-                    val dirFiles = oneDriveManager.listFiles(dir.id)
-                    oneDriveFiles = dirFiles
-                    val dbFile = dirFiles.find { it.name == "RoutineTurbo.db" }
+                    // Fetch the list of files from the "RoutineTurbo" directory
+                    val dirFiles = dir.id?.let { dirId ->
+                        withContext(Dispatchers.IO) {
+                            oneDriveManager.listFiles(dirId)
+                        }
+                    }
+
+                    // Update the list of OneDrive files if `dirFiles` is not null
+                    if (dirFiles != null) {
+                        oneDriveFiles = dirFiles
+                    }
+
+                    // Find the database file named "RoutineTurbo.db" in the directory
+                    val dbFile = dirFiles?.find { it.name == "RoutineTurbo.db" }
+
                     dbFile?.let { driveItem ->
                         driveItem.id?.let { driveItemId ->
+                            // Get the local file path for the database
                             val localDbFile = context.getDatabasePath(DatabaseHelper.DATABASE_NAME)
-                            oneDriveManager.downloadFile(driveItemId, localDbFile)
-                            withContext(Dispatchers.Main) {
-                                taskViewModel.loadTasks()
+
+                            // Download the database file from OneDrive to the local file path
+                            val downloadSuccessful = withContext(Dispatchers.IO) {
+                                oneDriveManager.downloadFile(driveItemId, localDbFile)
+                            }
+
+                            // Load tasks from the local database into the ViewModel if the download is successful
+                            if (downloadSuccessful) {
+                                withContext(Dispatchers.Main) {
+                                    taskViewModel.loadTasks()
+                                }
                             }
                         }
                     }
@@ -73,6 +102,7 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel(factory = TaskViewModelF
             }
         }
     }
+
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -104,7 +134,9 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel(factory = TaskViewModelF
                     }
                 }
             }
-        } else {
+        }
+
+        else {
             EditTaskScreen(
                 task = selectedTask!!,
                 onSave = { updatedTask ->

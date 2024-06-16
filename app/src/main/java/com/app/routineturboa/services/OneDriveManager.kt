@@ -44,6 +44,7 @@ class OneDriveManager(private val authProvider: IAuthenticationProvider) {
     }
 
 
+    // Nested class for handling authentication
     class MsalAuthProvider(private val authenticationResult: IAuthenticationResult) : IAuthenticationProvider {
         override fun getAuthorizationTokenAsync(requestUrl: URL): CompletableFuture<String> {
             return CompletableFuture.completedFuture(authenticationResult.accessToken)
