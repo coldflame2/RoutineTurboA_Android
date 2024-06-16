@@ -6,12 +6,14 @@ import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import com.app.routineturboa.data.model.Task
 import com.app.routineturboa.utils.TimeUtils
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class RoutineRepository(context: Context) {
     private val dbHelper = DatabaseHelper(context)
     private val db: SQLiteDatabase = dbHelper.readableDatabase
 
-    fun getAllTasks(): List<Task> {
+    suspend fun getAllTasks(): List<Task> = withContext(Dispatchers.IO) {
         val tasks = mutableListOf<Task>()
         val cursor: Cursor = db.query(
             DatabaseHelper.DailyRoutine.TABLE_NAME,
@@ -54,10 +56,10 @@ class RoutineRepository(context: Context) {
             }
         }
         cursor.close()
-        return tasks
+        return@withContext tasks
     }
 
-    fun updateTask(task: Task) {
+    suspend fun updateTask(task: Task) = withContext(Dispatchers.IO) {
         val values = ContentValues().apply {
             val currentDate = "2024-01-01"  // Example, you should replace it with the actual date
             put(DatabaseHelper.DailyRoutine.COLUMN_NAME_START_TIME, TimeUtils.formatToDatabaseTime(currentDate, TimeUtils.convertTo24HourFormat(task.startTime)))

@@ -1,16 +1,18 @@
 I am building an Android app called routineTurboA (A stands for Android, just so you know). It's built using Kotlin and Compose and some other libraries. There's also OneDrive integration using MSAL, but it's not implemented properly yet. As of now, it only lists the files in OneDrive, and doesn't do with them anything.
 
-I will share the complete code from this project. Your job is to explain to me how the app works. Explain the code to me. I am new to Kotlin and Android Development. Explain the concepts as well, but mainly, I want to understand the Kotlin code, including the syntax.
+I will share the complete code from this project.
+
+Your job is to explain to me how the app works. Explain the code to me. I am new to Kotlin and Android Development. Explain the concepts as well, but mainly, I want to understand the Kotlin code, including the syntax.
 
 I have learned Python and have built a similar app in PC using PYQt6. But I noticed that Android Development and Kotlin is too complicated compared to Python.
 
-So I want to understand the concepts, as in the flow and everything, but also, the specific lines of code and how it works, including the syntax, the arguments for functinos, data types, etc. That's the part that I find complicated.
+So I want to understand the concepts, as in the flow and everything, but also, the specific lines of code and how it works, including the syntax, the arguments for functions, data types, etc. That's the part that I find complicated.
 
-Here's teh complete code:
+Here's the complete code:
 
-Let's start simple. Take the MainActivity for now. Explain only that. And then we will move forward.
+Let's start simple. Take the MainScreen for now. Explain only that. And then we will move forward.
 
-Make sure that you explain the specific parts of the code, not just the conceptual upper layer stuff. Because I understand MainActivity is the entry point. I understand the basic stuff related to functions, etc. But the code looks way too complex than it does in Python. So pleease explain in ways you tihnk is the best.
+Make sure that you explain the specific parts of the code, not just the conceptual higher layer stuff.  Please explain in ways you think is the best.
 
 Prompt 2 (Frame Skipping):
 

@@ -18,8 +18,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Initialize MSALAuthManager
-        msalAuthManager = MSALAuthManager(this)
+        msalAuthManager = MSALAuthManager.getInstance(this)
 
         setContent {
             RoutineTurboATheme {

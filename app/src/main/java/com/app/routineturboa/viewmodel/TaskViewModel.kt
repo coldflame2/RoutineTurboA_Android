@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.routineturboa.data.local.RoutineRepository
 import com.app.routineturboa.data.model.Task
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,18 +18,16 @@ class TaskViewModel(private val repository: RoutineRepository) : ViewModel() {
     }
 
     fun loadTasks() {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch {
             val taskList = repository.getAllTasks()
             _tasks.value = taskList
         }
     }
 
     fun updateTask(task: Task) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch {
             repository.updateTask(task)
             loadTasks()
         }
     }
-
 }
-

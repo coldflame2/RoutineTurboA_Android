@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.jetbrainsKotlinAndroid)
+    alias(libs.plugins.compose.compiler)
 }
 
 android {
@@ -41,7 +42,7 @@ android {
         compose = true
     }
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.1"
+        kotlinCompilerExtensionVersion = "1.5.1" // Ensure this version is compatible with Kotlin 1.9.0
     }
 
     packaging {
@@ -56,6 +57,8 @@ android {
 }
 
 dependencies {
+    implementation(libs.coil.compose)
+
     implementation(libs.msal)
     implementation(libs.volley)
     implementation(libs.graph)

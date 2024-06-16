@@ -1,11 +1,13 @@
 [versions]
 agp = "8.3.2"
-kotlin = "1.9.0"
 coreKtx = "1.13.1"
 junit = "4.13.2"
 junitVersion = "1.1.5"
 espressoCore = "3.5.1"
 lifecycleRuntimeKtx = "2.8.0"
+
+kotlin = "2.0.0"
+compose-plugin = "2.0.0" # Assuming the version matches Kotlin 2.0.0
 
 activityCompose = "1.9.0"
 composeBom = "2024.05.00"
@@ -16,7 +18,11 @@ msalVersion = "5.3.1"  # Define the version for MSAL
 volley = "1.2.1"
 graphVersion = "5.10.0"
 
+coilCompose = "2.6.0"
+
 [libraries]
+coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coilCompose" }
+
 #msal
 msal = { group = "com.microsoft.identity.client", name = "msal", version.ref = "msalVersion" }  # Define the MSAL library
 graph = { group = "com.microsoft.graph", name = "microsoft-graph", version.ref = "graphVersion" }
@@ -67,4 +73,5 @@ volley = { module = "com.android.volley:volley", version.ref = "volley" }
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
 jetbrainsKotlinAndroid = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "compose-plugin" }
 
