@@ -24,9 +24,23 @@ class TaskViewModel(private val repository: RoutineRepository) : ViewModel() {
         }
     }
 
+    fun addTask(task: Task) {
+        viewModelScope.launch {
+            repository.addTask(task)
+            loadTasks()
+        }
+    }
+
     fun updateTask(task: Task) {
         viewModelScope.launch {
             repository.updateTask(task)
+            loadTasks()
+        }
+    }
+
+    fun updatePositions(startPosition: Int) { // Added updatePositions method
+        viewModelScope.launch {
+            repository.updatePositions(startPosition)
             loadTasks()
         }
     }

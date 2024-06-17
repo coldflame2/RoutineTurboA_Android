@@ -4,7 +4,7 @@ com.app.routineturboa
 │
 ├── data
 │   ├── local
-│   │   ├── DatabaseHelper.kt
+│   │   ├── com.app.routineturboa.data.local.DatabaseHelper.kt
 │   │   ├── RoutineRepository.kt
 │   └── model
 │       ├── Task.kt
@@ -30,7 +30,7 @@ Explanation of Structure
 
 •	data
     •	local
-        •	DatabaseHelper.kt: Contains the database helper class.
+        •	com.app.routineturboa.data.local.DatabaseHelper.kt: Contains the database helper class.
         •	RoutineRepository.kt: Repository for data operations.
     •	model
         •	Task.kt: Data model representing a task.

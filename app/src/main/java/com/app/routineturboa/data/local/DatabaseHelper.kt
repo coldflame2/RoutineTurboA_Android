@@ -4,6 +4,7 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import android.os.Environment
+import android.util.Log
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -11,8 +12,7 @@ import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 
-class DatabaseHelper(private val context: Context) : SQLiteOpenHelper(
-    context, DATABASE_NAME, null, DATABASE_VERSION) {
+class DatabaseHelper(private val context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
 
     companion object {
         const val DATABASE_VERSION = 1
@@ -68,22 +68,29 @@ class DatabaseHelper(private val context: Context) : SQLiteOpenHelper(
         val dbPath: String = context.getDatabasePath(DATABASE_NAME).absolutePath
         val dbFile = File(dbPath)
         if (!dbFile.exists()) {
+            Log.d("DatabaseHelper", "Database does not exist, copying from external storage.")
             val externalDbPath = Environment.getExternalStorageDirectory().absolutePath + "/$DATABASE_NAME"
             val externalDbFile = File(externalDbPath)
+
             if (externalDbFile.exists()) {
+                Log.d("DatabaseHelper", "External database exists, copying from external storage.")
                 FileInputStream(externalDbFile).use { inputStream: InputStream ->
                     FileOutputStream(dbPath).use { outputStream: OutputStream ->
                         copyStream(inputStream, outputStream)
                     }
                 }
             } else {
+                Log.d("DatabaseHelper", "External database does not exist, copying from assets.")
                 context.assets.open(DATABASE_NAME).use { inputStream: InputStream ->
                     FileOutputStream(dbPath).use { outputStream: OutputStream ->
                         copyStream(inputStream, outputStream)
                     }
                 }
             }
+        } else {
+            Log.d("DatabaseHelper", "Database exists, skipping copy.")
         }
+
     }
 
     @Throws(IOException::class)

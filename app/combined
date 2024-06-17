@@ -13,7 +13,9 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        tools:targetApi="31">
+        tools:targetApi="31"
+        android:theme="@style/Theme.AppCompat.DayNight.NoActionBar">
+
         <activity
             android:name=".MainActivity"
             android:exported="true">
@@ -139,14 +141,25 @@ package com.app.routineturboa
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import com.app.routineturboa.services.MSALAuthManager
 import com.app.routineturboa.ui.MainScreen
 import com.app.routineturboa.ui.theme.RoutineTurboATheme
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class MainActivity : ComponentActivity() {
     private lateinit var msalAuthManager: MSALAuthManager
@@ -159,8 +172,9 @@ class MainActivity : ComponentActivity() {
         setContent {
             RoutineTurboATheme {
                 Surface {
-                    Column {
+                    Column{
                         Greeting()
+                        Spacer(modifier = Modifier.height(2.dp)) // Optional spacer
                         MainScreen()
                     }
                 }
@@ -170,9 +184,20 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun Greeting(){
-    Text(text = "Routine", style = MaterialTheme.typography.headlineLarge)
+fun Greeting() {
+    val currentDate = SimpleDateFormat("EEEE, MMMM d, yyyy", Locale.getDefault()).format(Date())
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+
+    ) {
+        Text(text = currentDate, style = MaterialTheme.typography.headlineLarge)
+    }
 }
+
 
 
 // Content from C:\Users\Vivid\AndroidStudioProjects\RoutineTurbo_android\app\src\main\java\com\app\routineturboa\MyApplication.kt
@@ -196,6 +221,7 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import android.os.Environment
+import android.util.Log
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -203,8 +229,7 @@ import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 
-class DatabaseHelper(private val context: Context) : SQLiteOpenHelper(
-    context, DATABASE_NAME, null, DATABASE_VERSION) {
+class DatabaseHelper(private val context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
 
     companion object {
         const val DATABASE_VERSION = 1
@@ -260,22 +285,29 @@ class DatabaseHelper(private val context: Context) : SQLiteOpenHelper(
         val dbPath: String = context.getDatabasePath(DATABASE_NAME).absolutePath
         val dbFile = File(dbPath)
         if (!dbFile.exists()) {
+            Log.d("DatabaseHelper", "Database does not exist, copying from external storage.")
             val externalDbPath = Environment.getExternalStorageDirectory().absolutePath + "/$DATABASE_NAME"
             val externalDbFile = File(externalDbPath)
+
             if (externalDbFile.exists()) {
+                Log.d("DatabaseHelper", "External database exists, copying from external storage.")
                 FileInputStream(externalDbFile).use { inputStream: InputStream ->
                     FileOutputStream(dbPath).use { outputStream: OutputStream ->
                         copyStream(inputStream, outputStream)
                     }
                 }
             } else {
+                Log.d("DatabaseHelper", "External database does not exist, copying from assets.")
                 context.assets.open(DATABASE_NAME).use { inputStream: InputStream ->
                     FileOutputStream(dbPath).use { outputStream: OutputStream ->
                         copyStream(inputStream, outputStream)
                     }
                 }
             }
+        } else {
+            Log.d("DatabaseHelper", "Database exists, skipping copy.")
         }
+
     }
 
     @Throws(IOException::class)
@@ -287,7 +319,6 @@ class DatabaseHelper(private val context: Context) : SQLiteOpenHelper(
         }
     }
 }
-
 
 // Content from C:\Users\Vivid\AndroidStudioProjects\RoutineTurbo_android\app\src\main\java\com\app\routineturboa\data\local\RoutineRepository.kt
 package com.app.routineturboa.data.local
@@ -349,6 +380,20 @@ class RoutineRepository(context: Context) {
         }
         cursor.close()
         return@withContext tasks
+    }
+
+    suspend fun addTask(task: Task) = withContext(Dispatchers.IO) {
+        val values = ContentValues().apply {
+            val currentDate = "2024-01-01"  // Example, you should replace it with the actual date
+            put(DatabaseHelper.DailyRoutine.COLUMN_NAME_START_TIME, TimeUtils.formatToDatabaseTime(currentDate, TimeUtils.convertTo24HourFormat(task.startTime)))
+            put(DatabaseHelper.DailyRoutine.COLUMN_NAME_END_TIME, TimeUtils.formatToDatabaseTime(currentDate, TimeUtils.convertTo24HourFormat(task.endTime)))
+            put(DatabaseHelper.DailyRoutine.COLUMN_NAME_DURATION, task.duration)
+            put(DatabaseHelper.DailyRoutine.COLUMN_NAME_TASK_NAME, task.taskName)
+            put(DatabaseHelper.DailyRoutine.COLUMN_NAME_REMINDERS, task.reminders)
+            put(DatabaseHelper.DailyRoutine.COLUMN_NAME_TYPE, task.type)
+            put(DatabaseHelper.DailyRoutine.COLUMN_NAME_POSITION, task.position)
+        }
+        db.insert(DatabaseHelper.DailyRoutine.TABLE_NAME, null, values)
     }
 
     suspend fun updateTask(task: Task) = withContext(Dispatchers.IO) {
@@ -597,6 +642,7 @@ class OneDriveManager(private val authProvider: IAuthenticationProvider) {
     }
 
 
+    // Nested class for handling authentication
     class MsalAuthProvider(private val authenticationResult: IAuthenticationResult) : IAuthenticationProvider {
         override fun getAuthorizationTokenAsync(requestUrl: URL): CompletableFuture<String> {
             return CompletableFuture.completedFuture(authenticationResult.accessToken)
@@ -606,16 +652,21 @@ class OneDriveManager(private val authProvider: IAuthenticationProvider) {
 
 
 // Content from C:\Users\Vivid\AndroidStudioProjects\RoutineTurbo_android\app\src\main\java\com\app\routineturboa\ui\MainScreen.kt
+// In MainScreen.kt
 package com.app.routineturboa.ui
 
 import TaskViewModelFactory
+import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -627,6 +678,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
@@ -637,6 +689,7 @@ import com.app.routineturboa.data.local.RoutineRepository
 import com.app.routineturboa.data.model.Task
 import com.app.routineturboa.services.MSALAuthManager
 import com.app.routineturboa.services.OneDriveManager
+import com.app.routineturboa.ui.components.AddTaskScreen
 import com.app.routineturboa.ui.components.EditTaskScreen
 import com.app.routineturboa.ui.components.SignInButton
 import com.app.routineturboa.ui.components.TaskItem
@@ -651,6 +704,7 @@ import kotlinx.coroutines.withContext
 fun MainScreen(taskViewModel: TaskViewModel = viewModel(factory = TaskViewModelFactory(RoutineRepository(LocalContext.current)))) {
     val tasks by taskViewModel.tasks.collectAsState()
     var selectedTask by remember { mutableStateOf<Task?>(null) }
+    var isAddingTask by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val msalAuthManager = remember { MSALAuthManager.getInstance(context) }
     var oneDriveFiles by remember { mutableStateOf<List<DriveItem>>(emptyList()) }
@@ -659,25 +713,9 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel(factory = TaskViewModelF
 
     LaunchedEffect(authenticationResult) {
         authenticationResult?.let { authResult ->
-            val authProvider = OneDriveManager.MsalAuthProvider(authResult)
-            val oneDriveManager = OneDriveManager(authProvider)
-            coroutineScope.launch(Dispatchers.IO) {
-                val files = oneDriveManager.listFiles()
-                val routineTurboDir = files.find { it.name == "RoutineTurbo" && it.folder != null }
-                routineTurboDir?.let { dir ->
-                    val dirFiles = oneDriveManager.listFiles(dir.id)
-                    oneDriveFiles = dirFiles
-                    val dbFile = dirFiles.find { it.name == "RoutineTurbo.db" }
-                    dbFile?.let { driveItem ->
-                        driveItem.id?.let { driveItemId ->
-                            val localDbFile = context.getDatabasePath(DatabaseHelper.DATABASE_NAME)
-                            oneDriveManager.downloadFile(driveItemId, localDbFile)
-                            withContext(Dispatchers.Main) {
-                                taskViewModel.loadTasks()
-                            }
-                        }
-                    }
-                }
+            coroutineScope.launch {
+                downloadFromOneDrive(authResult, context)
+                taskViewModel.loadTasks()
             }
         }
     }
@@ -686,12 +724,32 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel(factory = TaskViewModelF
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
     ) {
-        if (selectedTask == null) {
+        if (isAddingTask) {
+            AddTaskScreen(
+                onSave = { newTask ->
+                    taskViewModel.addTask(newTask)
+                    isAddingTask = false
+                },
+                onCancel = {
+                    isAddingTask = false
+                }
+            )
+        } else if (selectedTask != null) {
+            EditTaskScreen(
+                task = selectedTask!!,
+                onSave = { updatedTask ->
+                    taskViewModel.updateTask(updatedTask)
+                    selectedTask = null
+                },
+                onCancel = {
+                    selectedTask = null
+                }
+            )
+        } else {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                    .padding(16.dp)
             ) {
                 SignInButton(msalAuthManager, authenticationResult) { result ->
                     authenticationResult = result
@@ -699,6 +757,7 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel(factory = TaskViewModelF
                 }
 
                 LazyColumn(
+                    modifier = Modifier.weight(1f),
                     contentPadding = PaddingValues(5.dp),
                     verticalArrangement = Arrangement.spacedBy(3.dp)
                 ) {
@@ -711,18 +770,53 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel(factory = TaskViewModelF
                         Text(text = file.name ?: "No name")
                     }
                 }
-            }
-        } else {
-            EditTaskScreen(
-                task = selectedTask!!,
-                onSave = { updatedTask ->
-                    taskViewModel.updateTask(updatedTask)
-                    selectedTask = null
-                },
-                onCancel = {
-                    selectedTask = null
+
+                Spacer(modifier = Modifier.height(36.dp))
+
+                Button(
+                    onClick = { isAddingTask = true },
+                    modifier = Modifier.align(alignment = Alignment.CenterHorizontally)
+                ) {
+                    Text("Add New Task")
                 }
-            )
+            }
+        }
+    }
+}
+
+suspend fun downloadFromOneDrive(authResult: IAuthenticationResult, context: Context) {
+    val authProvider = OneDriveManager.MsalAuthProvider(authResult)
+    val oneDriveManager = OneDriveManager(authProvider)
+
+    // Fetch the list of files from the root directory of OneDrive
+    val files = withContext(Dispatchers.IO) {
+        oneDriveManager.listFiles()
+    }
+
+    // Find the directory named "RoutineTurbo"
+    val routineTurboDir = files.find { it.name == "RoutineTurbo" && it.folder != null }
+
+    routineTurboDir?.let { dir ->
+        // Fetch the list of files from the "RoutineTurbo" directory
+        val dirFiles = dir.id?.let { dirId ->
+            withContext(Dispatchers.IO) {
+                oneDriveManager.listFiles(dirId)
+            }
+        }
+
+        // Find "RoutineTurbo.db" among the files
+        val dbFile = dirFiles?.find { it.name == "RoutineTurbo.db" }
+
+        dbFile?.let { driveItem ->
+            driveItem.id?.let { driveItemId ->
+                // Get the local file path for the database
+                val localDbFile = context.getDatabasePath(DatabaseHelper.DATABASE_NAME)
+
+                // Download the database file from OneDrive to the local file path
+                withContext(Dispatchers.IO) {
+                    oneDriveManager.downloadFile(driveItemId, localDbFile)
+                }
+            }
         }
     }
 }
@@ -731,6 +825,140 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel(factory = TaskViewModelF
 @Composable
 fun MainScreenPreview() {
     MainScreen()
+}
+
+
+// Content from C:\Users\Vivid\AndroidStudioProjects\RoutineTurbo_android\app\src\main\java\com\app\routineturboa\ui\components\AddTaskScreen.kt
+// In AddTaskScreen.kt
+package com.app.routineturboa.ui.components
+
+import android.widget.Toast
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import com.app.routineturboa.data.model.Task
+import com.app.routineturboa.utils.TimeUtils
+import java.text.ParseException
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AddTaskScreen(
+    onSave: (Task) -> Unit,
+    onCancel: () -> Unit
+) {
+    var taskName by remember { mutableStateOf("") }
+    var startTime by remember { mutableStateOf("") }
+    var endTime by remember { mutableStateOf("") }
+    var duration by remember { mutableStateOf("") }
+
+    val context = LocalContext.current
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.background,
+        contentColor = MaterialTheme.colorScheme.onBackground
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            TextField(
+                value = taskName,
+                onValueChange = { taskName = it },
+                label = { Text("Task Name") },
+                modifier = Modifier.fillMaxWidth(),
+                colors = TextFieldDefaults.textFieldColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                    unfocusedIndicatorColor = MaterialTheme.colorScheme.onSurface
+                )
+            )
+            TextField(
+                value = startTime,
+                onValueChange = { startTime = it },
+                label = { Text("Start Time (hh:mm a)") },
+                modifier = Modifier.fillMaxWidth(),
+                colors = TextFieldDefaults.textFieldColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                    unfocusedIndicatorColor = MaterialTheme.colorScheme.onSurface
+                )
+            )
+            TextField(
+                value = endTime,
+                onValueChange = { endTime = it },
+                label = { Text("End Time (hh:mm a)") },
+                modifier = Modifier.fillMaxWidth(),
+                colors = TextFieldDefaults.textFieldColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                    unfocusedIndicatorColor = MaterialTheme.colorScheme.onSurface
+                )
+            )
+            TextField(
+                value = duration,
+                onValueChange = { duration = it },
+                label = { Text("Duration") },
+                keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth(),
+                colors = TextFieldDefaults.textFieldColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                    unfocusedIndicatorColor = MaterialTheme.colorScheme.onSurface
+                )
+            )
+            Row(
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Button(onClick = { onCancel() }) {
+                    Text("Cancel")
+                }
+                Button(onClick = {
+                    if (TimeUtils.isValidTimeFormat(startTime) && TimeUtils.isValidTimeFormat(endTime)) {
+                        try {
+                            val newTask = Task(
+                                id = 0, // ID will be auto-generated by the database
+                                taskName = taskName,
+                                startTime = startTime,
+                                endTime = endTime,
+                                duration = duration.toInt(),
+                                reminders = "", // You can add a field for reminders if necessary
+                                type = "", // You can add a field for type if necessary
+                                position = 0 // Position can be managed as needed
+                            )
+                            onSave(newTask)
+                        } catch (e: ParseException) {
+                            Toast.makeText(context, "Invalid time format", Toast.LENGTH_SHORT).show()
+                        }
+                    } else {
+                        Toast.makeText(context, "Please enter valid times in hh:mm a format", Toast.LENGTH_SHORT).show()
+                    }
+                }) {
+                    Text("Save")
+                }
+            }
+        }
+    }
 }
 
 
@@ -948,6 +1176,7 @@ fun SignInButton(
                 }
             })
         },
+
         enabled = !isSigningIn // Disable button during sign-in process
     ) {
         Row {
@@ -967,6 +1196,7 @@ fun SignInButton(
 
 fun signIn(msalAuthManager: MSALAuthManager, activity: MainActivity, onSignInSuccess: (IAuthenticationResult) -> Unit) {
     msalAuthManager.signIn(activity, object : AuthenticationCallback {
+
         override fun onSuccess(result: IAuthenticationResult) {
             Log.d("SignInButton", "Sign-in successful")
             onSignInSuccess(result)
@@ -1064,39 +1294,6 @@ fun TaskItem(task: Task, onEditClick: (Task) -> Unit) {
 }
 
 
-// Content from C:\Users\Vivid\AndroidStudioProjects\RoutineTurbo_android\app\src\main\java\com\app\routineturboa\ui\components\TaskItemComposable_simple.kt
-package com.app.routineturboa.ui.components
-
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Task
-import androidx.compose.material3.Card
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import com.app.routineturboa.data.model.Task
-import com.app.routineturboa.utils.TimeUtils.convertTo12HourFormat
-
-@Composable
-fun TaskItemComposable(task: Task) {
-    Card{
-        Column{
-            Row{
-                Text(text = task.taskName)
-                Icon(imageVector = Icons.Default.Task,
-                    contentDescription = null)
-            }
-            Row{
-                Text(text = "${convertTo12HourFormat(task.startTime.split(" ")[1])} - ${convertTo12HourFormat(task.endTime.split(" ")[1])}")
-                Text(text = "${task.duration} minutes")
-            }
-        }
-    }
-}
-
-
-
 // Content from C:\Users\Vivid\AndroidStudioProjects\RoutineTurbo_android\app\src\main\java\com\app\routineturboa\ui\theme\Color.kt
 package com.app.routineturboa.ui.theme
 
@@ -1114,10 +1311,13 @@ val Pink40 = Color(0xFF7D5260)
 package com.app.routineturboa.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 
 
@@ -1144,13 +1344,18 @@ fun RoutineTurboATheme(
 
         )
     }
-
     MaterialTheme(
         colorScheme = colorScheme,
-        content = content
+        content = {
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = MaterialTheme.colorScheme.background
+            ) {
+                content()
+            }
+        }
     )
 }
-
 
 // Content from C:\Users\Vivid\AndroidStudioProjects\RoutineTurbo_android\app\src\main\java\com\app\routineturboa\ui\theme\Type.kt
 package com.app.routineturboa.ui.theme
@@ -1258,6 +1463,13 @@ class TaskViewModel(private val repository: RoutineRepository) : ViewModel() {
         }
     }
 
+    fun addTask(task: Task) {
+        viewModelScope.launch {
+            repository.addTask(task)
+            loadTasks()
+        }
+    }
+
     fun updateTask(task: Task) {
         viewModelScope.launch {
             repository.updateTask(task)
@@ -1265,6 +1477,7 @@ class TaskViewModel(private val repository: RoutineRepository) : ViewModel() {
         }
     }
 }
+
 
 
 // Content from C:\Users\Vivid\AndroidStudioProjects\RoutineTurbo_android\app\src\main\java\com\app\routineturboa\viewmodel\TaskViewModelFactory.kt

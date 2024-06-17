@@ -1,6 +1,7 @@
 package com.app.routineturboa.ui.components
 
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,19 +20,21 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.app.routineturboa.data.model.Task
 
 @Composable
-fun TaskItem(task: Task, onEditClick: (Task) -> Unit) {
+fun TaskItem(task: Task, isSelected: Boolean, onEditClick: (Task) -> Unit, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .padding(1.dp)
             .fillMaxWidth()
-            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp)),
+            .border(1.dp, if (isSelected) Color.Blue else MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
+            .clickable(onClick = onClick), // Make the task item clickable
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.background
+            containerColor = if (isSelected) Color.LightGray else MaterialTheme.colorScheme.background // Change color if selected
         ),
         elevation = CardDefaults.cardElevation(3.dp)
     ) {

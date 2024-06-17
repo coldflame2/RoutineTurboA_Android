@@ -59,6 +59,20 @@ class RoutineRepository(context: Context) {
         return@withContext tasks
     }
 
+    suspend fun addTask(task: Task) = withContext(Dispatchers.IO) {
+        val values = ContentValues().apply {
+            val currentDate = "2024-01-01"  // Example, you should replace it with the actual date
+            put(DatabaseHelper.DailyRoutine.COLUMN_NAME_START_TIME, TimeUtils.formatToDatabaseTime(currentDate, TimeUtils.convertTo24HourFormat(task.startTime)))
+            put(DatabaseHelper.DailyRoutine.COLUMN_NAME_END_TIME, TimeUtils.formatToDatabaseTime(currentDate, TimeUtils.convertTo24HourFormat(task.endTime)))
+            put(DatabaseHelper.DailyRoutine.COLUMN_NAME_DURATION, task.duration)
+            put(DatabaseHelper.DailyRoutine.COLUMN_NAME_TASK_NAME, task.taskName)
+            put(DatabaseHelper.DailyRoutine.COLUMN_NAME_REMINDERS, task.reminders)
+            put(DatabaseHelper.DailyRoutine.COLUMN_NAME_TYPE, task.type)
+            put(DatabaseHelper.DailyRoutine.COLUMN_NAME_POSITION, task.position)
+        }
+        db.insert(DatabaseHelper.DailyRoutine.TABLE_NAME, null, values)
+    }
+
     suspend fun updateTask(task: Task) = withContext(Dispatchers.IO) {
         val values = ContentValues().apply {
             val currentDate = "2024-01-01"  // Example, you should replace it with the actual date
@@ -79,4 +93,10 @@ class RoutineRepository(context: Context) {
             selectionArgs
         )
     }
+
+    suspend fun updatePositions(startPosition: Int) = withContext(Dispatchers.IO) {
+        val updateQuery = "UPDATE ${DatabaseHelper.DailyRoutine.TABLE_NAME} SET ${DatabaseHelper.DailyRoutine.COLUMN_NAME_POSITION} = ${DatabaseHelper.DailyRoutine.COLUMN_NAME_POSITION} + 1 WHERE ${DatabaseHelper.DailyRoutine.COLUMN_NAME_POSITION} >= ?" // Added query to update positions
+        db.execSQL(updateQuery, arrayOf(startPosition)) // Execute the query with the start position
+    }
+
 }

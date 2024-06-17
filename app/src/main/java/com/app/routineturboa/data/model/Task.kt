@@ -8,5 +8,5 @@ data class Task(
     val taskName: String,
     val reminders: String,
     val type: String,
-    val position: Int
+    var position: Int
 )

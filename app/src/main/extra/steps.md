@@ -4,7 +4,7 @@ To integrate OneDrive in your Android app, you'll follow a roadmap similar to th
 
 - **`MainActivity.kt`**: Entry point of the app.
 - **`data/local`**: Handles local data storage and retrieval.
-    - **`DatabaseHelper.kt`**: Manages SQLite database operations.
+    - **`com.app.routineturboa.data.local.DatabaseHelper.kt`**: Manages SQLite database operations.
     - **`RoutineRepository.kt`**: Likely manages data operations and serves as an intermediary between the ViewModel and the database.
 - **`data/model`**: Defines the data models used in the app.
     - **`Task.kt`**: Represents a task object.
@@ -34,7 +34,7 @@ To integrate OneDrive in your Android app, you'll follow a roadmap similar to th
     - A new helper class to manage OneDrive operations (similar to `OneDriveUploader`).
     - Use Microsoft Graph SDK to interact with OneDrive.
 
-### 4. **Modify `DatabaseHelper.kt` to Sync with OneDrive**
+### 4. **Modify `com.app.routineturboa.data.local.DatabaseHelper.kt` to Sync with OneDrive**
 
 - **Upload Database:**
     - Implement a method to upload the SQLite database file to OneDrive.
@@ -78,7 +78,7 @@ To integrate OneDrive in your Android app, you'll follow a roadmap similar to th
         - `uploadFile()` to upload the database.
         - `downloadFile()` to download the database.
 
-4. **Sync Methods in `DatabaseHelper.kt`:**
+4. **Sync Methods in `com.app.routineturboa.data.local.DatabaseHelper.kt`:**
     - Add methods for exporting and importing the database.
     - Use `OneDriveHelper` to upload and download the database file.
 

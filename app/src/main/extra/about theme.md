@@ -147,8 +147,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Initialize DatabaseHelper to ensure database is copied and set up
-        DatabaseHelper(this).readableDatabase
+        // Initialize com.app.routineturboa.data.local.DatabaseHelper to ensure database is copied and set up
+        com.app.routineturboa.data.local.DatabaseHelper(this).readableDatabase
 
         setContent {
             RoutineTurboATheme {
