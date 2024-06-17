@@ -39,6 +39,7 @@ import com.app.routineturboa.ui.components.AddTaskScreen
 import com.app.routineturboa.ui.components.EditTaskScreen
 import com.app.routineturboa.ui.components.SignInButton
 import com.app.routineturboa.ui.components.TaskItem
+import com.app.routineturboa.utils.TimeUtils
 import com.app.routineturboa.viewmodel.TaskViewModel
 import com.microsoft.graph.models.DriveItem
 import com.microsoft.identity.client.IAuthenticationResult
@@ -49,20 +50,19 @@ import kotlinx.coroutines.withContext
 @Composable
 fun MainScreen(taskViewModel: TaskViewModel = viewModel(factory = TaskViewModelFactory(RoutineRepository(LocalContext.current)))) {
     val tasks by taskViewModel.tasks.collectAsState()
-    var selectedTaskForDisplay by remember { mutableStateOf<Task?>(null) } // Added tracking for selected task for display
-    var taskBeingEdited by remember { mutableStateOf<Task?>(null) } // Added tracking for task being edited
+    var selectedTaskForDisplay by remember { mutableStateOf<Task?>(null) }
+    var taskBeingEdited by remember { mutableStateOf<Task?>(null) }
     var isAddingTask by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val msalAuthManager = remember { MSALAuthManager.getInstance(context) }
-    val oneDriveFiles by remember { mutableStateOf<List<DriveItem>>(emptyList()) }
+    var oneDriveFiles by remember { mutableStateOf<List<DriveItem>>(emptyList()) }
     var authenticationResult by remember { mutableStateOf<IAuthenticationResult?>(null) }
     val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(authenticationResult) {
         authenticationResult?.let { authResult ->
             coroutineScope.launch {
-                downloadFromOneDrive(authResult, context)
-                taskViewModel.loadTasks()
+                downloadFromOneDrive(authResult, context, taskViewModel)
             }
         }
     }
@@ -71,116 +71,164 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel(factory = TaskViewModelF
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp)
-        ) {
-            // Display the currently selected task
-            Text(
-                text = selectedTaskForDisplay?.let { "Selected Task: ${it.taskName}" } ?: "No Task Selected",
-                style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.padding(bottom = 16.dp) // Added padding for spacing
+        MainContent(
+            tasks = tasks,
+            selectedTaskForDisplay = selectedTaskForDisplay,
+            taskBeingEdited = taskBeingEdited,
+            isAddingTask = isAddingTask,
+            msalAuthManager = msalAuthManager,
+            authenticationResult = authenticationResult,
+            oneDriveFiles = oneDriveFiles,
+            onTaskSelected = { selectedTaskForDisplay = it },
+            onTaskEdited = { taskBeingEdited = it },
+            onAddTask = { isAddingTask = true },
+            onCancelAddTask = { isAddingTask = false },
+            onSaveTask = { newTask, selectedTask ->
+                handleSaveTask(newTask, selectedTask, taskViewModel, tasks)
+                isAddingTask = false
+            },
+            onSignInSuccess = { result ->
+                authenticationResult = result
+                msalAuthManager.saveAuthResult(result)
+            }
+        )
+    }
+}
+
+@Composable
+fun MainContent(
+    tasks: List<Task>,
+    selectedTaskForDisplay: Task?,
+    taskBeingEdited: Task?,
+    isAddingTask: Boolean,
+    msalAuthManager: MSALAuthManager,
+    authenticationResult: IAuthenticationResult?,
+    oneDriveFiles: List<DriveItem>,
+    onTaskSelected: (Task?) -> Unit,
+    onTaskEdited: (Task?) -> Unit,
+    onAddTask: () -> Unit,
+    onCancelAddTask: () -> Unit,
+    onSaveTask: (Task, Task?) -> Unit,
+    onSignInSuccess: (IAuthenticationResult) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(50.dp)
+    ) {
+        Text(
+            text = selectedTaskForDisplay?.let { "Selected Task: ${it.taskName}" } ?: "No Task Selected",
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.padding(bottom = 36.dp)
+        )
+
+        if (isAddingTask) {
+            val initialStartTime = selectedTaskForDisplay?.endTime ?: if (tasks.isNotEmpty()) tasks.last().endTime else "08:00 AM"
+            AddTaskScreen(
+                initialStartTime = initialStartTime,
+                onSave = { newTask -> onSaveTask(newTask, selectedTaskForDisplay) },
+                onCancel = onCancelAddTask
             )
-
-            if (isAddingTask) {
-                AddTaskScreen(
-                    onSave = { newTask ->
-                        selectedTaskForDisplay?.let { // Added to check if a task is selected
-                            taskViewModel.updatePositions(it.position + 1) // Added to update positions of tasks below the new task
-                            newTask.position = it.position + 1 // Added to set the position of the new task
-                            taskViewModel.addTask(newTask)
-                        } ?: run {
-                            newTask.position = tasks.size + 1 // Set position if no task is selected
-                            taskViewModel.addTask(newTask)
-                        }
-                        isAddingTask = false
-                    },
-                    onCancel = {
-                        isAddingTask = false
-                    }
-                )
-            } else if (taskBeingEdited != null) { // Check if a task is selected for editing
-                EditTaskScreen(
-                    task = taskBeingEdited!!,
-                    onSave = { updatedTask ->
-                        taskViewModel.updateTask(updatedTask)
-                        taskBeingEdited = null
-                    },
-                    onCancel = {
-                        taskBeingEdited = null
-                    }
-                )
-            } else {
-                SignInButton(msalAuthManager, authenticationResult) { result ->
-                    authenticationResult = result
-                    msalAuthManager.saveAuthResult(result)
+        } else if (taskBeingEdited != null) {
+            EditTaskScreen(
+                task = taskBeingEdited,
+                onSave = { updatedTask ->
+                    onTaskEdited(null)
+                },
+                onCancel = {
+                    onTaskEdited(null)
                 }
+            )
+        } else {
+            SignInButton(msalAuthManager, authenticationResult, onSignInSuccess)
 
-                LazyColumn(
-                    modifier = Modifier.weight(1f),
-                    contentPadding = PaddingValues(5.dp),
-                    verticalArrangement = Arrangement.spacedBy(3.dp)
-                ) {
-                    items(tasks, key = { it.id }) { task ->
-                        TaskItem(
-                            task = task,
-                            isSelected = task == selectedTaskForDisplay, // Pass whether the task is selected
-                            onEditClick = { taskBeingEdited = it }, // Set the task to be edited
-                            onClick = { selectedTaskForDisplay = task } // Update the selected task when clicked
-                        )
-                    }
-                    items(oneDriveFiles, key = { it.id!! }) { file ->
-                        Text(text = file.name ?: "No name")
-                    }
+            LazyColumn(
+                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(5.dp),
+                verticalArrangement = Arrangement.spacedBy(3.dp)
+            ) {
+                items(tasks, key = { it.id }) { task ->
+                    TaskItem(
+                        task = task,
+                        isSelected = task == selectedTaskForDisplay,
+                        onEditClick = { onTaskEdited(it) },
+                        onClick = { onTaskSelected(task) }
+                    )
                 }
-
-                Spacer(modifier = Modifier.height(36.dp))
-
-                Button(
-                    onClick = { isAddingTask = true },
-                    modifier = Modifier.align(alignment = Alignment.CenterHorizontally)
-                ) {
-                    Text("Add New Task")
+                items(oneDriveFiles, key = { it.id!! }) { file ->
+                    Text(text = file.name ?: "No name")
                 }
+            }
+
+            Spacer(modifier = Modifier.height(36.dp))
+
+            Button(
+                onClick = onAddTask,
+                modifier = Modifier.align(alignment = Alignment.CenterHorizontally)
+            ) {
+                Text("Add New Task")
             }
         }
     }
 }
 
-suspend fun downloadFromOneDrive(authResult: IAuthenticationResult, context: Context) {
+private suspend fun downloadFromOneDrive(authResult: IAuthenticationResult, context: Context, taskViewModel: TaskViewModel) {
     val authProvider = OneDriveManager.MsalAuthProvider(authResult)
     val oneDriveManager = OneDriveManager(authProvider)
 
-    // Fetch the list of files from the root directory of OneDrive
     val files = withContext(Dispatchers.IO) {
         oneDriveManager.listFiles()
     }
 
-    // Find the directory named "RoutineTurbo"
     val routineTurboDir = files.find { it.name == "RoutineTurbo" && it.folder != null }
 
     routineTurboDir?.let { dir ->
-        // Fetch the list of files from the "RoutineTurbo" directory
         val dirFiles = dir.id?.let { dirId ->
             withContext(Dispatchers.IO) {
                 oneDriveManager.listFiles(dirId)
             }
         }
 
-        // Find "RoutineTurbo.db" among the files
         val dbFile = dirFiles?.find { it.name == "RoutineTurbo.db" }
 
         dbFile?.let { driveItem ->
             driveItem.id?.let { driveItemId ->
-                // Get the local file path for the database
                 val localDbFile = context.getDatabasePath(DatabaseHelper.DATABASE_NAME)
-
-                // Download the database file from OneDrive to the local file path
                 withContext(Dispatchers.IO) {
                     oneDriveManager.downloadFile(driveItemId, localDbFile)
                 }
             }
+        }
+    }
+    taskViewModel.loadTasks()
+}
+
+private fun handleSaveTask(
+    newTask: Task,
+    selectedTaskForDisplay: Task?,
+    taskViewModel: TaskViewModel,
+    tasks: List<Task>
+) {
+    selectedTaskForDisplay?.let { selectedTask ->
+        val newStartTime = selectedTask.endTime
+        newTask.startTime = newStartTime
+        newTask.endTime = TimeUtils.addDurationToTime(newStartTime, newTask.duration)
+        taskViewModel.updatePositions(selectedTask.position + 1)
+        newTask.position = selectedTask.position + 1
+        taskViewModel.addTask(newTask)
+        taskViewModel.adjustSubsequentTasks(newTask.position, newTask.endTime)
+    } ?: run {
+        if (tasks.isNotEmpty()) {
+            val lastTask = tasks.last()
+            newTask.startTime = lastTask.endTime
+            newTask.endTime = TimeUtils.addDurationToTime(newTask.startTime, newTask.duration)
+            newTask.position = tasks.size + 1
+            taskViewModel.addTask(newTask)
+        } else {
+            newTask.startTime = "08:00 AM"
+            newTask.endTime = TimeUtils.addDurationToTime(newTask.startTime, newTask.duration)
+            newTask.position = 1
+            taskViewModel.addTask(newTask)
         }
     }
 }

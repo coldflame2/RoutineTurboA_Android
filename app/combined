@@ -416,6 +416,12 @@ class RoutineRepository(context: Context) {
             selectionArgs
         )
     }
+
+    suspend fun updatePositions(startPosition: Int) = withContext(Dispatchers.IO) {
+        val updateQuery = "UPDATE ${DatabaseHelper.DailyRoutine.TABLE_NAME} SET ${DatabaseHelper.DailyRoutine.COLUMN_NAME_POSITION} = ${DatabaseHelper.DailyRoutine.COLUMN_NAME_POSITION} + 1 WHERE ${DatabaseHelper.DailyRoutine.COLUMN_NAME_POSITION} >= ?" // Added query to update positions
+        db.execSQL(updateQuery, arrayOf(startPosition)) // Execute the query with the start position
+    }
+
 }
 
 
@@ -424,13 +430,13 @@ package com.app.routineturboa.data.model
 
 data class Task(
     val id: Int,
-    val startTime: String,
-    val endTime: String,
+    var startTime: String,
+    var endTime: String,
     val duration: Int,
     val taskName: String,
     val reminders: String,
     val type: String,
-    val position: Int
+    var position: Int
 )
 
 
@@ -693,6 +699,7 @@ import com.app.routineturboa.ui.components.AddTaskScreen
 import com.app.routineturboa.ui.components.EditTaskScreen
 import com.app.routineturboa.ui.components.SignInButton
 import com.app.routineturboa.ui.components.TaskItem
+import com.app.routineturboa.utils.TimeUtils
 import com.app.routineturboa.viewmodel.TaskViewModel
 import com.microsoft.graph.models.DriveItem
 import com.microsoft.identity.client.IAuthenticationResult
@@ -700,10 +707,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+
 @Composable
 fun MainScreen(taskViewModel: TaskViewModel = viewModel(factory = TaskViewModelFactory(RoutineRepository(LocalContext.current)))) {
     val tasks by taskViewModel.tasks.collectAsState()
-    var selectedTask by remember { mutableStateOf<Task?>(null) }
+    var selectedTaskForDisplay by remember { mutableStateOf<Task?>(null) } // Added tracking for selected task for display
+    var taskBeingEdited by remember { mutableStateOf<Task?>(null) } // Added tracking for task being edited
     var isAddingTask by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val msalAuthManager = remember { MSALAuthManager.getInstance(context) }
@@ -724,33 +733,64 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel(factory = TaskViewModelF
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
     ) {
-        if (isAddingTask) {
-            AddTaskScreen(
-                onSave = { newTask ->
-                    taskViewModel.addTask(newTask)
-                    isAddingTask = false
-                },
-                onCancel = {
-                    isAddingTask = false
-                }
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)
+        ) {
+            // Display the currently selected task
+            Text(
+                text = selectedTaskForDisplay?.let { "Selected Task: ${it.taskName}" } ?: "No Task Selected",
+                style = MaterialTheme.typography.headlineMedium,
+                modifier = Modifier.padding(bottom = 16.dp) // Added padding for spacing
             )
-        } else if (selectedTask != null) {
-            EditTaskScreen(
-                task = selectedTask!!,
-                onSave = { updatedTask ->
-                    taskViewModel.updateTask(updatedTask)
-                    selectedTask = null
-                },
-                onCancel = {
-                    selectedTask = null
-                }
-            )
-        } else {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp)
-            ) {
+
+            if (isAddingTask) {
+                val initialStartTime = selectedTaskForDisplay?.endTime ?: if (tasks.isNotEmpty()) tasks.last().endTime else "08:00 AM" // Determine initial start time
+                AddTaskScreen(
+                    initialStartTime = initialStartTime, // Pass the initial start time
+                    onSave = { newTask ->
+                        selectedTaskForDisplay?.let { selectedTask ->
+                            val newStartTime = selectedTask.endTime // New task start time is the selected task's end time
+                            newTask.startTime = newStartTime
+                            newTask.endTime = TimeUtils.addDurationToTime(newStartTime, newTask.duration)
+                            taskViewModel.updatePositions(selectedTask.position + 1)
+                            newTask.position = selectedTask.position + 1
+                            taskViewModel.addTask(newTask)
+                            taskViewModel.adjustSubsequentTasks(newTask.position, newTask.endTime) // Adjust subsequent tasks
+                        } ?: run {
+                            if (tasks.isNotEmpty()) {
+                                val lastTask = tasks.last()
+                                newTask.startTime = lastTask.endTime
+                                newTask.endTime = TimeUtils.addDurationToTime(newTask.startTime, newTask.duration)
+                                newTask.position = tasks.size + 1
+                                taskViewModel.addTask(newTask)
+                            } else {
+                                // If there are no tasks, set default start time
+                                newTask.startTime = "08:00 AM"
+                                newTask.endTime = TimeUtils.addDurationToTime(newTask.startTime, newTask.duration)
+                                newTask.position = 1
+                                taskViewModel.addTask(newTask)
+                            }
+                        }
+                        isAddingTask = false
+                    },
+                    onCancel = {
+                        isAddingTask = false
+                    }
+                )
+            } else if (taskBeingEdited != null) { // Check if a task is selected for editing
+                EditTaskScreen(
+                    task = taskBeingEdited!!,
+                    onSave = { updatedTask ->
+                        taskViewModel.updateTask(updatedTask)
+                        taskBeingEdited = null
+                    },
+                    onCancel = {
+                        taskBeingEdited = null
+                    }
+                )
+            } else {
                 SignInButton(msalAuthManager, authenticationResult) { result ->
                     authenticationResult = result
                     msalAuthManager.saveAuthResult(result)
@@ -762,9 +802,12 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel(factory = TaskViewModelF
                     verticalArrangement = Arrangement.spacedBy(3.dp)
                 ) {
                     items(tasks, key = { it.id }) { task ->
-                        TaskItem(task) {
-                            selectedTask = it
-                        }
+                        TaskItem(
+                            task = task,
+                            isSelected = task == selectedTaskForDisplay, // Pass whether the task is selected
+                            onEditClick = { taskBeingEdited = it }, // Set the task to be edited
+                            onClick = { selectedTaskForDisplay = task } // Update the selected task when clicked
+                        )
                     }
                     items(oneDriveFiles, key = { it.id!! }) { file ->
                         Text(text = file.name ?: "No name")
@@ -783,6 +826,7 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel(factory = TaskViewModelF
         }
     }
 }
+
 
 suspend fun downloadFromOneDrive(authResult: IAuthenticationResult, context: Context) {
     val authProvider = OneDriveManager.MsalAuthProvider(authResult)
@@ -829,7 +873,6 @@ fun MainScreenPreview() {
 
 
 // Content from C:\Users\Vivid\AndroidStudioProjects\RoutineTurbo_android\app\src\main\java\com\app\routineturboa\ui\components\AddTaskScreen.kt
-// In AddTaskScreen.kt
 package com.app.routineturboa.ui.components
 
 import android.widget.Toast
@@ -847,6 +890,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -862,15 +906,24 @@ import java.text.ParseException
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddTaskScreen(
+    initialStartTime: String, // Added parameter for initial start time
     onSave: (Task) -> Unit,
     onCancel: () -> Unit
 ) {
     var taskName by remember { mutableStateOf("") }
-    var startTime by remember { mutableStateOf("") }
-    var endTime by remember { mutableStateOf("") }
     var duration by remember { mutableStateOf("") }
-
+    var endTime by remember { mutableStateOf("") } // Added state for end time
     val context = LocalContext.current
+
+    LaunchedEffect(duration) {
+        try {
+            if (duration.isNotBlank()) {
+                endTime = TimeUtils.addDurationToTime(initialStartTime, duration.toInt())
+            }
+        } catch (e: NumberFormatException) {
+            endTime = ""
+        }
+    }
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -893,37 +946,39 @@ fun AddTaskScreen(
                 )
             )
             TextField(
-                value = startTime,
-                onValueChange = { startTime = it },
-                label = { Text("Start Time (hh:mm a)") },
+                value = initialStartTime, // Show the start time
+                onValueChange = {},
+                label = { Text("Start Time") },
                 modifier = Modifier.fillMaxWidth(),
+                enabled = false, // Make it non-editable
                 colors = TextFieldDefaults.textFieldColors(
                     containerColor = MaterialTheme.colorScheme.surface,
-                    focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                    unfocusedIndicatorColor = MaterialTheme.colorScheme.onSurface
-                )
-            )
-            TextField(
-                value = endTime,
-                onValueChange = { endTime = it },
-                label = { Text("End Time (hh:mm a)") },
-                modifier = Modifier.fillMaxWidth(),
-                colors = TextFieldDefaults.textFieldColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                    unfocusedIndicatorColor = MaterialTheme.colorScheme.onSurface
+                    disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                    disabledIndicatorColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f) // Updated for Compose 1.2.0 or later
                 )
             )
             TextField(
                 value = duration,
                 onValueChange = { duration = it },
-                label = { Text("Duration") },
+                label = { Text("Duration (minutes)") },
                 keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth(),
                 colors = TextFieldDefaults.textFieldColors(
                     containerColor = MaterialTheme.colorScheme.surface,
                     focusedIndicatorColor = MaterialTheme.colorScheme.primary,
                     unfocusedIndicatorColor = MaterialTheme.colorScheme.onSurface
+                )
+            )
+            TextField(
+                value = endTime, // Show the end time
+                onValueChange = {},
+                label = { Text("End Time") },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = false, // Make it non-editable
+                colors = TextFieldDefaults.textFieldColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                    disabledIndicatorColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f) // Updated for Compose 1.2.0 or later
                 )
             )
             Row(
@@ -934,24 +989,22 @@ fun AddTaskScreen(
                     Text("Cancel")
                 }
                 Button(onClick = {
-                    if (TimeUtils.isValidTimeFormat(startTime) && TimeUtils.isValidTimeFormat(endTime)) {
-                        try {
-                            val newTask = Task(
-                                id = 0, // ID will be auto-generated by the database
-                                taskName = taskName,
-                                startTime = startTime,
-                                endTime = endTime,
-                                duration = duration.toInt(),
-                                reminders = "", // You can add a field for reminders if necessary
-                                type = "", // You can add a field for type if necessary
-                                position = 0 // Position can be managed as needed
-                            )
-                            onSave(newTask)
-                        } catch (e: ParseException) {
-                            Toast.makeText(context, "Invalid time format", Toast.LENGTH_SHORT).show()
-                        }
-                    } else {
-                        Toast.makeText(context, "Please enter valid times in hh:mm a format", Toast.LENGTH_SHORT).show()
+                    try {
+                        val newTask = Task(
+                            id = 0, // ID will be auto-generated by the database
+                            taskName = taskName,
+                            startTime = initialStartTime,
+                            endTime = endTime, // Set the end time
+                            duration = duration.toInt(),
+                            reminders = "", // You can add a field for reminders if necessary
+                            type = "", // You can add a field for type if necessary
+                            position = 0 // Position will be set in MainScreen
+                        )
+                        onSave(newTask)
+                    } catch (e: ParseException) {
+                        Toast.makeText(context, "Invalid time format", Toast.LENGTH_SHORT).show()
+                    } catch (e: NumberFormatException) {
+                        Toast.makeText(context, "Invalid duration", Toast.LENGTH_SHORT).show()
                     }
                 }) {
                     Text("Save")
@@ -1217,6 +1270,7 @@ fun signIn(msalAuthManager: MSALAuthManager, activity: MainActivity, onSignInSuc
 package com.app.routineturboa.ui.components
 
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -1235,19 +1289,21 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.app.routineturboa.data.model.Task
 
 @Composable
-fun TaskItem(task: Task, onEditClick: (Task) -> Unit) {
+fun TaskItem(task: Task, isSelected: Boolean, onEditClick: (Task) -> Unit, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .padding(1.dp)
             .fillMaxWidth()
-            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp)),
+            .border(1.dp, if (isSelected) Color.Blue else MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
+            .clickable(onClick = onClick), // Make the task item clickable
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.background
+            containerColor = if (isSelected) Color.LightGray else MaterialTheme.colorScheme.background // Change color if selected
         ),
         elevation = CardDefaults.cardElevation(3.dp)
     ) {
@@ -1398,6 +1454,7 @@ package com.app.routineturboa.utils
 
 import java.text.ParseException
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Locale
 
 object TimeUtils {
@@ -1433,6 +1490,19 @@ object TimeUtils {
             false
         }
     }
+
+    fun addDurationToTime(startTime: String, duration: Int): String {
+        val calendar = Calendar.getInstance()
+        val date = try {
+            inputFormat.parse(startTime)
+        } catch (e: ParseException) {
+            outputFormat.parse(startTime)
+        }
+        calendar.time = date!!
+        calendar.add(Calendar.MINUTE, duration)
+        return outputFormat.format(calendar.time)
+    }
+
 }
 
 
@@ -1443,6 +1513,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.routineturboa.data.local.RoutineRepository
 import com.app.routineturboa.data.model.Task
+import com.app.routineturboa.utils.TimeUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -1476,8 +1547,28 @@ class TaskViewModel(private val repository: RoutineRepository) : ViewModel() {
             loadTasks()
         }
     }
-}
 
+    fun updatePositions(startPosition: Int) {
+        viewModelScope.launch {
+            repository.updatePositions(startPosition)
+            loadTasks()
+        }
+    }
+
+    fun adjustSubsequentTasks(startPosition: Int, endTime: String) { // Adjust subsequent tasks
+        viewModelScope.launch {
+            val tasks = repository.getAllTasks()
+            var previousEndTime = endTime
+            for (task in tasks.filter { it.position > startPosition }) {
+                task.startTime = previousEndTime
+                task.endTime = TimeUtils.addDurationToTime(task.startTime, task.duration)
+                previousEndTime = task.endTime
+                repository.updateTask(task)
+            }
+            loadTasks()
+        }
+    }
+}
 
 
 // Content from C:\Users\Vivid\AndroidStudioProjects\RoutineTurbo_android\app\src\main\java\com\app\routineturboa\viewmodel\TaskViewModelFactory.kt

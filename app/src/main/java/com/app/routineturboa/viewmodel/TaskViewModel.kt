@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.routineturboa.data.local.RoutineRepository
 import com.app.routineturboa.data.model.Task
+import com.app.routineturboa.utils.TimeUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -38,9 +39,23 @@ class TaskViewModel(private val repository: RoutineRepository) : ViewModel() {
         }
     }
 
-    fun updatePositions(startPosition: Int) { // Added updatePositions method
+    fun updatePositions(startPosition: Int) {
         viewModelScope.launch {
             repository.updatePositions(startPosition)
+            loadTasks()
+        }
+    }
+
+    fun adjustSubsequentTasks(startPosition: Int, endTime: String) { // Adjust subsequent tasks
+        viewModelScope.launch {
+            val tasks = repository.getAllTasks()
+            var previousEndTime = endTime
+            for (task in tasks.filter { it.position > startPosition }) {
+                task.startTime = previousEndTime
+                task.endTime = TimeUtils.addDurationToTime(task.startTime, task.duration)
+                previousEndTime = task.endTime
+                repository.updateTask(task)
+            }
             loadTasks()
         }
     }

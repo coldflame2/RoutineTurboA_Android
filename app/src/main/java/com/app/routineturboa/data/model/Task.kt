@@ -2,8 +2,8 @@ package com.app.routineturboa.data.model
 
 data class Task(
     val id: Int,
-    val startTime: String,
-    val endTime: String,
+    var startTime: String,
+    var endTime: String,
     val duration: Int,
     val taskName: String,
     val reminders: String,

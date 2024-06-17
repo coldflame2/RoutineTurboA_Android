@@ -2,6 +2,7 @@ package com.app.routineturboa.utils
 
 import java.text.ParseException
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Locale
 
 object TimeUtils {
@@ -37,4 +38,17 @@ object TimeUtils {
             false
         }
     }
+
+    fun addDurationToTime(startTime: String, duration: Int): String {
+        val calendar = Calendar.getInstance()
+        val date = try {
+            inputFormat.parse(startTime)
+        } catch (e: ParseException) {
+            outputFormat.parse(startTime)
+        }
+        calendar.time = date!!
+        calendar.add(Calendar.MINUTE, duration)
+        return outputFormat.format(calendar.time)
+    }
+
 }
