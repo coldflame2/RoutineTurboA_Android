@@ -1,8 +1,8 @@
-// In MainScreen.kt
 package com.app.routineturboa.ui
 
 import TaskViewModelFactory
 import android.content.Context
+import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -60,9 +60,12 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel(factory = TaskViewModelF
     val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(authenticationResult) {
+        Log.d("MainScreen", "LaunchedEffect triggered for authenticationResult: $authenticationResult")
         authenticationResult?.let { authResult ->
             coroutineScope.launch {
+                Log.d("MainScreen", "Starting downloadFromOneDrive")
                 downloadFromOneDrive(authResult, context, taskViewModel)
+                Log.d("MainScreen", "Finished downloadFromOneDrive")
             }
         }
     }
@@ -79,15 +82,31 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel(factory = TaskViewModelF
             msalAuthManager = msalAuthManager,
             authenticationResult = authenticationResult,
             oneDriveFiles = oneDriveFiles,
-            onTaskSelected = { selectedTaskForDisplay = it },
-            onTaskEdited = { taskBeingEdited = it },
-            onAddTask = { isAddingTask = true },
-            onCancelAddTask = { isAddingTask = false },
+            onTaskSelected = { task ->
+                if (task != null) {
+                    Log.d("MainScreen", "Task selected: ${task.taskName}")
+                }
+                selectedTaskForDisplay = task
+            },
+            onTaskEdited = { task ->
+                Log.d("MainScreen", "Editing task: ${task?.taskName}")
+                taskBeingEdited = task
+            },
+            onAddTask = {
+                Log.d("MainScreen", "Adding new task")
+                isAddingTask = true
+            },
+            onCancelAddTask = {
+                Log.d("MainScreen", "Canceling add task")
+                isAddingTask = false
+            },
             onSaveTask = { newTask, selectedTask ->
+                Log.d("MainScreen", "Saving task: ${newTask.taskName}")
                 handleSaveTask(newTask, selectedTask, taskViewModel, tasks)
                 isAddingTask = false
             },
             onSignInSuccess = { result ->
+                Log.d("MainScreen", "Sign-in successful: $result")
                 authenticationResult = result
                 msalAuthManager.saveAuthResult(result)
             }
@@ -114,7 +133,7 @@ fun MainContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(50.dp)
+            .padding(10.dp)
     ) {
         Text(
             text = selectedTaskForDisplay?.let { "Selected Task: ${it.taskName}" } ?: "No Task Selected",
@@ -173,6 +192,7 @@ fun MainContent(
 }
 
 private suspend fun downloadFromOneDrive(authResult: IAuthenticationResult, context: Context, taskViewModel: TaskViewModel) {
+    Log.d("MainScreen", "Downloading from OneDrive")
     val authProvider = OneDriveManager.MsalAuthProvider(authResult)
     val oneDriveManager = OneDriveManager(authProvider)
 
@@ -201,6 +221,7 @@ private suspend fun downloadFromOneDrive(authResult: IAuthenticationResult, cont
         }
     }
     taskViewModel.loadTasks()
+    Log.d("MainScreen", "Finished downloading from OneDrive")
 }
 
 private fun handleSaveTask(
@@ -209,6 +230,7 @@ private fun handleSaveTask(
     taskViewModel: TaskViewModel,
     tasks: List<Task>
 ) {
+    Log.d("MainScreen", "Handling save task: ${newTask.taskName}")
     selectedTaskForDisplay?.let { selectedTask ->
         val newStartTime = selectedTask.endTime
         newTask.startTime = newStartTime
@@ -231,6 +253,7 @@ private fun handleSaveTask(
             taskViewModel.addTask(newTask)
         }
     }
+    Log.d("MainScreen", "Task saved: ${newTask.taskName}")
 }
 
 @Preview(showBackground = true)

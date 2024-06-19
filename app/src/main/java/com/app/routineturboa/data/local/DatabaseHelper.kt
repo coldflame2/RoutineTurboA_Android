@@ -17,6 +17,7 @@ class DatabaseHelper(private val context: Context) : SQLiteOpenHelper(context, D
     companion object {
         const val DATABASE_VERSION = 1
         const val DATABASE_NAME = "RoutineTurbo.db"
+        private const val TAG = "DatabaseHelper"
     }
 
     object DailyRoutine {
@@ -46,20 +47,24 @@ class DatabaseHelper(private val context: Context) : SQLiteOpenHelper(context, D
     private val deleteEntries = "DROP TABLE IF EXISTS ${DailyRoutine.TABLE_NAME}"
 
     override fun onCreate(db: SQLiteDatabase) {
+        Log.d(TAG, "Creating database with the following query: $createEntries")
         db.execSQL(createEntries)
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+        Log.d(TAG, "Upgrading database from version $oldVersion to $newVersion")
         db.execSQL(deleteEntries)
         onCreate(db)
     }
 
     override fun getReadableDatabase(): SQLiteDatabase {
+        Log.d(TAG, "Getting readable database")
         copyDatabase()
         return super.getReadableDatabase()
     }
 
     override fun getWritableDatabase(): SQLiteDatabase {
+        Log.d(TAG, "Getting writable database")
         copyDatabase()
         return super.getWritableDatabase()
     }
@@ -68,29 +73,34 @@ class DatabaseHelper(private val context: Context) : SQLiteOpenHelper(context, D
         val dbPath: String = context.getDatabasePath(DATABASE_NAME).absolutePath
         val dbFile = File(dbPath)
         if (!dbFile.exists()) {
-            Log.d("DatabaseHelper", "Database does not exist, copying from external storage.")
+            Log.d(TAG, "Database does not exist, copying from external storage.")
             val externalDbPath = Environment.getExternalStorageDirectory().absolutePath + "/$DATABASE_NAME"
             val externalDbFile = File(externalDbPath)
 
-            if (externalDbFile.exists()) {
-                Log.d("DatabaseHelper", "External database exists, copying from external storage.")
-                FileInputStream(externalDbFile).use { inputStream: InputStream ->
-                    FileOutputStream(dbPath).use { outputStream: OutputStream ->
-                        copyStream(inputStream, outputStream)
+            try {
+                if (externalDbFile.exists()) {
+                    Log.d(TAG, "External database exists, copying from external storage.")
+                    FileInputStream(externalDbFile).use { inputStream ->
+                        FileOutputStream(dbPath).use { outputStream ->
+                            Log.d(TAG, "Copying database from $externalDbPath to $dbPath")
+                            copyStream(inputStream, outputStream)
+                        }
+                    }
+                } else {
+                    Log.d(TAG, "External database does not exist, copying from assets.")
+                    context.assets.open(DATABASE_NAME).use { inputStream ->
+                        FileOutputStream(dbPath).use { outputStream ->
+                            Log.d(TAG, "Copying database from assets to $dbPath")
+                            copyStream(inputStream, outputStream)
+                        }
                     }
                 }
-            } else {
-                Log.d("DatabaseHelper", "External database does not exist, copying from assets.")
-                context.assets.open(DATABASE_NAME).use { inputStream: InputStream ->
-                    FileOutputStream(dbPath).use { outputStream: OutputStream ->
-                        copyStream(inputStream, outputStream)
-                    }
-                }
+            } catch (e: IOException) {
+                Log.e(TAG, "Error copying database: ${e.message}", e)
             }
         } else {
-            Log.d("DatabaseHelper", "Database exists, skipping copy.")
+            Log.d(TAG, "Database exists, skipping copy.")
         }
-
     }
 
     @Throws(IOException::class)
@@ -100,5 +110,6 @@ class DatabaseHelper(private val context: Context) : SQLiteOpenHelper(context, D
         while (inputStream.read(buffer).also { length = it } > 0) {
             outputStream.write(buffer, 0, length)
         }
+        Log.d(TAG, "Finished copying stream")
     }
 }

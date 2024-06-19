@@ -29,6 +29,7 @@ class MSALAuthManager(context: Context) {
     var currentAccount: IAccount? = null
 
     init {
+        Log.d("MSALAuthManager", "Initializing MSALAuthManager")
         PublicClientApplication.createSingleAccountPublicClientApplication(
             appContext,
             R.raw.auth_config_single_account,
@@ -46,6 +47,7 @@ class MSALAuthManager(context: Context) {
     }
 
     private fun checkCurrentAccount() {
+        Log.d("MSALAuthManager", "Checking current account")
         singleAccountApp?.getCurrentAccountAsync(object : ISingleAccountPublicClientApplication.CurrentAccountCallback {
             override fun onAccountLoaded(activeAccount: IAccount?) {
                 currentAccount = activeAccount
@@ -58,6 +60,7 @@ class MSALAuthManager(context: Context) {
             }
 
             override fun onAccountChanged(priorAccount: IAccount?, currentAccount: IAccount?) {
+                Log.d("MSALAuthManager", "Account changed: ${currentAccount?.username}")
                 this@MSALAuthManager.currentAccount = currentAccount
             }
 
@@ -87,12 +90,15 @@ class MSALAuthManager(context: Context) {
     }
 
     fun signOut(callback: ISingleAccountPublicClientApplication.SignOutCallback) {
+        Log.d("MSALAuthManager", "Attempting to sign out")
         singleAccountApp?.signOut(callback)
         clearAuthResult() // Clear saved authentication result
+        Log.d("MSALAuthManager", "Signed out and cleared auth result")
     }
 
     suspend fun getProfileImageUrl(): String? {
         val account = currentAccount ?: return null
+        Log.d("MSALAuthManager", "Fetching profile image URL for account: ${account.username}")
         return withContext(Dispatchers.IO) {
             try {
                 val token = singleAccountApp?.acquireTokenSilent(arrayOf("User.Read"), account.authority)?.accessToken
@@ -112,13 +118,16 @@ class MSALAuthManager(context: Context) {
                             FileOutputStream(file).use { out ->
                                 bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
                             }
+                            Log.d("MSALAuthManager", "Profile image saved at: ${file.absolutePath}")
                             file.absolutePath
                         }
                     } else {
+                        Log.e("MSALAuthManager", "Failed to fetch profile image, response code: ${response.code}")
                         null
                     }
                 }
             } catch (e: Exception) {
+                Log.e("MSALAuthManager", "Error fetching profile image: ${e.message}")
                 e.printStackTrace()
                 null
             }
@@ -126,19 +135,21 @@ class MSALAuthManager(context: Context) {
     }
 
     fun saveAuthResult(authResult: IAuthenticationResult) {
+        Log.d("MSALAuthManager", "Saving authentication result for account: ${authResult.account.username}")
         preferences.edit().putString("accessToken", authResult.accessToken).apply()
-        preferences.edit().putString("idToken", authResult.account?.idToken).apply()
-        preferences.edit().putString("accountName", authResult.account?.username).apply()
+        preferences.edit().putString("idToken", authResult.account.idToken).apply()
+        preferences.edit().putString("accountName", authResult.account.username).apply()
     }
 
-
     private fun loadAuthResult() {
+        Log.d("MSALAuthManager", "Loading authentication result from preferences")
         val accessToken = preferences.getString("accessToken", null)
         val idToken = preferences.getString("idToken", null)
         val accountName = preferences.getString("accountName", null)
 
         if (accessToken != null && idToken != null && accountName != null) {
             // Using stored information to set current account
+            Log.d("MSALAuthManager", "Loaded account: $accountName")
             currentAccount = object : IAccount {
                 override fun getId(): String = "storedId"
                 override fun getUsername(): String = accountName
@@ -147,10 +158,13 @@ class MSALAuthManager(context: Context) {
                 override fun getIdToken(): String = idToken
                 override fun getTenantId(): String = "storedTenantId" // Implementing the tenant ID method
             }
+        } else {
+            Log.d("MSALAuthManager", "No stored authentication result found")
         }
     }
 
     private fun clearAuthResult() {
+        Log.d("MSALAuthManager", "Clearing authentication result from preferences")
         preferences.edit().remove("accessToken").apply()
         preferences.edit().remove("idToken").apply()
         preferences.edit().remove("accountName").apply()

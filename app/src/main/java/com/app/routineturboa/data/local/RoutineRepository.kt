@@ -4,6 +4,7 @@ import android.content.ContentValues
 import android.content.Context
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
+import android.util.Log
 import com.app.routineturboa.data.model.Task
 import com.app.routineturboa.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
@@ -13,7 +14,12 @@ class RoutineRepository(context: Context) {
     private val dbHelper = DatabaseHelper(context)
     private val db: SQLiteDatabase = dbHelper.readableDatabase
 
+    companion object {
+        private const val TAG = "RoutineRepository"
+    }
+
     suspend fun getAllTasks(): List<Task> = withContext(Dispatchers.IO) {
+        Log.d(TAG, "Fetching all tasks from database")
         val tasks = mutableListOf<Task>()
         val cursor: Cursor = db.query(
             DatabaseHelper.DailyRoutine.TABLE_NAME,
@@ -52,14 +58,17 @@ class RoutineRepository(context: Context) {
                     getString(getColumnIndexOrThrow(DatabaseHelper.DailyRoutine.COLUMN_NAME_TYPE)),
                     getInt(getColumnIndexOrThrow(DatabaseHelper.DailyRoutine.COLUMN_NAME_POSITION))
                 )
+                Log.d(TAG, "Fetched task: $task")
                 tasks.add(task)
             }
         }
         cursor.close()
+        Log.d(TAG, "Completed fetching all tasks")
         return@withContext tasks
     }
 
     suspend fun addTask(task: Task) = withContext(Dispatchers.IO) {
+        Log.d(TAG, "Adding new task: $task")
         val values = ContentValues().apply {
             val currentDate = "2024-01-01"  // Example, you should replace it with the actual date
             put(DatabaseHelper.DailyRoutine.COLUMN_NAME_START_TIME, TimeUtils.formatToDatabaseTime(currentDate, TimeUtils.convertTo24HourFormat(task.startTime)))
@@ -71,9 +80,11 @@ class RoutineRepository(context: Context) {
             put(DatabaseHelper.DailyRoutine.COLUMN_NAME_POSITION, task.position)
         }
         db.insert(DatabaseHelper.DailyRoutine.TABLE_NAME, null, values)
+        Log.d(TAG, "Task added successfully: ${task.taskName}")
     }
 
     suspend fun updateTask(task: Task) = withContext(Dispatchers.IO) {
+        Log.d(TAG, "Updating task: $task")
         val values = ContentValues().apply {
             val currentDate = "2024-01-01"  // Example, you should replace it with the actual date
             put(DatabaseHelper.DailyRoutine.COLUMN_NAME_START_TIME, TimeUtils.formatToDatabaseTime(currentDate, TimeUtils.convertTo24HourFormat(task.startTime)))
@@ -92,11 +103,13 @@ class RoutineRepository(context: Context) {
             selection,
             selectionArgs
         )
+        Log.d(TAG, "Task updated successfully: ${task.taskName}")
     }
 
     suspend fun updatePositions(startPosition: Int) = withContext(Dispatchers.IO) {
+        Log.d(TAG, "Updating positions starting from: $startPosition")
         val updateQuery = "UPDATE ${DatabaseHelper.DailyRoutine.TABLE_NAME} SET ${DatabaseHelper.DailyRoutine.COLUMN_NAME_POSITION} = ${DatabaseHelper.DailyRoutine.COLUMN_NAME_POSITION} + 1 WHERE ${DatabaseHelper.DailyRoutine.COLUMN_NAME_POSITION} >= ?" // Added query to update positions
         db.execSQL(updateQuery, arrayOf(startPosition)) // Execute the query with the start position
+        Log.d(TAG, "Positions updated successfully from: $startPosition")
     }
-
 }

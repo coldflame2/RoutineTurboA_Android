@@ -1,6 +1,7 @@
 package com.app.routineturboa
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
@@ -28,8 +29,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Log.d("MainActivity", "onCreate called")
 
         msalAuthManager = MSALAuthManager.getInstance(this)
+        Log.d("MainActivity", "MSALAuthManager initialized")
 
         setContent {
             RoutineTurboATheme {
@@ -48,15 +51,14 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun Greeting() {
     val currentDate = SimpleDateFormat("EEEE, MMMM d, yyyy", Locale.getDefault()).format(Date())
+    Log.d("MainActivity", "Current date formatted: $currentDate")
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
-
     ) {
         Text(text = currentDate, style = MaterialTheme.typography.headlineLarge)
     }
 }
-

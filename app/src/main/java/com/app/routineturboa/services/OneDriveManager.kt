@@ -1,5 +1,6 @@
 package com.app.routineturboa.services
 
+import android.util.Log
 import com.microsoft.graph.authentication.IAuthenticationProvider
 import com.microsoft.graph.models.DriveItem
 import com.microsoft.graph.requests.GraphServiceClient
@@ -16,16 +17,20 @@ class OneDriveManager(private val authProvider: IAuthenticationProvider) {
         .buildClient()
 
     fun listFiles(driveItemId: String? = null): List<DriveItem> {
+        Log.d("OneDriveManager", "Listing files for drive item ID: $driveItemId")
         val request = if (driveItemId == null) {
             graphClient.me().drive().root().children().buildRequest()
         } else {
             graphClient.me().drive().items(driveItemId).children().buildRequest()
         }
 
-        return request.get()?.currentPage ?: emptyList()
+        val files = request.get()?.currentPage ?: emptyList()
+        Log.d("OneDriveManager", "Found ${files.size} files")
+        return files
     }
 
     fun downloadFile(driveItemId: String, destinationFile: File): Boolean {
+        Log.d("OneDriveManager", "Downloading file with ID: $driveItemId to ${destinationFile.absolutePath}")
         val request = graphClient.me().drive().items(driveItemId).content().buildRequest()
         return try {
             val inputStream = request.get()
@@ -33,18 +38,19 @@ class OneDriveManager(private val authProvider: IAuthenticationProvider) {
                 FileOutputStream(destinationFile).use { outputStream ->
                     inputStream.copyTo(outputStream)
                 }
+                Log.d("OneDriveManager", "File downloaded successfully")
                 true
             } else {
+                Log.e("OneDriveManager", "Failed to download file: input stream is null")
                 false
             }
         } catch (e: Exception) {
+            Log.e("OneDriveManager", "Error downloading file: ${e.message}")
             e.printStackTrace()
             false
         }
     }
 
-
-    // Nested class for handling authentication
     class MsalAuthProvider(private val authenticationResult: IAuthenticationResult) : IAuthenticationProvider {
         override fun getAuthorizationTokenAsync(requestUrl: URL): CompletableFuture<String> {
             return CompletableFuture.completedFuture(authenticationResult.accessToken)

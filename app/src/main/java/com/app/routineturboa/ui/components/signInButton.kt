@@ -72,6 +72,7 @@ fun SignInButton(
                 }
 
                 override fun onAccountChanged(priorAccount: IAccount?, currentAccount: IAccount?) {
+                    Log.d("SignInButton", "Account changed: ${currentAccount?.username}")
                 }
 
                 override fun onError(exception: MsalException) {
@@ -80,7 +81,6 @@ fun SignInButton(
                 }
             })
         },
-
         enabled = !isSigningIn // Disable button during sign-in process
     ) {
         Row {
