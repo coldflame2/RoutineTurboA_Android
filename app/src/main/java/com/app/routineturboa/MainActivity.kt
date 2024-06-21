@@ -17,7 +17,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.app.routineturboa.services.MSALAuthManager
 import com.app.routineturboa.ui.MainScreen
 import com.app.routineturboa.ui.theme.RoutineTurboATheme
 import java.text.SimpleDateFormat
@@ -25,13 +24,13 @@ import java.util.Date
 import java.util.Locale
 
 class MainActivity : ComponentActivity() {
-    private lateinit var msalAuthManager: MSALAuthManager
+//    private lateinit var msalAuthManager: MSALAuthManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.d("MainActivity", "onCreate called")
 
-        msalAuthManager = MSALAuthManager.getInstance(this)
+//        msalAuthManager = MSALAuthManager.getInstance(this)
         Log.d("MainActivity", "MSALAuthManager initialized")
 
         setContent {

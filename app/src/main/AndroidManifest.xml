@@ -11,8 +11,7 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        tools:targetApi="31"
-        android:theme="@style/Theme.AppCompat.DayNight.NoActionBar">
+        tools:targetApi="31">
 
         <activity
             android:name=".MainActivity"
@@ -23,19 +22,6 @@
             </intent-filter>
         </activity>
 
-        <!-- MSAL BrowserTabActivity configuration -->
-        <activity
-            android:name="com.microsoft.identity.client.BrowserTabActivity"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="msauth"
-                    android:host="com.app.routineturboa"
-                    android:path="/a0VHP+Yc7DrhJPus83+LbjsqzHY=" />
-            </intent-filter>
-        </activity>
 
     </application>
 </manifest>
