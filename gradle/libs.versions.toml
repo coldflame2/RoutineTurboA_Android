@@ -4,15 +4,15 @@ coreKtx = "1.13.1"
 junit = "4.13.2"
 junitVersion = "1.1.5"
 espressoCore = "3.5.1"
-lifecycleRuntimeKtx = "2.8.0"
+lifecycleRuntimeKtx = "2.8.2"
 
 kotlin = "2.0.0"
 compose-plugin = "2.0.0" # Assuming the version matches Kotlin 2.0.0
 
 activityCompose = "1.9.0"
-composeBom = "2024.05.00"
+composeBom = "2024.06.00"
 sqlite = "2.4.0"
-lifecycleViewModelCompose = "2.8.0"
+lifecycleViewModelCompose = "2.8.2"
 
 msalVersion = "5.3.1"  # Define the version for MSAL
 volley = "1.2.1"
