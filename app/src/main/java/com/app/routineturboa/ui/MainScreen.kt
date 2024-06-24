@@ -1,11 +1,11 @@
 package com.app.routineturboa.ui
 
 import TaskViewModelFactory
-import android.content.Context
 import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
@@ -18,7 +18,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -27,29 +26,27 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.app.routineturboa.data.local.DatabaseHelper
 import com.app.routineturboa.data.local.RoutineRepository
 import com.app.routineturboa.data.model.Task
 import com.app.routineturboa.services.MSALAuthManager
-import com.app.routineturboa.services.OneDriveManager
+import com.app.routineturboa.services.downloadFromOneDrive
 import com.app.routineturboa.ui.components.AddTaskScreen
 import com.app.routineturboa.ui.components.EditTaskScreen
 import com.app.routineturboa.ui.components.SignInButton
 import com.app.routineturboa.ui.components.TaskItem
-import com.app.routineturboa.utils.TimeUtils
 import com.app.routineturboa.viewmodel.TaskViewModel
 import com.microsoft.graph.models.DriveItem
 import com.microsoft.identity.client.IAuthenticationResult
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 @Composable
 fun MainScreen(taskViewModel: TaskViewModel = viewModel(factory = TaskViewModelFactory(RoutineRepository(LocalContext.current)))) {
-    val tasks by taskViewModel.tasks.collectAsState()
+
+    val tasks by taskViewModel.tasks.collectAsStateWithLifecycle()
+
     var selectedTaskForDisplay by remember { mutableStateOf<Task?>(null) }
     var taskBeingEdited by remember { mutableStateOf<Task?>(null) }
     var isAddingTask by remember { mutableStateOf(false) }
@@ -71,7 +68,6 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel(factory = TaskViewModelF
     }
 
     Surface(
-        modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
     ) {
         MainContent(
@@ -82,6 +78,7 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel(factory = TaskViewModelF
             msalAuthManager = msalAuthManager,
             authenticationResult = authenticationResult,
             oneDriveFiles = oneDriveFiles,
+
             onTaskSelected = { task ->
                 if (task != null) {
                     Log.d("MainScreen", "Task selected: ${task.taskName}")
@@ -92,6 +89,12 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel(factory = TaskViewModelF
                 Log.d("MainScreen", "Editing task: ${task?.taskName}")
                 taskBeingEdited = task
             },
+            onTaskEditSave = { updatedTask ->
+                Log.d("MainScreen", "Saving edited task: ${updatedTask.taskName}")
+                taskViewModel.updateTask(updatedTask)
+                taskBeingEdited = null
+            },
+
             onAddTask = {
                 Log.d("MainScreen", "Adding new task")
                 isAddingTask = true
@@ -102,7 +105,7 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel(factory = TaskViewModelF
             },
             onSaveTask = { newTask, selectedTask ->
                 Log.d("MainScreen", "Saving task: ${newTask.taskName}")
-                handleSaveTask(newTask, selectedTask, taskViewModel, tasks)
+                taskViewModel.handleSaveTask(newTask, selectedTask)
                 isAddingTask = false
             },
             onSignInSuccess = { result ->
@@ -119,6 +122,7 @@ fun MainContent(
     tasks: List<Task>,
     selectedTaskForDisplay: Task?,
     taskBeingEdited: Task?,
+    onTaskEditSave: (Task) -> Unit,
     isAddingTask: Boolean,
     msalAuthManager: MSALAuthManager,
     authenticationResult: IAuthenticationResult?,
@@ -130,16 +134,19 @@ fun MainContent(
     onSaveTask: (Task, Task?) -> Unit,
     onSignInSuccess: (IAuthenticationResult) -> Unit
 ) {
+    // Retain selected task and tasks list across recompositions
+    val selectedTask = remember { mutableStateOf(selectedTaskForDisplay) }
+    val tasksState = remember { mutableStateOf(tasks) }
+
+    selectedTask.value = selectedTaskForDisplay
+    tasksState.value = tasks
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(10.dp)
     ) {
-        Text(
-            text = selectedTaskForDisplay?.let { "Selected Task: ${it.taskName}" } ?: "No Task Selected",
-            style = MaterialTheme.typography.labelSmall,
-            modifier = Modifier.padding(bottom = 36.dp)
-        )
+
 
         if (isAddingTask) {
             val initialStartTime = selectedTaskForDisplay?.endTime ?: if (tasks.isNotEmpty()) tasks.last().endTime else "08:00 AM"
@@ -148,25 +155,30 @@ fun MainContent(
                 onSave = { newTask -> onSaveTask(newTask, selectedTaskForDisplay) },
                 onCancel = onCancelAddTask
             )
-        } else if (taskBeingEdited != null) {
+        }
+
+        else if (taskBeingEdited != null) {
             EditTaskScreen(
                 task = taskBeingEdited,
                 onSave = { updatedTask ->
+                    onTaskEditSave(updatedTask)
                     onTaskEdited(null)
                 },
                 onCancel = {
                     onTaskEdited(null)
                 }
             )
-        } else {
-            SignInButton(msalAuthManager, authenticationResult, onSignInSuccess)
+        }
+
+        else {
 
             LazyColumn(
-                modifier = Modifier.weight(1f),
-                contentPadding = PaddingValues(5.dp),
+                modifier = Modifier.weight(1f)
+                    .height(350.dp),
+                contentPadding = PaddingValues(2.dp),
                 verticalArrangement = Arrangement.spacedBy(3.dp)
             ) {
-                items(tasks, key = { it.id }) { task ->
+                items(tasksState.value, key = { it.id }) { task ->
                     TaskItem(
                         task = task,
                         isSelected = task == selectedTaskForDisplay,
@@ -179,85 +191,25 @@ fun MainContent(
                 }
             }
 
-            Spacer(modifier = Modifier.height(36.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
-            Button(
-                onClick = onAddTask,
-                modifier = Modifier.align(alignment = Alignment.CenterHorizontally)
-            ) {
-                Text("Add New Task")
-            }
-        }
-    }
-}
+            Row {
+                SignInButton(msalAuthManager, authenticationResult, onSignInSuccess)
 
-private suspend fun downloadFromOneDrive(authResult: IAuthenticationResult, context: Context, taskViewModel: TaskViewModel) {
-    Log.d("MainScreen", "Downloading from OneDrive")
-    val authProvider = OneDriveManager.MsalAuthProvider(authResult)
-    val oneDriveManager = OneDriveManager(authProvider)
-
-    val files = withContext(Dispatchers.IO) {
-        oneDriveManager.listFiles()
-    }
-
-    val routineTurboDir = files.find { it.name == "RoutineTurbo" && it.folder != null }
-
-    routineTurboDir?.let { dir ->
-        val dirFiles = dir.id?.let { dirId ->
-            withContext(Dispatchers.IO) {
-                oneDriveManager.listFiles(dirId)
-            }
-        }
-
-        val dbFile = dirFiles?.find { it.name == "RoutineTurbo.db" }
-
-        dbFile?.let { driveItem ->
-            driveItem.id?.let { driveItemId ->
-                val localDbFile = context.getDatabasePath(DatabaseHelper.DATABASE_NAME)
-                withContext(Dispatchers.IO) {
-                    oneDriveManager.downloadFile(driveItemId, localDbFile)
+                // Add new Task Button
+                Button(onClick = onAddTask) {
+                    Text("Add New Task")
                 }
+
+                // Task currently clicked
+                Text(
+                    text = selectedTaskForDisplay?.let { "Selected Task: ${it.taskName}" } ?: "No Task Selected",
+                    style = MaterialTheme.typography.labelMedium,
+                    // align vertically center
+                    modifier = Modifier.align(Alignment.CenterVertically)
+                )
             }
+
         }
     }
-    taskViewModel.loadTasks()
-    Log.d("MainScreen", "Finished downloading from OneDrive")
-}
-
-private fun handleSaveTask(
-    newTask: Task,
-    selectedTaskForDisplay: Task?,
-    taskViewModel: TaskViewModel,
-    tasks: List<Task>
-) {
-    Log.d("MainScreen", "Handling save task: ${newTask.taskName}")
-    selectedTaskForDisplay?.let { selectedTask ->
-        val newStartTime = selectedTask.endTime
-        newTask.startTime = newStartTime
-        newTask.endTime = TimeUtils.addDurationToTime(newStartTime, newTask.duration)
-        taskViewModel.updatePositions(selectedTask.position + 1)
-        newTask.position = selectedTask.position + 1
-        taskViewModel.addTask(newTask)
-        taskViewModel.adjustSubsequentTasks(newTask.position, newTask.endTime)
-    } ?: run {
-        if (tasks.isNotEmpty()) {
-            val lastTask = tasks.last()
-            newTask.startTime = lastTask.endTime
-            newTask.endTime = TimeUtils.addDurationToTime(newTask.startTime, newTask.duration)
-            newTask.position = tasks.size + 1
-            taskViewModel.addTask(newTask)
-        } else {
-            newTask.startTime = "08:00 AM"
-            newTask.endTime = TimeUtils.addDurationToTime(newTask.startTime, newTask.duration)
-            newTask.position = 1
-            taskViewModel.addTask(newTask)
-        }
-    }
-    Log.d("MainScreen", "Task saved: ${newTask.taskName}")
-}
-
-@Preview(showBackground = true)
-@Composable
-fun MainScreenPreview() {
-    MainScreen()
 }

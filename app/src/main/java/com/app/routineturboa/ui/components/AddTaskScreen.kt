@@ -56,7 +56,7 @@ fun AddTaskScreen(
         contentColor = MaterialTheme.colorScheme.onBackground
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(5.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             TextField(

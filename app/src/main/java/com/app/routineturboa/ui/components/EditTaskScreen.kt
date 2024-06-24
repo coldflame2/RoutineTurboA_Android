@@ -13,7 +13,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -42,59 +41,46 @@ fun EditTaskScreen(
     val context = LocalContext.current
 
     Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.background,
-        contentColor = MaterialTheme.colorScheme.onBackground
+        modifier = Modifier.fillMaxWidth()
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.padding(1.dp),
+            verticalArrangement = Arrangement.spacedBy(1.dp)
         ) {
+            Text(
+                text = "Edit Task: $taskName",
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.padding(10.dp)
+            )
+
             TextField(
                 value = taskName,
                 onValueChange = { taskName = it },
                 label = { Text("Task Name") },
-                modifier = Modifier.fillMaxWidth(),
-                colors = TextFieldDefaults.textFieldColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                    unfocusedIndicatorColor = MaterialTheme.colorScheme.onSurface
-                )
+                modifier = Modifier.fillMaxWidth()
             )
+
             TextField(
                 value = startTime,
                 onValueChange = { startTime = it },
                 label = { Text("Start Time (hh:mm a)") },
-                modifier = Modifier.fillMaxWidth(),
-                colors = TextFieldDefaults.textFieldColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                    unfocusedIndicatorColor = MaterialTheme.colorScheme.onSurface
-                )
+                modifier = Modifier.fillMaxWidth()
             )
             TextField(
                 value = endTime,
                 onValueChange = { endTime = it },
                 label = { Text("End Time (hh:mm a)") },
-                modifier = Modifier.fillMaxWidth(),
-                colors = TextFieldDefaults.textFieldColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                    unfocusedIndicatorColor = MaterialTheme.colorScheme.onSurface
-                )
+                modifier = Modifier.fillMaxWidth()
             )
+
             TextField(
                 value = duration,
                 onValueChange = { duration = it },
                 label = { Text("Duration") },
                 keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
-                modifier = Modifier.fillMaxWidth(),
-                colors = TextFieldDefaults.textFieldColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                    unfocusedIndicatorColor = MaterialTheme.colorScheme.onSurface
-                )
+                modifier = Modifier.fillMaxWidth()
             )
+
             Row(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 modifier = Modifier.fillMaxWidth()

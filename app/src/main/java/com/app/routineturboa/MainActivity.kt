@@ -5,59 +5,64 @@ import android.util.Log
 import android.view.Window
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import com.app.routineturboa.services.MSALAuthManager
 import com.app.routineturboa.ui.MainScreen
+import com.app.routineturboa.ui.theme.RoutineTurboATheme
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
 class MainActivity : ComponentActivity() {
     private lateinit var msalAuthManager: MSALAuthManager
+    private val currentDate: String = SimpleDateFormat("EEEE, MMMM d, yyyy", Locale.getDefault()).format(Date())
 
+
+    @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
+        requestWindowFeature(Window.FEATURE_NO_TITLE)
+        requestWindowFeature(Window.FEATURE_CONTEXT_MENU)
+
         super.onCreate(savedInstanceState)
         Log.d("MainActivity", "onCreate called")
 
         msalAuthManager = MSALAuthManager.getInstance(this)
         Log.d("MainActivity", "MSALAuthManager initialized")
 
-        requestWindowFeature(Window.FEATURE_NO_TITLE);
+
 
         setContent {
-                Column{
-                    Greeting()
-                    Spacer(modifier = Modifier.height(2.dp)) // Optional spacer
-                    MainScreen()
-                }
+            RoutineTurboATheme {
+                Scaffold(
+                    topBar = {
+                        TopAppBar(
+                            colors = TopAppBarDefaults.topAppBarColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                            ),
 
+                            title = {Text(text = "OKay")},
 
+                            navigationIcon = {Text("...")},
+                            actions = {Text("...")}
+                        )
+                    },
+
+                    content = { innerPadding ->
+                        Column(modifier = Modifier.padding(innerPadding)) {
+                            MainScreen()
+                        }
+                    }
+                )
+            }
         }
-    }
-}
-
-@Composable
-fun Greeting() {
-    val currentDate = SimpleDateFormat("EEEE, MMMM d, yyyy", Locale.getDefault()).format(Date())
-    Log.d("MainActivity", "Current date formatted: $currentDate")
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(text = currentDate, style = MaterialTheme.typography.headlineLarge)
     }
 }

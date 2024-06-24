@@ -1,5 +1,6 @@
 package com.app.routineturboa.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.routineturboa.data.local.RoutineRepository
@@ -33,6 +34,7 @@ class TaskViewModel(private val repository: RoutineRepository) : ViewModel() {
     }
 
     fun updateTask(task: Task) {
+        Log.d("TaskViewModel", "Updating task: ${task.taskName}")
         viewModelScope.launch {
             repository.updateTask(task)
             loadTasks()
@@ -40,6 +42,7 @@ class TaskViewModel(private val repository: RoutineRepository) : ViewModel() {
     }
 
     fun updatePositions(startPosition: Int) {
+        Log.d("TaskViewModel", "Updating positions from $startPosition")
         viewModelScope.launch {
             repository.updatePositions(startPosition)
             loadTasks()
@@ -58,5 +61,36 @@ class TaskViewModel(private val repository: RoutineRepository) : ViewModel() {
             }
             loadTasks()
         }
+    }
+
+    fun handleSaveTask(
+        newTask: Task,
+        selectedTaskForDisplay: Task?
+    ) {
+        Log.d("MainScreen", "Handling save task: ${newTask.taskName}")
+        val currentTasks = _tasks.value
+        selectedTaskForDisplay?.let { selectedTask ->
+            val newStartTime = selectedTask.endTime
+            newTask.startTime = newStartTime
+            newTask.endTime = TimeUtils.addDurationToTime(newStartTime, newTask.duration)
+            updatePositions(selectedTask.position + 1)
+            newTask.position = selectedTask.position + 1
+            addTask(newTask)
+            adjustSubsequentTasks(newTask.position, newTask.endTime)
+        } ?: run {
+            if (currentTasks.isNotEmpty()) {
+                val lastTask = currentTasks.last()
+                newTask.startTime = lastTask.endTime
+                newTask.endTime = TimeUtils.addDurationToTime(newTask.startTime, newTask.duration)
+                newTask.position = currentTasks.size + 1
+                addTask(newTask)
+            } else {
+                newTask.startTime = "08:00 AM"
+                newTask.endTime = TimeUtils.addDurationToTime(newTask.startTime, newTask.duration)
+                newTask.position = 1
+                addTask(newTask)
+            }
+        }
+        Log.d("MainScreen", "Task saved: ${newTask.taskName}")
     }
 }

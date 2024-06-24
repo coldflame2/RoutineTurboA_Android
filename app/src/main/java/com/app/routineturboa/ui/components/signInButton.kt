@@ -84,11 +84,11 @@ fun SignInButton(
         enabled = !isSigningIn // Disable button during sign-in process
     ) {
         Row {
-            if (currentAuthResult != null && profilePicUrl != null) {
+            if (currentAuthResult != null) {
                 Image(
                     painter = rememberAsyncImagePainter(profilePicUrl),
                     contentDescription = "Profile Picture",
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(10.dp)
                 )
                 Text(text = "Signed In") // Show "Signed In" when signed in
             } else {
