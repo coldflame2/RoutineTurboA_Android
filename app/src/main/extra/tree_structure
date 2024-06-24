@@ -1,0 +1,41 @@
+|   |   
+|-- routineturboa/
+|   |-- get_tree_structure.py
+|   |-- MainActivity.kt
+|   |-- MyApplication.kt
+|   |   
+|   |-- data/
+|   |   
+|   |   |-- local/
+|   |   |   |-- DatabaseHelper.kt
+|   |   |   |-- RoutineRepository.kt
+|   |   
+|   |   |-- model/
+|   |   |   |-- Task.kt
+|   |   
+|   |-- services/
+|   |   |-- downloadFromOneDrive.kt
+|   |   |-- MSALAuthManager.kt
+|   |   |-- OneDriveManager.kt
+|   |   
+|   |-- ui/
+|   |   |-- MainScreen.kt
+|   |   
+|   |   |-- components/
+|   |   |   |-- AddTaskScreen.kt
+|   |   |   |-- EditTaskScreen.kt
+|   |   |   |-- ShowDate.kt
+|   |   |   |-- signInButton.kt
+|   |   |   |-- TaskItem.kt
+|   |   
+|   |   |-- theme/
+|   |   |   |-- Color.kt
+|   |   |   |-- Theme.kt
+|   |   |   |-- Type.kt
+|   |   
+|   |-- utils/
+|   |   |-- TimeUtils.kt
+|   |   
+|   |-- viewmodel/
+|   |   |-- TaskViewModel.kt
+|   |   |-- TaskViewModelFactory.kt
