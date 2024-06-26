@@ -144,9 +144,8 @@ fun MainContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(10.dp)
+            .padding(5.dp, 0.dp, 5.dp, 0.dp)
     ) {
-
 
         if (isAddingTask) {
             val initialStartTime = selectedTaskForDisplay?.endTime ?: if (tasks.isNotEmpty()) tasks.last().endTime else "08:00 AM"

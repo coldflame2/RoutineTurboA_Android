@@ -42,7 +42,7 @@ class MainActivity : ComponentActivity() {
                                 titleContentColor = MaterialTheme.colorScheme.onPrimary,
                             ),
 
-                            title = {Text(text = "Testing")}
+                            title = {Text(text = currentDate)}
                         )
                     },
                     content = { innerPadding ->

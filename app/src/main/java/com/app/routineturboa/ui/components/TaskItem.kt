@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Card
@@ -21,7 +22,6 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -73,17 +73,27 @@ fun TaskCard(
 @Composable
 fun UpperRow(task: Task, onEditClick: (Task) -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().padding(5.dp, 0.dp, 1.dp, 0.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
     ) {
         TaskName(task)
-        IconButton(
-            onClick = { onEditClick(task) },
-        ) {
-            Icon(Icons.Default.Edit, contentDescription = "Edit Task",
-                tint = Color.DarkGray)
-        }
+        EditIcon { onEditClick(task) }
+    }
+}
+
+@Composable
+fun EditIcon(onClick: () -> Unit) {
+    IconButton(
+        onClick = onClick,
+        modifier = Modifier.size(32.dp)
+    ) {
+        Icon(
+            imageVector = Icons.Default.Edit,
+            contentDescription = "Edit Task",
+            tint = MaterialTheme.colorScheme.tertiary,
+            modifier = Modifier.size(13.dp)
+        )
     }
 }
 
