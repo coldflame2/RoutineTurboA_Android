@@ -14,7 +14,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.ui.Modifier
-import com.app.routineturboa.services.MSALAuthManager
 import com.app.routineturboa.ui.MainScreen
 import com.app.routineturboa.ui.theme.RoutineTurboATheme
 import java.text.SimpleDateFormat
@@ -22,40 +21,30 @@ import java.util.Date
 import java.util.Locale
 
 class MainActivity : ComponentActivity() {
-    private lateinit var msalAuthManager: MSALAuthManager
-    private val currentDate: String = SimpleDateFormat("EEEE, MMMM d, yyyy", Locale.getDefault()).format(Date())
-
+    private val currentDate: String = SimpleDateFormat("EEEE, MMMM d, yyyy",
+        Locale.getDefault()).format(Date())
 
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         requestWindowFeature(Window.FEATURE_NO_TITLE)
-        requestWindowFeature(Window.FEATURE_CONTEXT_MENU)
 
         super.onCreate(savedInstanceState)
         Log.d("MainActivity", "onCreate called")
-
-        msalAuthManager = MSALAuthManager.getInstance(this)
-        Log.d("MainActivity", "MSALAuthManager initialized")
-
-
-
         setContent {
             RoutineTurboATheme {
                 Scaffold(
                     topBar = {
+                        Log.d("MainActivity", "Setting title to 'Testing'")
+
                         TopAppBar(
                             colors = TopAppBarDefaults.topAppBarColors(
                                 containerColor = MaterialTheme.colorScheme.primary,
                                 titleContentColor = MaterialTheme.colorScheme.onPrimary,
                             ),
 
-                            title = {Text(text = "OKay")},
-
-                            navigationIcon = {Text("...")},
-                            actions = {Text("...")}
+                            title = {Text(text = "Testing")}
                         )
                     },
-
                     content = { innerPadding ->
                         Column(modifier = Modifier.padding(innerPadding)) {
                             MainScreen()

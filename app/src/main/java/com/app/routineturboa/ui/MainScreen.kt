@@ -171,7 +171,6 @@ fun MainContent(
         }
 
         else {
-
             LazyColumn(
                 modifier = Modifier.weight(1f)
                     .height(350.dp),
@@ -209,7 +208,6 @@ fun MainContent(
                     modifier = Modifier.align(Alignment.CenterVertically)
                 )
             }
-
         }
     }
 }

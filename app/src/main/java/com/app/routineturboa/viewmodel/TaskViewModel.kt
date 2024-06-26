@@ -33,6 +33,16 @@ class TaskViewModel(private val repository: RoutineRepository) : ViewModel() {
         }
     }
 
+    fun deleteTask(task: Task) {
+        Log.d("TaskViewModel", "Deleting task: ${task.taskName}")
+        viewModelScope.launch {
+            //Delete the task
+            repository.deleteTask(task)
+            updatePositions(task.position)
+            loadTasks()
+        }
+
+    }
     fun updateTask(task: Task) {
         Log.d("TaskViewModel", "Updating task: ${task.taskName}")
         viewModelScope.launch {
@@ -41,7 +51,7 @@ class TaskViewModel(private val repository: RoutineRepository) : ViewModel() {
         }
     }
 
-    fun updatePositions(startPosition: Int) {
+    private fun updatePositions(startPosition: Int) {
         Log.d("TaskViewModel", "Updating positions from $startPosition")
         viewModelScope.launch {
             repository.updatePositions(startPosition)

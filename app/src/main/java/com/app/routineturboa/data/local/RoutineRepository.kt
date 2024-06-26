@@ -106,6 +106,15 @@ class RoutineRepository(context: Context) {
         Log.d(TAG, "Task updated successfully: ${task.taskName}")
     }
 
+    suspend fun deleteTask(task: Task) = withContext(Dispatchers.IO) {
+        Log.d(TAG, "Deleting task: ${task.taskName}")
+        val selection = "${DatabaseHelper.DailyRoutine.COLUMN_NAME_ID} = ?"
+        val selectionArgs = arrayOf(task.id.toString())
+        db.delete(DatabaseHelper.DailyRoutine.TABLE_NAME, selection, selectionArgs)
+        Log.d(TAG, "Task deleted successfully: ${task.taskName}")
+    }
+
+
     suspend fun updatePositions(startPosition: Int) = withContext(Dispatchers.IO) {
         Log.d(TAG, "Updating positions starting from: $startPosition")
         val updateQuery = "UPDATE ${DatabaseHelper.DailyRoutine.TABLE_NAME} SET ${DatabaseHelper.DailyRoutine.COLUMN_NAME_POSITION} = ${DatabaseHelper.DailyRoutine.COLUMN_NAME_POSITION} + 1 WHERE ${DatabaseHelper.DailyRoutine.COLUMN_NAME_POSITION} >= ?" // Added query to update positions

@@ -37,9 +37,9 @@ fun TaskItem(
 
     TaskCard(
         modifier = Modifier
-            .padding(8.dp, 0.dp, 0.dp, 0.dp)
+            .padding(0.dp, 0.dp, 0.dp, 0.dp)
             .fillMaxWidth(),
-            
+
         onClick = onClick
     ) {
         Column {

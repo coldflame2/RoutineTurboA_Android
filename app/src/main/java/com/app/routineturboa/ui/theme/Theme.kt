@@ -1,5 +1,6 @@
 package com.app.routineturboa.ui.theme
 
+import android.util.Log
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
@@ -16,6 +17,8 @@ fun RoutineTurboATheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
+    Log.d("RoutineTurboATheme", "Theme applied")
+
     val colorScheme = if (darkTheme) {
         darkColorScheme(
             primary = Color(0xFF6200EE),
