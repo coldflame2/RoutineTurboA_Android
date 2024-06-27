@@ -7,6 +7,8 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Log
 import com.app.routineturboa.R
+import com.microsoft.identity.client.AcquireTokenParameters
+import com.microsoft.identity.client.AcquireTokenSilentParameters
 import com.microsoft.identity.client.AuthenticationCallback
 import com.microsoft.identity.client.IAccount
 import com.microsoft.identity.client.IAuthenticationResult
@@ -28,23 +30,47 @@ class MSALAuthManager(context: Context) {
     var singleAccountApp: ISingleAccountPublicClientApplication? = null
     var currentAccount: IAccount? = null
 
-    init {
-        Log.d("MSALAuthManager", "Initializing MSALAuthManager")
+    companion object {
+        @Volatile
+        private var INSTANCE: MSALAuthManager? = null
+
+        fun getInstance(context: Context): MSALAuthManager =
+            INSTANCE ?: synchronized(this) {
+                INSTANCE ?: MSALAuthManager(context).also { INSTANCE = it }
+            }
+    }
+
+    private fun createMsalApplication() {
+        Log.d("MSALAuthManager", "Creating MSAL single account application")
+
         PublicClientApplication.createSingleAccountPublicClientApplication(
             appContext,
             R.raw.auth_config_single_account,
-            object : IPublicClientApplication.ISingleAccountApplicationCreatedListener {
-                override fun onCreated(application: ISingleAccountPublicClientApplication) {
-                    Log.d("MSALAuthManager", "MSAL client created")
-                    singleAccountApp = application
-                    checkCurrentAccount()
-                }
-
-                override fun onError(exception: MsalException) {
-                    Log.e("MSALAuthManager", "MSAL client creation error: ${exception.message}")
-                }
-            })
+            getMsalClientListener()
+        )
     }
+
+    // Prepares a response handler for when the MSAL is set up.
+    private fun getMsalClientListener(): IPublicClientApplication.ISingleAccountApplicationCreatedListener {
+        return object : IPublicClientApplication.ISingleAccountApplicationCreatedListener {
+
+            override fun onCreated(application: ISingleAccountPublicClientApplication) {
+                Log.d("MSALAuthManager", "MSAL client created successfully")
+                singleAccountApp = application
+                checkCurrentAccount()
+            }
+
+            override fun onError(exception: MsalException) {
+                Log.e("MSALAuthManager", "MSAL client creation error: ${exception.message}")
+            }
+        }
+    }
+
+    init {
+        Log.d("MSALAuthManager", "Initializing MSALAuthManager")
+        createMsalApplication()
+    }
+
 
     private fun checkCurrentAccount() {
         Log.d("MSALAuthManager", "Checking current account")
@@ -70,24 +96,21 @@ class MSALAuthManager(context: Context) {
         })
     }
 
-    companion object {
-        @Volatile
-        private var INSTANCE: MSALAuthManager? = null
-
-        fun getInstance(context: Context): MSALAuthManager =
-            INSTANCE ?: synchronized(this) {
-                INSTANCE ?: MSALAuthManager(context).also { INSTANCE = it }
-            }
-    }
-
     fun signIn(activity: Activity, callback: AuthenticationCallback) {
         if (singleAccountApp != null) {
             Log.d("MSALAuthManager", "Attempting to sign in")
-            singleAccountApp?.signIn(activity, null, arrayOf("User.Read", "Files.Read"), callback)
+            val parameters = AcquireTokenParameters.Builder()
+                .startAuthorizationFromActivity(activity)
+                .withScopes(listOf("User.Read", "Files.Read"))
+                .withCallback(callback)
+                .build()
+
+            singleAccountApp?.acquireToken(parameters)
         } else {
             Log.e("MSALAuthManager", "MSAL client is not initialized")
         }
     }
+
 
     fun signOut(callback: ISingleAccountPublicClientApplication.SignOutCallback) {
         Log.d("MSALAuthManager", "Attempting to sign out")
@@ -101,7 +124,15 @@ class MSALAuthManager(context: Context) {
         Log.d("MSALAuthManager", "Fetching profile image URL for account: ${account.username}")
         return withContext(Dispatchers.IO) {
             try {
-                val token = singleAccountApp?.acquireTokenSilent(arrayOf("User.Read"), account.authority)?.accessToken
+                val parameters = AcquireTokenSilentParameters.Builder()
+                    .withScopes(listOf("User.Read"))
+                    .forAccount(account)
+                    .fromAuthority(account.authority)
+                    .build()
+
+                val result = singleAccountApp?.acquireTokenSilent(parameters)
+                val token = result?.accessToken
+
                 token?.let {
                     val client = OkHttpClient()
                     val request = Request.Builder()
@@ -109,6 +140,7 @@ class MSALAuthManager(context: Context) {
                         .addHeader("Authorization", "Bearer $token")
                         .build()
                     val response = client.newCall(request).execute()
+                    Log.d("MSALAuthManager", "Account authority: ${account.authority}")
                     if (response.isSuccessful) {
                         val byteArray = response.body?.bytes()
                         byteArray?.let {

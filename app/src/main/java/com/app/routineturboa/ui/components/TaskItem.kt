@@ -17,23 +17,15 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontStyle
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.times
 import com.app.routineturboa.data.model.Task
 
 @Composable
 fun TaskItem(
-    task: Task, isSelected: Boolean, onEditClick: (Task) -> Unit, onClick: () -> Unit
+    task: Task, onEditClick: (Task) -> Unit, onClick: () -> Unit
 ) {
-    val taskDuration = task.duration
-    var scale by remember { mutableFloatStateOf(1f) }
 
     TaskCard(
         modifier = Modifier
@@ -47,12 +39,6 @@ fun TaskItem(
             LowerRow(task)  // Task Duration and Timings
         }
     }
-}
-
-fun calculateCardHeight(duration: Int, scale: Float): Dp {
-    val baseHeight = 100.dp
-    val additionalHeight = (duration / 10) * 5.dp
-    return  duration *1.dp * scale
 }
 
 @Composable

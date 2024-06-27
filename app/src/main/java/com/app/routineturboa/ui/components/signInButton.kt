@@ -1,6 +1,7 @@
 package com.app.routineturboa.ui.components
 
 import android.util.Log
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
@@ -27,20 +28,23 @@ import com.microsoft.identity.client.exception.MsalException
 import kotlinx.coroutines.launch
 
 @Composable
-fun SignInButton(
-    msalAuthManager: MSALAuthManager,
-    authenticationResult: IAuthenticationResult?,
-    onSignInSuccess: (IAuthenticationResult) -> Unit
-) {
+fun SignInButton() {
     val context = LocalContext.current
+
+    val msalAuthManager = remember { MSALAuthManager.getInstance(context) }
+    var authenticationResult by remember { mutableStateOf<IAuthenticationResult?>(null) }
+    val onSignInSuccess = { result:IAuthenticationResult ->
+        authenticationResult = result
+        msalAuthManager.saveAuthResult(result)
+    }
+
     val coroutineScope = rememberCoroutineScope()
     var isSigningIn by remember { mutableStateOf(false) }
     var profilePicUrl by remember { mutableStateOf<String?>(null) }
-    var currentAuthResult by remember { mutableStateOf(authenticationResult) }
 
     // Fetch profile image URL when authentication result changes
-    LaunchedEffect(currentAuthResult) {
-        currentAuthResult?.let {
+    LaunchedEffect(authenticationResult) {
+        authenticationResult?.let {
             coroutineScope.launch {
                 profilePicUrl = msalAuthManager.getProfileImageUrl()
                 Log.d("SignInButton", "Profile image URL fetched: $profilePicUrl")
@@ -50,11 +54,14 @@ fun SignInButton(
 
     Button(
         onClick = {
+            Toast.makeText(context, "Signing in", Toast.LENGTH_LONG).show()
             Log.d("SignInButton", "Sign-in button clicked")
+
             isSigningIn = true
             msalAuthManager.singleAccountApp?.getCurrentAccountAsync(object : ISingleAccountPublicClientApplication.CurrentAccountCallback {
                 override fun onAccountLoaded(activeAccount: IAccount?) {
                     if (activeAccount != null) {
+
                         msalAuthManager.signOut(object : ISingleAccountPublicClientApplication.SignOutCallback {
                             override fun onSignOut() {
                                 Log.d("SignInButton", "Signed out successfully, now signing in again.")
@@ -82,9 +89,10 @@ fun SignInButton(
             })
         },
         enabled = !isSigningIn // Disable button during sign-in process
+
     ) {
         Row {
-            if (currentAuthResult != null) {
+            if (authenticationResult != null) {
                 Image(
                     painter = rememberAsyncImagePainter(profilePicUrl),
                     contentDescription = "Profile Picture",
@@ -103,6 +111,7 @@ fun signIn(msalAuthManager: MSALAuthManager, activity: MainActivity, onSignInSuc
 
         override fun onSuccess(result: IAuthenticationResult) {
             Log.d("SignInButton", "Sign-in successful")
+            Toast.makeText(activity, "Sign-in successful", Toast.LENGTH_SHORT).show()
             onSignInSuccess(result)
         }
 
