@@ -12,14 +12,15 @@ android {
         applicationId = "com.app.routineturboa"
         minSdk = 30
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+
+        versionCode = 2
+        versionName = "1.9.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
         }
-        versionNameSuffix = "1"
+        versionNameSuffix = "alpha"
     }
 
     buildTypes {
@@ -30,6 +31,11 @@ android {
                 "proguard-rules.pro"
             )
             signingConfig = signingConfigs.getByName("debug")
+            applicationIdSuffix = ".release"
+        }
+
+        getByName("debug") {
+            applicationIdSuffix = ".debug"
         }
     }
     compileOptions {

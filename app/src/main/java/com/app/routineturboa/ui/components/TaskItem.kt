@@ -59,7 +59,7 @@ fun TaskCard(
 @Composable
 fun UpperRow(task: Task, onEditClick: (Task) -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(5.dp, 0.dp, 1.dp, 0.dp),
+        modifier = Modifier.fillMaxWidth().padding(15.dp, 0.dp, 1.dp, 0.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
     ) {
