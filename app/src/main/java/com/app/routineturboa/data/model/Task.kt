@@ -6,7 +6,7 @@ data class Task(
     var endTime: String,
     val duration: Int,
     val taskName: String,
-    val reminders: String,
+    val reminder: String,
     val type: String,
     var position: Int
 )

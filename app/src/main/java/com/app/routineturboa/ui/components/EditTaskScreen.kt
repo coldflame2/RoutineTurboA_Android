@@ -37,6 +37,7 @@ fun EditTaskScreen(
     var startTime by remember { mutableStateOf(task.startTime) }
     var endTime by remember { mutableStateOf(task.endTime) }
     var duration by remember { mutableStateOf(task.duration.toString()) }
+    var reminder by remember { mutableStateOf(task.reminder) }
 
     val context = LocalContext.current
 
@@ -48,7 +49,7 @@ fun EditTaskScreen(
             verticalArrangement = Arrangement.spacedBy(1.dp)
         ) {
             Text(
-                text = "Edit Task: $taskName",
+                text = "Edit",
                 style = MaterialTheme.typography.headlineSmall,
                 modifier = Modifier.padding(10.dp)
             )
@@ -81,6 +82,14 @@ fun EditTaskScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
+            TextField(
+                value = reminder,
+                onValueChange = { reminder = it },
+                label = { Text("Reminder") },
+                keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth()
+            )
+
             Row(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 modifier = Modifier.fillMaxWidth()
@@ -95,9 +104,11 @@ fun EditTaskScreen(
                                 taskName = taskName,
                                 startTime = startTime,
                                 endTime = endTime,
+                                reminder = reminder,
                                 duration = duration.toInt()
                             )
                             onSave(updatedTask)
+
                         } catch (e: ParseException) {
                             Toast.makeText(context, "Invalid time format", Toast.LENGTH_SHORT).show()
                         }

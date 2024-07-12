@@ -68,7 +68,7 @@ fun RoutineTurboATheme(
             onBackground = Color(0xFF1C1B1F),
             surface = Color(0xFFFFFBFE),
             onSurface = Color(0xFF1C1B1F),
-            surfaceVariant = Color(0xFF5A0F0F),  // Existing
+            surfaceVariant = Color(0xFFFFFFFF),  // Existing
             onSurfaceVariant = Color(0xFF49454F),
             outline = Color(0xFF8B8B8B),  // Existing
             outlineVariant = Color(0xFFCAC4D0),

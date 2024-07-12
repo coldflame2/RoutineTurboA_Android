@@ -24,7 +24,7 @@ import androidx.compose.ui.unit.dp
 import com.app.routineturboa.R
 
 @Composable
-fun DrawerContent(onItemClicked: () -> Unit) {
+fun RoutineDrawerContent(onItemClicked: () -> Unit) {
     val context = LocalContext.current // Assuming you're calling this from a composable
     val appName = context.getString(R.string.app_name)
 

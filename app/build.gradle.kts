@@ -65,6 +65,7 @@ android {
 
 dependencies {
     implementation(libs.coil.compose)
+    implementation(libs.androidx.work.runtime.ktx.v271)
 
     implementation(libs.msal)
     implementation(libs.volley)
@@ -86,6 +87,7 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.compose.runtime)
+    implementation(libs.androidx.work.runtime.ktx)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

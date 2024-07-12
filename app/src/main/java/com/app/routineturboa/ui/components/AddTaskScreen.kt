@@ -121,7 +121,7 @@ fun AddTaskScreen(
                             startTime = initialStartTime,
                             endTime = endTime, // Set the end time
                             duration = duration.toInt(),
-                            reminders = "", // You can add a field for reminders if necessary
+                            reminder = "", // You can add a field for reminders if necessary
                             type = "", // You can add a field for type if necessary
                             position = 0 // Position will be set in MainScreen
                         )

@@ -26,6 +26,16 @@ class TaskViewModel(private val repository: RoutineRepository) : ViewModel() {
         }
     }
 
+    fun isTaskFirst(task: Task): Boolean {
+        val taskList = tasks.value
+        return taskList.indexOf(task) == 0
+    }
+
+    fun isTaskLast(task: Task): Boolean {
+        val taskList = tasks.value
+        return taskList.indexOf(task) == taskList.size - 1
+    }
+
     fun addTask(task: Task) {
         viewModelScope.launch {
             repository.addTask(task)
@@ -36,13 +46,12 @@ class TaskViewModel(private val repository: RoutineRepository) : ViewModel() {
     fun deleteTask(task: Task) {
         Log.d("TaskViewModel", "Deleting task: ${task.taskName}")
         viewModelScope.launch {
-            //Delete the task
             repository.deleteTask(task)
             updatePositions(task.position)
             loadTasks()
         }
-
     }
+
     fun updateTask(task: Task) {
         Log.d("TaskViewModel", "Updating task: ${task.taskName}")
         viewModelScope.launch {
@@ -103,4 +112,5 @@ class TaskViewModel(private val repository: RoutineRepository) : ViewModel() {
         }
         Log.d("MainScreen", "Task saved: ${newTask.taskName}")
     }
+
 }

@@ -1,10 +1,12 @@
 package com.app.routineturboa.data.local
 
+import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import android.os.Environment
 import android.util.Log
+import com.app.routineturboa.utils.TimeUtils
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -16,7 +18,7 @@ class DatabaseHelper(private val context: Context) : SQLiteOpenHelper(context, D
 
     companion object {
         const val DATABASE_VERSION = 1
-        const val DATABASE_NAME = "RoutineTurbo.db"
+        const val DATABASE_NAME = "RoutineTurbo_DEMO.db"
         private const val TAG = "DatabaseHelper"
     }
 
@@ -27,7 +29,7 @@ class DatabaseHelper(private val context: Context) : SQLiteOpenHelper(context, D
         const val COLUMN_NAME_END_TIME = "end_time"
         const val COLUMN_NAME_DURATION = "duration"
         const val COLUMN_NAME_TASK_NAME = "task_name"
-        const val COLUMN_NAME_REMINDERS = "reminders"
+        const val COLUMN_NAME_REMINDER = "reminders"
         const val COLUMN_NAME_TYPE = "type"
         const val COLUMN_NAME_POSITION = "position"
     }
@@ -35,11 +37,11 @@ class DatabaseHelper(private val context: Context) : SQLiteOpenHelper(context, D
     private val createEntries = """
         CREATE TABLE IF NOT EXISTS ${DailyRoutine.TABLE_NAME} (
             ${DailyRoutine.COLUMN_NAME_ID} INTEGER PRIMARY KEY AUTOINCREMENT,
-            ${DailyRoutine.COLUMN_NAME_START_TIME} DATETIME,
-            ${DailyRoutine.COLUMN_NAME_END_TIME} DATETIME,
+            ${DailyRoutine.COLUMN_NAME_START_TIME} TEXT,
+            ${DailyRoutine.COLUMN_NAME_END_TIME} TEXT,
             ${DailyRoutine.COLUMN_NAME_DURATION} INTEGER,
             ${DailyRoutine.COLUMN_NAME_TASK_NAME} TEXT,
-            ${DailyRoutine.COLUMN_NAME_REMINDERS} DATETIME,
+            ${DailyRoutine.COLUMN_NAME_REMINDER} TEXT,
             ${DailyRoutine.COLUMN_NAME_TYPE} TEXT,
             ${DailyRoutine.COLUMN_NAME_POSITION} INTEGER)
     """
@@ -49,6 +51,8 @@ class DatabaseHelper(private val context: Context) : SQLiteOpenHelper(context, D
     override fun onCreate(db: SQLiteDatabase) {
         Log.d(TAG, "Creating database with the following query: $createEntries")
         db.execSQL(createEntries)
+        insertDefaultTasks(db)
+
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
@@ -112,4 +116,41 @@ class DatabaseHelper(private val context: Context) : SQLiteOpenHelper(context, D
         }
         Log.d(TAG, "Finished copying stream")
     }
+
+    private fun insertDefaultTasks(db: SQLiteDatabase) {
+        val cursor = db.rawQuery("SELECT COUNT(*) FROM ${DailyRoutine.TABLE_NAME}", null)
+        cursor.moveToFirst()
+        val count = cursor.getInt(0)
+        cursor.close()
+
+        if (count == 0) {
+            Log.d(TAG, "Inserting default tasks")
+
+            val defaultTasks = listOf(
+                DefaultTask("00:00", "06:00", "Sleep/Wake up", 0),
+                DefaultTask("06:00", "23:59", "Daily Activities", 1)
+            )
+
+            defaultTasks.forEach { task ->
+                val values = ContentValues().apply {
+                    put(DailyRoutine.COLUMN_NAME_START_TIME, task.startTime)
+                    put(DailyRoutine.COLUMN_NAME_END_TIME, task.endTime)
+                    put(DailyRoutine.COLUMN_NAME_TASK_NAME, task.taskName)
+                    put(DailyRoutine.COLUMN_NAME_DURATION,
+                        TimeUtils.calculateDuration(task.startTime, task.endTime))
+
+                    put(DailyRoutine.COLUMN_NAME_REMINDER, "")
+                    put(DailyRoutine.COLUMN_NAME_TYPE, " ")
+                    put(DailyRoutine.COLUMN_NAME_POSITION, task.position)
+                }
+                db.insert(DailyRoutine.TABLE_NAME, null, values)
+            }
+        }
+    }
+
+    private data class DefaultTask(
+        val startTime: String,
+        val endTime: String,
+        val taskName: String,
+        val position: Int)
 }
