@@ -1,6 +1,6 @@
 package com.app.routineturboa
 
-import RoutineDrawerContent
+import ContentForDrawer
 import android.Manifest
 import android.os.Build
 import android.os.Bundle
@@ -38,6 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.lifecycleScope
 import com.app.routineturboa.reminders.ReminderManager
 import com.app.routineturboa.ui.MainScreen
 import com.app.routineturboa.ui.theme.RoutineTurboATheme
@@ -71,7 +72,9 @@ class MainActivity : ComponentActivity() {
         }
 
         if (PermissionUtils.hasNotificationPermission(this)) {
-            // Notification permission is already granted
+            lifecycleScope.launch {
+                reminderManager.observeAndScheduleReminders(applicationContext)
+            }
         }
 
         setContent {
@@ -88,9 +91,12 @@ class MainActivity : ComponentActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         } else {
-            //
+            lifecycleScope.launch {
+                reminderManager.observeAndScheduleReminders(applicationContext)
+            }
         }
     }
+
 
 }
 
@@ -113,7 +119,7 @@ fun MainScreenContent(
             ModalDrawerSheet(
                 modifier = Modifier.width(drawerWidth.dp)
             ) {
-                RoutineDrawerContent {
+                ContentForDrawer {
                     coroutineScope.launch { drawerState.close() }
                 }
             }
