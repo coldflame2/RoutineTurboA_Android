@@ -38,18 +38,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
-import com.app.routineturboa.data.local.RoutineRepository
 import com.app.routineturboa.reminders.ReminderManager
 import com.app.routineturboa.ui.MainScreen
 import com.app.routineturboa.ui.theme.RoutineTurboATheme
 import com.app.routineturboa.utils.PermissionUtils
-import com.app.routineturboa.utils.TimeUtils
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+
 
 class MainActivity : ComponentActivity() {
     private lateinit var requestPermissionLauncher: ActivityResultLauncher<String>
@@ -67,14 +64,14 @@ class MainActivity : ComponentActivity() {
         ) { isGranted: Boolean ->
             if (isGranted) {
                 Log.d("MainActivity", "Notification permission granted")
-                scheduleRemindersForAllTasks()
+                //
             } else {
                 Log.d("MainActivity", "Notification permission denied")
             }
         }
 
         if (PermissionUtils.hasNotificationPermission(this)) {
-            scheduleRemindersForAllTasks()
+            // Notification permission is already granted
         }
 
         setContent {
@@ -91,25 +88,10 @@ class MainActivity : ComponentActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         } else {
-            scheduleRemindersForAllTasks()
+            //
         }
     }
 
-    private fun scheduleRemindersForAllTasks() {
-        CoroutineScope(Dispatchers.IO).launch {
-            val dbRepository = RoutineRepository(applicationContext)
-            val tasks = dbRepository.getAllTasks()
-            tasks.forEach { task ->
-                task.reminder.let { reminderTime ->
-                    Log.d("MainActivity", "Reminder time: $reminderTime")
-                    val reminderMillis = TimeUtils.timeStringToMilliseconds(reminderTime)
-                    if (reminderMillis > System.currentTimeMillis()) {
-                        reminderManager.scheduleReminder(task.id, reminderMillis)
-                    }
-                }
-            }
-        }
-    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

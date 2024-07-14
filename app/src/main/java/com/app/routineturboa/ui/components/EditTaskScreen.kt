@@ -22,15 +22,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.app.routineturboa.data.model.Task
+import com.app.routineturboa.data.model.TaskEntity
 import com.app.routineturboa.utils.TimeUtils
 import java.text.ParseException
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditTaskScreen(
-    task: Task,
-    onSave: (Task) -> Unit,
+    task: TaskEntity,
+    onSave: (TaskEntity) -> Unit,
     onCancel: () -> Unit
 ) {
     var taskName by remember { mutableStateOf(task.taskName) }

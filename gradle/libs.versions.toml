@@ -1,81 +1,56 @@
 [versions]
 agp = "8.3.2"
-androidxWorkRuntimeKtx = "2.9.0"
 coreKtx = "1.13.1"
 junit = "4.13.2"
 junitVersion = "1.1.5"
 espressoCore = "3.5.1"
 lifecycleRuntimeKtx = "2.8.2"
-
 kotlin = "2.0.0"
-compose-plugin = "2.0.0" # Assuming the version matches Kotlin 2.0.0
-
+compose-plugin = "2.0.0"
 activityCompose = "1.9.0"
 composeBom = "2024.06.00"
 sqlite = "2.4.0"
 lifecycleViewModelCompose = "2.8.2"
-
-msalVersion = "5.3.1"  # Define the version for MSAL
+msalVersion = "5.3.1"
 volley = "1.2.1"
 graphVersion = "5.10.0"
-
 coilCompose = "2.6.0"
 workRuntimeKtx = "2.9.0"
+kspVersion = "2.0.0-1.0.23"
+roomRuntime = "2.5.0"
 
 [libraries]
-androidx-work-runtime-ktx-v271 = { module = "androidx.work:work-runtime-ktx", version.ref = "androidxWorkRuntimeKtx" }
+androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "roomRuntime" }
+androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "roomRuntime" }
+androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "roomRuntime" }
 coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coilCompose" }
-
-#msal
-msal = { group = "com.microsoft.identity.client", name = "msal", version.ref = "msalVersion" }  # Define the MSAL library
+androidx-work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "workRuntimeKtx" }
+msal = { group = "com.microsoft.identity.client", name = "msal", version.ref = "msalVersion" }
 graph = { group = "com.microsoft.graph", name = "microsoft-graph", version.ref = "graphVersion" }
-
-
-# Jetpack Compose Libraries
-    ## Core Compose Libraries
-androidx-compose-runtime = { group = "androidx.compose.runtime", name = "runtime" }  # Core runtime for Compose
-androidx-ui = { group = "androidx.compose.ui", name = "ui" }  # Basic UI elements
-androidx-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }  # Graphics support for UI elements
-androidx-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }  # Tools to aid in Compose UI development
-androidx-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }  # Tools for previewing Compose UI elements
-androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }  # Testing utilities for UI manifests
-androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }  # JUnit4 support for testing Compose UIs
-androidx-material3 = { group = "androidx.compose.material3", name = "material3" }  # Material Design components for Compose
-
-   ## Compose Integration Libraries
-androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }  # Integrates Compose with Android activity lifecycle
-androidx-lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "lifecycleRuntimeKtx" }  # Adds lifecycle awareness to Compose components
-androidx-lifecycle-viewmodel-compose = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "lifecycleViewModelCompose" }  # Integrates ViewModel with Compose
-androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }  # Bill of Materials to manage versions of Compose libraries
-
-    ## Material Icons
+androidx-compose-runtime = { group = "androidx.compose.runtime", name = "runtime" }
+androidx-ui = { group = "androidx.compose.ui", name = "ui" }
+androidx-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
+androidx-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
+androidx-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
+androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
+androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
+androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
+androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
+androidx-lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "lifecycleRuntimeKtx" }
+androidx-lifecycle-viewmodel-compose = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "lifecycleViewModelCompose" }
+androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
 androidx-material-icons-core = { group = "androidx.compose.material", name = "material-icons-core" }
 androidx-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
-
-
-# Android Core Libraries
-    ## Core Kotlin Extensions
-androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }  # Kotlin extensions for core Android libraries
-
-    ## Lifecycle Management
-androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }  # Kotlin extensions for lifecycle-aware components
-
-# Persistence Libraries
-    ## SQLite
-sqlite = { module = "androidx.sqlite:sqlite", version.ref = "sqlite" }  # SQLite database support
-
-# Testing Libraries
-
-    ## JUnit
-junit = { group = "junit", name = "junit", version.ref = "junit" }  # Core JUnit library for testing
-androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }  # JUnit support for Android tests
-androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }  # Espresso framework for UI testing
+androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
+sqlite = { module = "androidx.sqlite:sqlite", version.ref = "sqlite" }
+junit = { group = "junit", name = "junit", version.ref = "junit" }
+androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
+androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
 volley = { module = "com.android.volley:volley", version.ref = "volley" }
-androidx-work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "workRuntimeKtx" }
-
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
 jetbrainsKotlinAndroid = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "compose-plugin" }
-
+ksp = { id = "com.google.devtools.ksp", version.ref = "kspVersion" }

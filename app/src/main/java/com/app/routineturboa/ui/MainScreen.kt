@@ -24,7 +24,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.app.routineturboa.data.local.RoutineRepository
-import com.app.routineturboa.data.model.Task
+import com.app.routineturboa.data.model.TaskEntity
 import com.app.routineturboa.services.downloadFromOneDrive
 import com.app.routineturboa.ui.components.AddTaskScreen
 import com.app.routineturboa.ui.components.EditTaskScreen
@@ -41,8 +41,8 @@ fun MainScreen() {
     val taskViewModel: TaskViewModel = viewModel(factory = taskViewModelFactory)
     val tasks by taskViewModel.tasks.collectAsStateWithLifecycle()
 
-    var clickedTask by remember { mutableStateOf<Task?>(null) }
-    var taskBeingEdited by remember { mutableStateOf<Task?>(null) }
+    var clickedTask by remember { mutableStateOf<TaskEntity?>(null) }
+    var taskBeingEdited by remember { mutableStateOf<TaskEntity?>(null) }
     var isAddingTask by remember { mutableStateOf(false) }
 
     val authenticationResult by remember { mutableStateOf<IAuthenticationResult?>(null) }
@@ -74,7 +74,10 @@ fun MainScreen() {
                 isAddingTask -> {
                     AddTaskScreen(
                         initialStartTime = "08:00 AM",
-                        onSave = { newTask -> taskViewModel.handleSaveTask(newTask, null) },
+                        onSave = { newTask: TaskEntity ->
+                            taskViewModel.handleSaveTask(newTask, null)
+                            isAddingTask = false
+                        },
                         onCancel = { isAddingTask = false }
                     )
                 }
@@ -83,7 +86,7 @@ fun MainScreen() {
                     taskBeingEdited?.let { task ->
                         EditTaskScreen(
                             task = task,
-                            onSave = { updatedTask ->
+                            onSave = { updatedTask: TaskEntity ->
                                 taskViewModel.updateTask(updatedTask)
                                 taskBeingEdited = null
                             },

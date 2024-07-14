@@ -1,0 +1,34 @@
+package com.app.routineturboa.data.local
+
+import androidx.room.Dao
+import androidx.room.Delete
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
+import androidx.room.Update
+import com.app.routineturboa.data.model.TaskEntity
+import kotlinx.coroutines.flow.Flow
+
+@Dao
+interface TaskDao {
+    @Query("SELECT * FROM tasks ORDER BY startTime")
+    fun getAllTasks(): Flow<List<TaskEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTask(task: TaskEntity): Long
+
+    @Update
+    suspend fun updateTask(task: TaskEntity)
+
+    @Delete
+    suspend fun deleteTask(task: TaskEntity)
+
+    @Query("SELECT * FROM tasks WHERE id = :taskId")
+    suspend fun getTaskById(taskId: Int): TaskEntity?
+
+    @Query("SELECT * FROM tasks ORDER BY startTime ASC LIMIT 1")
+    suspend fun getFirstTask(): TaskEntity?
+
+    @Query("SELECT * FROM tasks ORDER BY startTime DESC LIMIT 1")
+    suspend fun getLastTask(): TaskEntity?
+}

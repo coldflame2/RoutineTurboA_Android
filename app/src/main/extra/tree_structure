@@ -1,6 +1,5 @@
 |   |   
 |-- routineturboa/
-|   |-- get_tree_structure.py
 |   |-- MainActivity.kt
 |   |-- MyApplication.kt
 |   |   
@@ -24,8 +23,8 @@
 |   |   |-- components/
 |   |   |   |-- AddTaskScreen.kt
 |   |   |   |-- EditTaskScreen.kt
-|   |   |   |-- ShowDate.kt
-|   |   |   |-- signInButton.kt
+|   |   |   |-- RoutineDrawerContent.kt
+|   |   |   |-- SignInButton.kt
 |   |   |   |-- TaskItem.kt
 |   |   
 |   |   |-- theme/
@@ -35,7 +34,14 @@
 |   |   
 |   |-- utils/
 |   |   |-- TimeUtils.kt
+|   |   |-- showToast.kt
+|   |   |-- permissions.kt
 |   |   
 |   |-- viewmodel/
 |   |   |-- TaskViewModel.kt
 |   |   |-- TaskViewModelFactory.kt
+|   |
+|   |-- reminders/
+|   |   |-- ReminderManager.kt
+|   |   |-- ReminderReceiver.kt
+|   |

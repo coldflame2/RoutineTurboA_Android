@@ -1,181 +1,230 @@
 
-// Content from C:\Users\Vivid\AndroidStudioProjects\RoutineTurbo_android\app\src\main\AndroidManifest.xml
-<?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools">
 
-    <application
-        android:name=".MyApplication"
-        android:allowBackup="true"
-        android:dataExtractionRules="@xml/data_extraction_rules"
-        android:fullBackupContent="@xml/backup_rules"
-        android:icon="@mipmap/ic_launcher"
-        android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
-        android:supportsRtl="true"
-        tools:targetApi="31"
-        android:theme="@style/Theme.AppCompat.DayNight.NoActionBar">
 
-        <activity
-            android:name=".MainActivity"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
+// Content from C:\Users\vivid\Documents\C-Creative Projects\RoutineTurboA_android\app\src\main\extra\MainScreen_original.kt
+package com.app.routineturboa.ui
 
-        <!-- MSAL BrowserTabActivity configuration -->
-        <activity
-            android:name="com.microsoft.identity.client.BrowserTabActivity"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="msauth"
-                    android:host="com.app.routineturboa"
-                    android:path="/a0VHP+Yc7DrhJPus83+LbjsqzHY=" />
-            </intent-filter>
-        </activity>
 
-    </application>
-</manifest>
+@Composable
+fun MainScreen(taskViewModel: TaskViewModel = viewModel(factory = TaskViewModelFactory(RoutineRepository(LocalContext.current)))) {
 
-// Content from C:\Users\Vivid\AndroidStudioProjects\RoutineTurbo_android\app\build.gradle.kts
-plugins {
-    alias(libs.plugins.androidApplication)
-    alias(libs.plugins.jetbrainsKotlinAndroid)
-    alias(libs.plugins.compose.compiler)
-}
+    val tasks by taskViewModel.tasks.collectAsStateWithLifecycle()
 
-android {
-    namespace = "com.app.routineturboa"
-    compileSdk = 34
+    var selectedTaskForDisplay by remember { mutableStateOf<Task?>(null) }
+    var taskBeingEdited by remember { mutableStateOf<Task?>(null) }
+    var isAddingTask by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val msalAuthManager = remember { MSALAuthManager.getInstance(context) }
+    var oneDriveFiles by remember { mutableStateOf<List<DriveItem>>(emptyList()) }
+    var authenticationResult by remember { mutableStateOf<IAuthenticationResult?>(null) }
+    val coroutineScope = rememberCoroutineScope()
 
-    defaultConfig {
-        applicationId = "com.app.routineturboa"
-        minSdk = 30
-        targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
-
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        vectorDrawables {
-            useSupportLibrary = true
-        }
-        versionNameSuffix = "1"
+    LaunchedEffect(authenticationResult) {
+        //Calling downloadFromOneDrive
     }
 
-    buildTypes {
-        release {
-            isMinifyEnabled = false
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+    Surface(
+        color = MaterialTheme.colorScheme.background
+    ) {
+        MainContent(
+            tasks = tasks,
+            selectedTaskForDisplay = selectedTaskForDisplay,
+            taskBeingEdited = taskBeingEdited,
+            isAddingTask = isAddingTask,
+            msalAuthManager = msalAuthManager,
+            authenticationResult = authenticationResult,
+            oneDriveFiles = oneDriveFiles,
+
+            onTaskSelected = { task ->
+                if (task != null) {
+                    Log.d("MainScreen", "Task selected: ${task.taskName}")
+                }
+                selectedTaskForDisplay = task
+            },
+            onTaskEdited = { task ->
+                Log.d("MainScreen", "Editing task: ${task?.taskName}")
+                taskBeingEdited = task
+            },
+            onTaskEditSave = { updatedTask ->
+                Log.d("MainScreen", "Saving edited task: ${updatedTask.taskName}")
+                taskViewModel.updateTask(updatedTask)
+                taskBeingEdited = null
+            },
+
+            onAddTask = {
+                Log.d("MainScreen", "Adding new task")
+                isAddingTask = true
+            },
+            onCancelAddTask = {
+                Log.d("MainScreen", "Canceling add task")
+                isAddingTask = false
+            },
+            onSaveTask = { newTask, selectedTask ->
+                Log.d("MainScreen", "Saving task: ${newTask.taskName}")
+                taskViewModel.handleSaveTask(newTask, selectedTask)
+                isAddingTask = false
+            },
+            onSignInSuccess = { result ->
+                Log.d("MainScreen", "Sign-in successful: $result")
+                authenticationResult = result
+                msalAuthManager.saveAuthResult(result)
+            }
+        )
+    }
+}
+
+@Composable
+fun MainContent(
+    tasks: List<Task>,
+    selectedTaskForDisplay: Task?,
+    taskBeingEdited: Task?,
+    onTaskEditSave: (Task) -> Unit,
+    isAddingTask: Boolean,
+    msalAuthManager: MSALAuthManager,
+    authenticationResult: IAuthenticationResult?,
+    oneDriveFiles: List<DriveItem>,
+    onTaskSelected: (Task?) -> Unit,
+    onTaskEdited: (Task?) -> Unit,
+    onAddTask: () -> Unit,
+    onCancelAddTask: () -> Unit,
+    onSaveTask: (Task, Task?) -> Unit,
+    onSignInSuccess: (IAuthenticationResult) -> Unit
+) {
+    // Retain selected task and tasks list across recompositions
+    val selectedTask = remember { mutableStateOf(selectedTaskForDisplay) }
+    val tasksState = remember { mutableStateOf(tasks) }
+
+    selectedTask.value = selectedTaskForDisplay
+    tasksState.value = tasks
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(5.dp, 0.dp, 5.dp, 0.dp)
+    ) {
+
+        if (isAddingTask) {
+            val initialStartTime = selectedTaskForDisplay?.endTime ?: if (tasks.isNotEmpty()) tasks.last().endTime else "08:00 AM"
+            AddTaskScreen(
+                initialStartTime = initialStartTime,
+                onSave = { newTask -> onSaveTask(newTask, selectedTaskForDisplay) },
+                onCancel = onCancelAddTask
             )
         }
-    }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
-    }
-    kotlinOptions {
-        jvmTarget = "1.8"
-    }
-    buildFeatures {
-        compose = true
-    }
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.1" // Ensure this version is compatible with Kotlin 1.9.0
-    }
 
-    packaging {
-        resources {
-            excludes += "/META-INF/{AL2.0,LGPL2.1}"
-            excludes += "META-INF/NOTICE.md"
-            excludes += "META-INF/LICENSE.md"
-            excludes += "META-INF/LICENSE.txt"
-            excludes += "META-INF/NOTICE.txt"
+        else if (taskBeingEdited != null) {
+            EditTaskScreen(
+                task = taskBeingEdited,
+                onSave = { updatedTask ->
+                    onTaskEditSave(updatedTask)
+                    onTaskEdited(null)
+                },
+                onCancel = {
+                    onTaskEdited(null)
+                }
+            )
+        }
+
+        else {
+            LazyColumn(
+                modifier = Modifier.weight(1f)
+                    .height(350.dp),
+                contentPadding = PaddingValues(2.dp),
+                verticalArrangement = Arrangement.spacedBy(3.dp)
+            ) {
+                items(tasksState.value, key = { it.id }) { task ->
+                    TaskItem(
+                        task = task,
+                        isSelected = task == selectedTaskForDisplay,
+                        onEditClick = { onTaskEdited(it) },
+                        onClick = { onTaskSelected(task) }
+                    )
+                }
+                items(oneDriveFiles, key = { it.id!! }) { file ->
+                    Text(text = file.name ?: "No name")
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Row {
+                SignInButton(msalAuthManager, authenticationResult, onSignInSuccess)
+
+                // Add new Task Button
+                Button(onClick = onAddTask) {
+                    Text("Add New Task")
+                }
+
+                // Task currently clicked
+                Text(
+                    text = selectedTaskForDisplay?.let { "Selected Task: ${it.taskName}" } ?: "No Task Selected",
+                    style = MaterialTheme.typography.labelMedium,
+                    // align vertically center
+                    modifier = Modifier.align(Alignment.CenterVertically)
+                )
+            }
         }
     }
 }
 
-dependencies {
-    implementation(libs.coil.compose)
 
-    implementation(libs.msal)
-    implementation(libs.volley)
-    implementation(libs.graph)
-
-    implementation(libs.sqlite)
-    implementation(libs.androidx.lifecycle.viewmodel.compose)
-
-    implementation(libs.androidx.material.icons.core)
-    implementation(libs.androidx.material.icons.extended)
-
-    implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation(libs.androidx.activity.compose)
-    implementation(platform(libs.androidx.compose.bom))
-    implementation(libs.androidx.ui)
-    implementation(libs.androidx.ui.graphics)
-    implementation(libs.androidx.ui.tooling.preview)
-    implementation(libs.androidx.material3)
-    implementation(libs.androidx.lifecycle.runtime.compose)
-    implementation(libs.androidx.compose.runtime)
-    testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(platform(libs.androidx.compose.bom))
-    androidTestImplementation(libs.androidx.ui.test.junit4)
-    debugImplementation(libs.androidx.ui.tooling)
-    debugImplementation(libs.androidx.ui.test.manifest)
-
-}
-
-
-// Content from C:\Users\Vivid\AndroidStudioProjects\RoutineTurbo_android\app\src\main\java\com\app\routineturboa\MainActivity.kt
+// Content from C:\Users\vivid\Documents\C-Creative Projects\RoutineTurboA_android\app\src\main\java\com\app\routineturboa\MainActivity.kt
 package com.app.routineturboa
 
-import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import com.app.routineturboa.services.MSALAuthManager
-import com.app.routineturboa.ui.MainScreen
-import com.app.routineturboa.ui.theme.RoutineTurboATheme
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-
 class MainActivity : ComponentActivity() {
-    private lateinit var msalAuthManager: MSALAuthManager
+    private lateinit var requestPermissionLauncher: ActivityResultLauncher<String>
+    private lateinit var reminderManager: ReminderManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        requestWindowFeature(Window.FEATURE_NO_TITLE)
         super.onCreate(savedInstanceState)
+        Log.d("MainActivity", "onCreate called")
 
-        msalAuthManager = MSALAuthManager.getInstance(this)
+        reminderManager = ReminderManager(this)
+
+        requestPermissionLauncher = registerForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { isGranted: Boolean ->
+            if (isGranted) {
+                Log.d("MainActivity", "Notification permission granted")
+                scheduleRemindersForAllTasks()
+            } else {
+                Log.d("MainActivity", "Notification permission denied")
+            }
+        }
+
+        if (PermissionUtils.hasNotificationPermission(this)) {
+            scheduleRemindersForAllTasks()
+        }
 
         setContent {
             RoutineTurboATheme {
-                Surface {
-                    Column{
-                        Greeting()
-                        Spacer(modifier = Modifier.height(2.dp)) // Optional spacer
-                        MainScreen()
+                MainScreenContent(
+                    hasNotificationPermission = PermissionUtils.hasNotificationPermission(this),
+                    onRequestPermission = { requestNotificationPermission() }
+                )
+            }
+        }
+    }
+
+    private fun requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            scheduleRemindersForAllTasks()
+        }
+    }
+
+    private fun scheduleRemindersForAllTasks() {
+        CoroutineScope(Dispatchers.IO).launch {
+            val dbRepository = RoutineRepository(applicationContext)
+            val tasks = dbRepository.getAllTasks()
+            tasks.forEach { task ->
+                task.reminder.let { reminderTime ->
+                    Log.d("MainActivity", "Reminder time: $reminderTime")
+                    val reminderMillis = TimeUtils.timeStringToMilliseconds(reminderTime)
+                    if (reminderMillis > System.currentTimeMillis()) {
+                        reminderManager.scheduleReminder(task.id, reminderMillis)
                     }
                 }
             }
@@ -183,57 +232,106 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun Greeting() {
-    val currentDate = SimpleDateFormat("EEEE, MMMM d, yyyy", Locale.getDefault()).format(Date())
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
+fun MainScreenContent(
+    hasNotificationPermission: Boolean,
+    onRequestPermission: () -> Unit
+) {
+    val drawerState = rememberDrawerState(DrawerValue.Closed)
+    val coroutineScope = rememberCoroutineScope()
+    val drawerWidth = with(LocalConfiguration.current.screenWidthDp.dp) { value * 2 / 3f }
+    val currentDate: String = SimpleDateFormat("EEEE, MMMM d, yyyy", Locale.getDefault()).format(Date())
 
+    var showPermissionDialog by remember { mutableStateOf(!hasNotificationPermission) }
+
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            ModalDrawerSheet(
+                modifier = Modifier.width(drawerWidth.dp)
+            ) {
+                RoutineDrawerContent {
+                    coroutineScope.launch { drawerState.close() }
+                }
+            }
+        }
     ) {
-        Text(text = currentDate, style = MaterialTheme.typography.headlineLarge)
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                    ),
+                    title = { Text(text = currentDate) },
+                    navigationIcon = {
+                        IconButton(onClick = { coroutineScope.launch { drawerState.open() } }) {
+                            Icon(Icons.Filled.Menu, contentDescription = "Menu")
+                        }
+                    }
+                )
+            },
+        ) { paddingValues ->
+            Column(modifier = Modifier.padding(paddingValues)) {
+                MainScreen()
+            }
+        }
+    }
+
+    if (showPermissionDialog) {
+        AlertDialog(
+            onDismissRequest = { showPermissionDialog = false },
+            title = { Text("Notification Permission") },
+            text = { Text("This app needs notification permission to send you reminders. Would you like to grant this permission?") },
+            confirmButton = {
+                Button(onClick = {
+                    showPermissionDialog = false
+                    onRequestPermission()
+                }) {
+                    Text("Grant Permission")
+                }
+            },
+            dismissButton = {
+                Button(onClick = { showPermissionDialog = false }) {
+                    Text("Not Now")
+                }
+            }
+        )
     }
 }
 
-
-
-// Content from C:\Users\Vivid\AndroidStudioProjects\RoutineTurbo_android\app\src\main\java\com\app\routineturboa\MyApplication.kt
+// Content from C:\Users\vivid\Documents\C-Creative Projects\RoutineTurboA_android\app\src\main\java\com\app\routineturboa\MyApplication.kt
 package com.app.routineturboa
 
-import android.app.Application
-import com.app.routineturboa.services.MSALAuthManager
 
 class MyApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         MSALAuthManager.getInstance(this)
+
+        val channelId = "tasks channel ID"
+        val channelName = "Tasks Reminders"
+        val importance = NotificationManager.IMPORTANCE_DEFAULT
+
+        val channel = NotificationChannel(channelId, channelName, importance)
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.createNotificationChannel(channel)
+
     }
 }
 
 
-// Content from C:\Users\Vivid\AndroidStudioProjects\RoutineTurbo_android\app\src\main\java\com\app\routineturboa\data\local\DatabaseHelper.kt
+// Content from C:\Users\vivid\Documents\C-Creative Projects\RoutineTurboA_android\app\src\main\java\com\app\routineturboa\data\local\DatabaseHelper.kt
 package com.app.routineturboa.data.local
 
-import android.content.Context
-import android.database.sqlite.SQLiteDatabase
-import android.database.sqlite.SQLiteOpenHelper
-import android.os.Environment
-import android.util.Log
-import java.io.File
-import java.io.FileInputStream
-import java.io.FileOutputStream
-import java.io.IOException
-import java.io.InputStream
-import java.io.OutputStream
 
 class DatabaseHelper(private val context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
 
     companion object {
         const val DATABASE_VERSION = 1
-        const val DATABASE_NAME = "RoutineTurbo.db"
+        const val DATABASE_NAME = "RoutineTurbo_DEMO.db"
+        private const val TAG = "DatabaseHelper"
     }
 
     object DailyRoutine {
@@ -243,7 +341,7 @@ class DatabaseHelper(private val context: Context) : SQLiteOpenHelper(context, D
         const val COLUMN_NAME_END_TIME = "end_time"
         const val COLUMN_NAME_DURATION = "duration"
         const val COLUMN_NAME_TASK_NAME = "task_name"
-        const val COLUMN_NAME_REMINDERS = "reminders"
+        const val COLUMN_NAME_REMINDER = "reminders"
         const val COLUMN_NAME_TYPE = "type"
         const val COLUMN_NAME_POSITION = "position"
     }
@@ -251,11 +349,11 @@ class DatabaseHelper(private val context: Context) : SQLiteOpenHelper(context, D
     private val createEntries = """
         CREATE TABLE IF NOT EXISTS ${DailyRoutine.TABLE_NAME} (
             ${DailyRoutine.COLUMN_NAME_ID} INTEGER PRIMARY KEY AUTOINCREMENT,
-            ${DailyRoutine.COLUMN_NAME_START_TIME} DATETIME,
-            ${DailyRoutine.COLUMN_NAME_END_TIME} DATETIME,
+            ${DailyRoutine.COLUMN_NAME_START_TIME} TEXT,
+            ${DailyRoutine.COLUMN_NAME_END_TIME} TEXT,
             ${DailyRoutine.COLUMN_NAME_DURATION} INTEGER,
             ${DailyRoutine.COLUMN_NAME_TASK_NAME} TEXT,
-            ${DailyRoutine.COLUMN_NAME_REMINDERS} DATETIME,
+            ${DailyRoutine.COLUMN_NAME_REMINDER} TEXT,
             ${DailyRoutine.COLUMN_NAME_TYPE} TEXT,
             ${DailyRoutine.COLUMN_NAME_POSITION} INTEGER)
     """
@@ -263,20 +361,25 @@ class DatabaseHelper(private val context: Context) : SQLiteOpenHelper(context, D
     private val deleteEntries = "DROP TABLE IF EXISTS ${DailyRoutine.TABLE_NAME}"
 
     override fun onCreate(db: SQLiteDatabase) {
+        Log.d(TAG, "Creating database with the following query: $createEntries")
         db.execSQL(createEntries)
+        insertDefaultTasks(db)
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+        Log.d(TAG, "Upgrading database from version $oldVersion to $newVersion")
         db.execSQL(deleteEntries)
         onCreate(db)
     }
 
     override fun getReadableDatabase(): SQLiteDatabase {
+        Log.d(TAG, "Getting readable database")
         copyDatabase()
         return super.getReadableDatabase()
     }
 
     override fun getWritableDatabase(): SQLiteDatabase {
+        Log.d(TAG, "Getting writable database")
         copyDatabase()
         return super.getWritableDatabase()
     }
@@ -285,29 +388,34 @@ class DatabaseHelper(private val context: Context) : SQLiteOpenHelper(context, D
         val dbPath: String = context.getDatabasePath(DATABASE_NAME).absolutePath
         val dbFile = File(dbPath)
         if (!dbFile.exists()) {
-            Log.d("DatabaseHelper", "Database does not exist, copying from external storage.")
+            Log.d(TAG, "Database does not exist, copying from external storage.")
             val externalDbPath = Environment.getExternalStorageDirectory().absolutePath + "/$DATABASE_NAME"
             val externalDbFile = File(externalDbPath)
 
-            if (externalDbFile.exists()) {
-                Log.d("DatabaseHelper", "External database exists, copying from external storage.")
-                FileInputStream(externalDbFile).use { inputStream: InputStream ->
-                    FileOutputStream(dbPath).use { outputStream: OutputStream ->
-                        copyStream(inputStream, outputStream)
+            try {
+                if (externalDbFile.exists()) {
+                    Log.d(TAG, "External database exists, copying from external storage.")
+                    FileInputStream(externalDbFile).use { inputStream ->
+                        FileOutputStream(dbPath).use { outputStream ->
+                            Log.d(TAG, "Copying database from $externalDbPath to $dbPath")
+                            copyStream(inputStream, outputStream)
+                        }
+                    }
+                } else {
+                    Log.d(TAG, "External database does not exist, copying from assets.")
+                    context.assets.open(DATABASE_NAME).use { inputStream ->
+                        FileOutputStream(dbPath).use { outputStream ->
+                            Log.d(TAG, "Copying database from assets to $dbPath")
+                            copyStream(inputStream, outputStream)
+                        }
                     }
                 }
-            } else {
-                Log.d("DatabaseHelper", "External database does not exist, copying from assets.")
-                context.assets.open(DATABASE_NAME).use { inputStream: InputStream ->
-                    FileOutputStream(dbPath).use { outputStream: OutputStream ->
-                        copyStream(inputStream, outputStream)
-                    }
-                }
+            } catch (e: IOException) {
+                Log.e(TAG, "Error copying database: ${e.message}", e)
             }
         } else {
-            Log.d("DatabaseHelper", "Database exists, skipping copy.")
+            Log.d(TAG, "Database exists, skipping copy.")
         }
-
     }
 
     @Throws(IOException::class)
@@ -317,26 +425,63 @@ class DatabaseHelper(private val context: Context) : SQLiteOpenHelper(context, D
         while (inputStream.read(buffer).also { length = it } > 0) {
             outputStream.write(buffer, 0, length)
         }
+        Log.d(TAG, "Finished copying stream")
     }
+
+    private fun insertDefaultTasks(db: SQLiteDatabase) {
+        val cursor = db.rawQuery("SELECT COUNT(*) FROM ${DailyRoutine.TABLE_NAME}", null)
+        cursor.moveToFirst()
+        val count = cursor.getInt(0)
+        cursor.close()
+
+        if (count == 0) {
+            Log.d(TAG, "Inserting default tasks")
+
+            val defaultTasks = listOf(
+                DefaultTask("00:00", "06:00", "Sleep/Wake up", 0),
+                DefaultTask("06:00", "23:59", "Daily Activities", 1)
+            )
+
+            defaultTasks.forEach { task ->
+                val values = ContentValues().apply {
+                    put(DailyRoutine.COLUMN_NAME_START_TIME, task.startTime)
+                    put(DailyRoutine.COLUMN_NAME_END_TIME, task.endTime)
+                    put(DailyRoutine.COLUMN_NAME_TASK_NAME, task.taskName)
+                    put(DailyRoutine.COLUMN_NAME_DURATION,
+                        TimeUtils.calculateDuration(task.startTime, task.endTime))
+
+                    put(DailyRoutine.COLUMN_NAME_REMINDER, "")
+                    put(DailyRoutine.COLUMN_NAME_TYPE, " ")
+                    put(DailyRoutine.COLUMN_NAME_POSITION, task.position)
+                }
+                db.insert(DailyRoutine.TABLE_NAME, null, values)
+            }
+        }
+    }
+
+    private data class DefaultTask(
+        val startTime: String,
+        val endTime: String,
+        val taskName: String,
+        val position: Int
+    )
 }
 
-// Content from C:\Users\Vivid\AndroidStudioProjects\RoutineTurbo_android\app\src\main\java\com\app\routineturboa\data\local\RoutineRepository.kt
+
+// Content from C:\Users\vivid\Documents\C-Creative Projects\RoutineTurboA_android\app\src\main\java\com\app\routineturboa\data\local\RoutineRepository.kt
 package com.app.routineturboa.data.local
 
-import android.content.ContentValues
-import android.content.Context
-import android.database.Cursor
-import android.database.sqlite.SQLiteDatabase
-import com.app.routineturboa.data.model.Task
-import com.app.routineturboa.utils.TimeUtils
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 class RoutineRepository(context: Context) {
     private val dbHelper = DatabaseHelper(context)
     private val db: SQLiteDatabase = dbHelper.readableDatabase
 
+    companion object {
+        private const val TAG = "RoutineRepository"
+    }
+
     suspend fun getAllTasks(): List<Task> = withContext(Dispatchers.IO) {
+        Log.d(TAG, "Fetching all tasks from database")
         val tasks = mutableListOf<Task>()
         val cursor: Cursor = db.query(
             DatabaseHelper.DailyRoutine.TABLE_NAME,
@@ -346,7 +491,7 @@ class RoutineRepository(context: Context) {
                 DatabaseHelper.DailyRoutine.COLUMN_NAME_END_TIME,
                 DatabaseHelper.DailyRoutine.COLUMN_NAME_DURATION,
                 DatabaseHelper.DailyRoutine.COLUMN_NAME_TASK_NAME,
-                DatabaseHelper.DailyRoutine.COLUMN_NAME_REMINDERS,
+                DatabaseHelper.DailyRoutine.COLUMN_NAME_REMINDER,
                 DatabaseHelper.DailyRoutine.COLUMN_NAME_TYPE,
                 DatabaseHelper.DailyRoutine.COLUMN_NAME_POSITION
             ),
@@ -361,9 +506,11 @@ class RoutineRepository(context: Context) {
             while (moveToNext()) {
                 val startTime = getString(getColumnIndexOrThrow(DatabaseHelper.DailyRoutine.COLUMN_NAME_START_TIME))
                 val endTime = getString(getColumnIndexOrThrow(DatabaseHelper.DailyRoutine.COLUMN_NAME_END_TIME))
+                val reminder = getString(getColumnIndexOrThrow(DatabaseHelper.DailyRoutine.COLUMN_NAME_REMINDER))
 
                 val formattedStartTime = TimeUtils.convertTo12HourFormat(startTime)
                 val formattedEndTime = TimeUtils.convertTo12HourFormat(endTime)
+                val formattedReminder = TimeUtils.convertTo12HourFormat(reminder)
 
                 val task = Task(
                     getInt(getColumnIndexOrThrow(DatabaseHelper.DailyRoutine.COLUMN_NAME_ID)),
@@ -371,39 +518,99 @@ class RoutineRepository(context: Context) {
                     formattedEndTime,
                     getInt(getColumnIndexOrThrow(DatabaseHelper.DailyRoutine.COLUMN_NAME_DURATION)),
                     getString(getColumnIndexOrThrow(DatabaseHelper.DailyRoutine.COLUMN_NAME_TASK_NAME)),
-                    getString(getColumnIndexOrThrow(DatabaseHelper.DailyRoutine.COLUMN_NAME_REMINDERS)),
+                    formattedReminder,
                     getString(getColumnIndexOrThrow(DatabaseHelper.DailyRoutine.COLUMN_NAME_TYPE)),
                     getInt(getColumnIndexOrThrow(DatabaseHelper.DailyRoutine.COLUMN_NAME_POSITION))
                 )
+                Log.d(TAG, "Fetched task: $task")
                 tasks.add(task)
             }
         }
+
         cursor.close()
+        Log.d(TAG, "Completed fetching all tasks")
         return@withContext tasks
     }
 
+    fun getTaskById(taskId: Int): Task?{
+        Log.d(TAG, "Fetching task with ID: $taskId")
+        val cursor: Cursor = db.query(
+            DatabaseHelper.DailyRoutine.TABLE_NAME,
+            arrayOf(
+                DatabaseHelper.DailyRoutine.COLUMN_NAME_ID,
+                DatabaseHelper.DailyRoutine.COLUMN_NAME_START_TIME,
+                DatabaseHelper.DailyRoutine.COLUMN_NAME_END_TIME,
+                DatabaseHelper.DailyRoutine.COLUMN_NAME_DURATION,
+                DatabaseHelper.DailyRoutine.COLUMN_NAME_TASK_NAME,
+                DatabaseHelper.DailyRoutine.COLUMN_NAME_REMINDER,
+                DatabaseHelper.DailyRoutine.COLUMN_NAME_TYPE,
+                DatabaseHelper.DailyRoutine.COLUMN_NAME_POSITION
+            ),
+            "${DatabaseHelper.DailyRoutine.COLUMN_NAME_ID} = ?",
+            arrayOf(taskId.toString()),
+            null,
+            null,
+            null
+        )
+
+        var task: Task? = null
+        with(cursor) {
+            if (moveToFirst()) {
+                val startTime = getString(getColumnIndexOrThrow(DatabaseHelper.DailyRoutine.COLUMN_NAME_START_TIME))
+                val endTime = getString(getColumnIndexOrThrow(DatabaseHelper.DailyRoutine.COLUMN_NAME_END_TIME))
+
+                val formattedStartTime = TimeUtils.convertTo12HourFormat(startTime)
+                val formattedEndTime = TimeUtils.convertTo12HourFormat(endTime)
+
+                task = Task(
+                    getInt(getColumnIndexOrThrow(DatabaseHelper.DailyRoutine.COLUMN_NAME_ID)),
+                    formattedStartTime,
+                    formattedEndTime,
+                    getInt(getColumnIndexOrThrow(DatabaseHelper.DailyRoutine.COLUMN_NAME_DURATION)),
+                    getString(getColumnIndexOrThrow(DatabaseHelper.DailyRoutine.COLUMN_NAME_TASK_NAME)),
+                    getString(getColumnIndexOrThrow(DatabaseHelper.DailyRoutine.COLUMN_NAME_REMINDER)),
+                    getString(getColumnIndexOrThrow(DatabaseHelper.DailyRoutine.COLUMN_NAME_TYPE)),
+                    getInt(getColumnIndexOrThrow(DatabaseHelper.DailyRoutine.COLUMN_NAME_POSITION))
+                )
+                Log.d(TAG, "Fetched task: $task")
+            }
+        }
+        cursor.close()
+        Log.d(TAG, "Completed fetching task with ID: $taskId")
+        return task
+    }
+
     suspend fun addTask(task: Task) = withContext(Dispatchers.IO) {
+        Log.d(TAG, "Adding new task: $task")
+
         val values = ContentValues().apply {
-            val currentDate = "2024-01-01"  // Example, you should replace it with the actual date
+            val currentDate = "2024-01-01"
+
             put(DatabaseHelper.DailyRoutine.COLUMN_NAME_START_TIME, TimeUtils.formatToDatabaseTime(currentDate, TimeUtils.convertTo24HourFormat(task.startTime)))
             put(DatabaseHelper.DailyRoutine.COLUMN_NAME_END_TIME, TimeUtils.formatToDatabaseTime(currentDate, TimeUtils.convertTo24HourFormat(task.endTime)))
             put(DatabaseHelper.DailyRoutine.COLUMN_NAME_DURATION, task.duration)
             put(DatabaseHelper.DailyRoutine.COLUMN_NAME_TASK_NAME, task.taskName)
-            put(DatabaseHelper.DailyRoutine.COLUMN_NAME_REMINDERS, task.reminders)
+
+            put(DatabaseHelper.DailyRoutine.COLUMN_NAME_REMINDER, TimeUtils.formatToDatabaseTime(currentDate, TimeUtils.convertTo24HourFormat(task.reminder)))
+
+            put(DatabaseHelper.DailyRoutine.COLUMN_NAME_REMINDER, task.reminder)
             put(DatabaseHelper.DailyRoutine.COLUMN_NAME_TYPE, task.type)
             put(DatabaseHelper.DailyRoutine.COLUMN_NAME_POSITION, task.position)
         }
+
         db.insert(DatabaseHelper.DailyRoutine.TABLE_NAME, null, values)
+        Log.d(TAG, "Task added successfully: ${task.taskName}")
     }
 
     suspend fun updateTask(task: Task) = withContext(Dispatchers.IO) {
+        Log.d(TAG, "Updating task: $task")
         val values = ContentValues().apply {
             val currentDate = "2024-01-01"  // Example, you should replace it with the actual date
             put(DatabaseHelper.DailyRoutine.COLUMN_NAME_START_TIME, TimeUtils.formatToDatabaseTime(currentDate, TimeUtils.convertTo24HourFormat(task.startTime)))
             put(DatabaseHelper.DailyRoutine.COLUMN_NAME_END_TIME, TimeUtils.formatToDatabaseTime(currentDate, TimeUtils.convertTo24HourFormat(task.endTime)))
             put(DatabaseHelper.DailyRoutine.COLUMN_NAME_DURATION, task.duration)
             put(DatabaseHelper.DailyRoutine.COLUMN_NAME_TASK_NAME, task.taskName)
-            put(DatabaseHelper.DailyRoutine.COLUMN_NAME_REMINDERS, task.reminders)
+            put(DatabaseHelper.DailyRoutine.COLUMN_NAME_REMINDER, task.reminder)
             put(DatabaseHelper.DailyRoutine.COLUMN_NAME_TYPE, task.type)
             put(DatabaseHelper.DailyRoutine.COLUMN_NAME_POSITION, task.position)
         }
@@ -415,17 +622,29 @@ class RoutineRepository(context: Context) {
             selection,
             selectionArgs
         )
+        Log.d(TAG, "Task updated successfully: ${task.taskName}")
+    }
+
+    suspend fun deleteTask(task: Task) = withContext(Dispatchers.IO) {
+        Log.d(TAG, "Deleting task: ${task.taskName}")
+        val selection = "${DatabaseHelper.DailyRoutine.COLUMN_NAME_ID} = ?"
+        val selectionArgs = arrayOf(task.id.toString())
+        db.delete(DatabaseHelper.DailyRoutine.TABLE_NAME, selection, selectionArgs)
+        Log.d(TAG, "Task deleted successfully: ${task.taskName}")
     }
 
     suspend fun updatePositions(startPosition: Int) = withContext(Dispatchers.IO) {
+        Log.d(TAG, "Updating positions starting from: $startPosition")
         val updateQuery = "UPDATE ${DatabaseHelper.DailyRoutine.TABLE_NAME} SET ${DatabaseHelper.DailyRoutine.COLUMN_NAME_POSITION} = ${DatabaseHelper.DailyRoutine.COLUMN_NAME_POSITION} + 1 WHERE ${DatabaseHelper.DailyRoutine.COLUMN_NAME_POSITION} >= ?" // Added query to update positions
         db.execSQL(updateQuery, arrayOf(startPosition)) // Execute the query with the start position
+        Log.d(TAG, "Positions updated successfully from: $startPosition")
     }
+
 
 }
 
 
-// Content from C:\Users\Vivid\AndroidStudioProjects\RoutineTurbo_android\app\src\main\java\com\app\routineturboa\data\model\Task.kt
+// Content from C:\Users\vivid\Documents\C-Creative Projects\RoutineTurboA_android\app\src\main\java\com\app\routineturboa\data\model\Task.kt
 package com.app.routineturboa.data.model
 
 data class Task(
@@ -434,35 +653,143 @@ data class Task(
     var endTime: String,
     val duration: Int,
     val taskName: String,
-    val reminders: String,
+    val reminder: String,
     val type: String,
     var position: Int
 )
 
 
-// Content from C:\Users\Vivid\AndroidStudioProjects\RoutineTurbo_android\app\src\main\java\com\app\routineturboa\services\MSALAuthManager.kt
+// Content from C:\Users\vivid\Documents\C-Creative Projects\RoutineTurboA_android\app\src\main\java\com\app\routineturboa\reminders\ReminderManager.kt
+package com.app.routineturboa.reminders
+
+
+class ReminderManager(private val context: Context) {
+    private val notificationManager: NotificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    private val alarmManager: AlarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+
+    init {
+        createNotificationChannel()
+    }
+
+    private fun createNotificationChannel() {
+        val channel = NotificationChannel(
+            CHANNEL_ID,
+            "Task Reminders",
+            NotificationManager.IMPORTANCE_HIGH
+        ).apply {
+            description = "Notifications for task reminders"
+        }
+        notificationManager.createNotificationChannel(channel)
+    }
+
+    fun showNotification(taskId: Int, title: String, content: String) {
+        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(R.drawable.routineturbo)
+            .setContentTitle(title)
+            .setContentText(content)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .build()
+        notificationManager.notify(taskId, notification)
+    }
+
+    fun scheduleReminder(taskId: Int, reminderTime: Long) {
+        val intent = Intent(context, ReminderReceiver::class.java).apply {
+            putExtra("TASK_ID", taskId)
+        }
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            taskId,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        alarmManager.setAndAllowWhileIdle(
+            AlarmManager.RTC_WAKEUP,
+            reminderTime,
+            pendingIntent
+        )
+    }
+
+    fun cancelReminder(taskId: Int) {
+        val intent = Intent(context, ReminderReceiver::class.java)
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            taskId,
+            intent,
+            PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
+        )
+        pendingIntent?.let {
+            alarmManager.cancel(it)
+            it.cancel()
+        }
+    }
+
+    companion object {
+        const val CHANNEL_ID = "task_reminders_channel"
+    }
+}
+
+// Content from C:\Users\vivid\Documents\C-Creative Projects\RoutineTurboA_android\app\src\main\java\com\app\routineturboa\reminders\ReminderReceiver.kt
+package com.app.routineturboa.reminders
+
+
+class ReminderReceiver : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+        val taskId = intent.getIntExtra("TASK_ID", -1)
+        if (taskId != -1) {
+            CoroutineScope(Dispatchers.IO).launch {
+                val dbRepository = RoutineRepository(context)
+                val reminderManager = ReminderManager(context)
+                val task = dbRepository.getTaskById(taskId)
+                task?.let {
+                    reminderManager.showNotification(it.id, it.taskName, it.type)
+                }
+            }
+        }
+    }
+}
+
+// Content from C:\Users\vivid\Documents\C-Creative Projects\RoutineTurboA_android\app\src\main\java\com\app\routineturboa\services\downloadFromOneDrive.kt
 package com.app.routineturboa.services
 
-import android.app.Activity
-import android.content.Context
-import android.content.SharedPreferences
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.util.Log
-import com.app.routineturboa.R
-import com.microsoft.identity.client.AuthenticationCallback
-import com.microsoft.identity.client.IAccount
-import com.microsoft.identity.client.IAuthenticationResult
-import com.microsoft.identity.client.IPublicClientApplication
-import com.microsoft.identity.client.ISingleAccountPublicClientApplication
-import com.microsoft.identity.client.PublicClientApplication
-import com.microsoft.identity.client.exception.MsalException
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import java.io.File
-import java.io.FileOutputStream
+
+suspend fun downloadFromOneDrive(authResult: IAuthenticationResult, context: Context, taskViewModel: TaskViewModel) {
+    Log.d("MainScreen", "Downloading from OneDrive")
+    val authProvider = OneDriveManager.MsalAuthProvider(authResult)
+    val oneDriveManager = OneDriveManager(authProvider)
+
+    val files = withContext(Dispatchers.IO) {
+        oneDriveManager.listFiles()
+    }
+
+    val routineTurboDir = files.find { it.name == "RoutineTurbo" && it.folder != null }
+
+    routineTurboDir?.let { dir ->
+        val dirFiles = dir.id?.let { dirId ->
+            withContext(Dispatchers.IO) {
+                oneDriveManager.listFiles(dirId)
+            }
+        }
+
+        val dbFile = dirFiles?.find { it.name == "RoutineTurbo.db" }
+
+        dbFile?.let { driveItem ->
+            driveItem.id?.let { driveItemId ->
+                val localDbFile = context.getDatabasePath(DatabaseHelper.DATABASE_NAME)
+                withContext(Dispatchers.IO) {
+                    oneDriveManager.downloadFile(driveItemId, localDbFile)
+                }
+            }
+        }
+    }
+    taskViewModel.loadTasks()
+    Log.d("MainScreen", "Finished downloading from OneDrive")
+}
+
+// Content from C:\Users\vivid\Documents\C-Creative Projects\RoutineTurboA_android\app\src\main\java\com\app\routineturboa\services\MSALAuthManager.kt
+package com.app.routineturboa.services
+
 
 class MSALAuthManager(context: Context) {
 
@@ -471,24 +798,50 @@ class MSALAuthManager(context: Context) {
     var singleAccountApp: ISingleAccountPublicClientApplication? = null
     var currentAccount: IAccount? = null
 
-    init {
+    companion object {
+        @Volatile
+        private var INSTANCE: MSALAuthManager? = null
+
+        fun getInstance(context: Context): MSALAuthManager =
+            INSTANCE ?: synchronized(this) {
+                INSTANCE ?: MSALAuthManager(context).also { INSTANCE = it }
+            }
+    }
+
+    private fun createMsalApplication() {
+        Log.d("MSALAuthManager", "Creating MSAL single account application")
+
         PublicClientApplication.createSingleAccountPublicClientApplication(
             appContext,
             R.raw.auth_config_single_account,
-            object : IPublicClientApplication.ISingleAccountApplicationCreatedListener {
-                override fun onCreated(application: ISingleAccountPublicClientApplication) {
-                    Log.d("MSALAuthManager", "MSAL client created")
-                    singleAccountApp = application
-                    checkCurrentAccount()
-                }
-
-                override fun onError(exception: MsalException) {
-                    Log.e("MSALAuthManager", "MSAL client creation error: ${exception.message}")
-                }
-            })
+            getMsalClientListener()
+        )
     }
 
+    // Prepares a response handler for when the MSAL is set up.
+    private fun getMsalClientListener(): IPublicClientApplication.ISingleAccountApplicationCreatedListener {
+        return object : IPublicClientApplication.ISingleAccountApplicationCreatedListener {
+
+            override fun onCreated(application: ISingleAccountPublicClientApplication) {
+                Log.d("MSALAuthManager", "MSAL client created successfully")
+                singleAccountApp = application
+                checkCurrentAccount()
+            }
+
+            override fun onError(exception: MsalException) {
+                Log.e("MSALAuthManager", "MSAL client creation error: ${exception.message}")
+            }
+        }
+    }
+
+    init {
+        Log.d("MSALAuthManager", "Initializing MSALAuthManager")
+        createMsalApplication()
+    }
+
+
     private fun checkCurrentAccount() {
+        Log.d("MSALAuthManager", "Checking current account")
         singleAccountApp?.getCurrentAccountAsync(object : ISingleAccountPublicClientApplication.CurrentAccountCallback {
             override fun onAccountLoaded(activeAccount: IAccount?) {
                 currentAccount = activeAccount
@@ -501,6 +854,7 @@ class MSALAuthManager(context: Context) {
             }
 
             override fun onAccountChanged(priorAccount: IAccount?, currentAccount: IAccount?) {
+                Log.d("MSALAuthManager", "Account changed: ${currentAccount?.username}")
                 this@MSALAuthManager.currentAccount = currentAccount
             }
 
@@ -510,35 +864,43 @@ class MSALAuthManager(context: Context) {
         })
     }
 
-    companion object {
-        @Volatile
-        private var INSTANCE: MSALAuthManager? = null
-
-        fun getInstance(context: Context): MSALAuthManager =
-            INSTANCE ?: synchronized(this) {
-                INSTANCE ?: MSALAuthManager(context).also { INSTANCE = it }
-            }
-    }
-
     fun signIn(activity: Activity, callback: AuthenticationCallback) {
         if (singleAccountApp != null) {
             Log.d("MSALAuthManager", "Attempting to sign in")
-            singleAccountApp?.signIn(activity, null, arrayOf("User.Read", "Files.Read"), callback)
+            val parameters = AcquireTokenParameters.Builder()
+                .startAuthorizationFromActivity(activity)
+                .withScopes(listOf("User.Read", "Files.Read"))
+                .withCallback(callback)
+                .build()
+
+            singleAccountApp?.acquireToken(parameters)
         } else {
             Log.e("MSALAuthManager", "MSAL client is not initialized")
         }
     }
 
+
     fun signOut(callback: ISingleAccountPublicClientApplication.SignOutCallback) {
+        Log.d("MSALAuthManager", "Attempting to sign out")
         singleAccountApp?.signOut(callback)
         clearAuthResult() // Clear saved authentication result
+        Log.d("MSALAuthManager", "Signed out and cleared auth result")
     }
 
     suspend fun getProfileImageUrl(): String? {
         val account = currentAccount ?: return null
+        Log.d("MSALAuthManager", "Fetching profile image URL for account: ${account.username}")
         return withContext(Dispatchers.IO) {
             try {
-                val token = singleAccountApp?.acquireTokenSilent(arrayOf("User.Read"), account.authority)?.accessToken
+                val parameters = AcquireTokenSilentParameters.Builder()
+                    .withScopes(listOf("User.Read"))
+                    .forAccount(account)
+                    .fromAuthority(account.authority)
+                    .build()
+
+                val result = singleAccountApp?.acquireTokenSilent(parameters)
+                val token = result?.accessToken
+
                 token?.let {
                     val client = OkHttpClient()
                     val request = Request.Builder()
@@ -546,6 +908,7 @@ class MSALAuthManager(context: Context) {
                         .addHeader("Authorization", "Bearer $token")
                         .build()
                     val response = client.newCall(request).execute()
+                    Log.d("MSALAuthManager", "Account authority: ${account.authority}")
                     if (response.isSuccessful) {
                         val byteArray = response.body?.bytes()
                         byteArray?.let {
@@ -555,13 +918,16 @@ class MSALAuthManager(context: Context) {
                             FileOutputStream(file).use { out ->
                                 bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
                             }
+                            Log.d("MSALAuthManager", "Profile image saved at: ${file.absolutePath}")
                             file.absolutePath
                         }
                     } else {
+                        Log.e("MSALAuthManager", "Failed to fetch profile image, response code: ${response.code}")
                         null
                     }
                 }
             } catch (e: Exception) {
+                Log.e("MSALAuthManager", "Error fetching profile image: ${e.message}")
                 e.printStackTrace()
                 null
             }
@@ -569,19 +935,21 @@ class MSALAuthManager(context: Context) {
     }
 
     fun saveAuthResult(authResult: IAuthenticationResult) {
+        Log.d("MSALAuthManager", "Saving authentication result for account: ${authResult.account.username}")
         preferences.edit().putString("accessToken", authResult.accessToken).apply()
-        preferences.edit().putString("idToken", authResult.account?.idToken).apply()
-        preferences.edit().putString("accountName", authResult.account?.username).apply()
+        preferences.edit().putString("idToken", authResult.account.idToken).apply()
+        preferences.edit().putString("accountName", authResult.account.username).apply()
     }
 
-
     private fun loadAuthResult() {
+        Log.d("MSALAuthManager", "Loading authentication result from preferences")
         val accessToken = preferences.getString("accessToken", null)
         val idToken = preferences.getString("idToken", null)
         val accountName = preferences.getString("accountName", null)
 
         if (accessToken != null && idToken != null && accountName != null) {
             // Using stored information to set current account
+            Log.d("MSALAuthManager", "Loaded account: $accountName")
             currentAccount = object : IAccount {
                 override fun getId(): String = "storedId"
                 override fun getUsername(): String = accountName
@@ -590,10 +958,13 @@ class MSALAuthManager(context: Context) {
                 override fun getIdToken(): String = idToken
                 override fun getTenantId(): String = "storedTenantId" // Implementing the tenant ID method
             }
+        } else {
+            Log.d("MSALAuthManager", "No stored authentication result found")
         }
     }
 
     private fun clearAuthResult() {
+        Log.d("MSALAuthManager", "Clearing authentication result from preferences")
         preferences.edit().remove("accessToken").apply()
         preferences.edit().remove("idToken").apply()
         preferences.edit().remove("accountName").apply()
@@ -601,17 +972,9 @@ class MSALAuthManager(context: Context) {
 }
 
 
-// Content from C:\Users\Vivid\AndroidStudioProjects\RoutineTurbo_android\app\src\main\java\com\app\routineturboa\services\OneDriveManager.kt
+// Content from C:\Users\vivid\Documents\C-Creative Projects\RoutineTurboA_android\app\src\main\java\com\app\routineturboa\services\OneDriveManager.kt
 package com.app.routineturboa.services
 
-import com.microsoft.graph.authentication.IAuthenticationProvider
-import com.microsoft.graph.models.DriveItem
-import com.microsoft.graph.requests.GraphServiceClient
-import com.microsoft.identity.client.IAuthenticationResult
-import java.io.File
-import java.io.FileOutputStream
-import java.net.URL
-import java.util.concurrent.CompletableFuture
 
 class OneDriveManager(private val authProvider: IAuthenticationProvider) {
 
@@ -620,16 +983,20 @@ class OneDriveManager(private val authProvider: IAuthenticationProvider) {
         .buildClient()
 
     fun listFiles(driveItemId: String? = null): List<DriveItem> {
+        Log.d("OneDriveManager", "Listing files for drive item ID: $driveItemId")
         val request = if (driveItemId == null) {
             graphClient.me().drive().root().children().buildRequest()
         } else {
             graphClient.me().drive().items(driveItemId).children().buildRequest()
         }
 
-        return request.get()?.currentPage ?: emptyList()
+        val files = request.get()?.currentPage ?: emptyList()
+        Log.d("OneDriveManager", "Found ${files.size} files")
+        return files
     }
 
     fun downloadFile(driveItemId: String, destinationFile: File): Boolean {
+        Log.d("OneDriveManager", "Downloading file with ID: $driveItemId to ${destinationFile.absolutePath}")
         val request = graphClient.me().drive().items(driveItemId).content().buildRequest()
         return try {
             val inputStream = request.get()
@@ -637,18 +1004,19 @@ class OneDriveManager(private val authProvider: IAuthenticationProvider) {
                 FileOutputStream(destinationFile).use { outputStream ->
                     inputStream.copyTo(outputStream)
                 }
+                Log.d("OneDriveManager", "File downloaded successfully")
                 true
             } else {
+                Log.e("OneDriveManager", "Failed to download file: input stream is null")
                 false
             }
         } catch (e: Exception) {
+            Log.e("OneDriveManager", "Error downloading file: ${e.message}")
             e.printStackTrace()
             false
         }
     }
 
-
-    // Nested class for handling authentication
     class MsalAuthProvider(private val authenticationResult: IAuthenticationResult) : IAuthenticationProvider {
         override fun getAuthorizationTokenAsync(requestUrl: URL): CompletableFuture<String> {
             return CompletableFuture.completedFuture(authenticationResult.accessToken)
@@ -657,170 +1025,85 @@ class OneDriveManager(private val authProvider: IAuthenticationProvider) {
 }
 
 
-// Content from C:\Users\Vivid\AndroidStudioProjects\RoutineTurbo_android\app\src\main\java\com\app\routineturboa\ui\MainScreen.kt
-// In MainScreen.kt
+// Content from C:\Users\vivid\Documents\C-Creative Projects\RoutineTurboA_android\app\src\main\java\com\app\routineturboa\ui\MainScreen.kt
 package com.app.routineturboa.ui
 
-import TaskViewModelFactory
-import android.content.Context
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.app.routineturboa.data.local.DatabaseHelper
-import com.app.routineturboa.data.local.RoutineRepository
-import com.app.routineturboa.data.model.Task
-import com.app.routineturboa.services.MSALAuthManager
-import com.app.routineturboa.services.OneDriveManager
-import com.app.routineturboa.ui.components.AddTaskScreen
-import com.app.routineturboa.ui.components.EditTaskScreen
-import com.app.routineturboa.ui.components.SignInButton
-import com.app.routineturboa.ui.components.TaskItem
-import com.app.routineturboa.utils.TimeUtils
-import com.app.routineturboa.viewmodel.TaskViewModel
-import com.microsoft.graph.models.DriveItem
-import com.microsoft.identity.client.IAuthenticationResult
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 
 @Composable
-fun MainScreen(taskViewModel: TaskViewModel = viewModel(factory = TaskViewModelFactory(RoutineRepository(LocalContext.current)))) {
-    val tasks by taskViewModel.tasks.collectAsState()
-    var selectedTaskForDisplay by remember { mutableStateOf<Task?>(null) } // Added tracking for selected task for display
-    var taskBeingEdited by remember { mutableStateOf<Task?>(null) } // Added tracking for task being edited
-    var isAddingTask by remember { mutableStateOf(false) }
+fun MainScreen() {
     val context = LocalContext.current
-    val msalAuthManager = remember { MSALAuthManager.getInstance(context) }
-    var oneDriveFiles by remember { mutableStateOf<List<DriveItem>>(emptyList()) }
-    var authenticationResult by remember { mutableStateOf<IAuthenticationResult?>(null) }
+    val taskViewModelFactory = remember { TaskViewModelFactory(RoutineRepository(context)) }
+    val taskViewModel: TaskViewModel = viewModel(factory = taskViewModelFactory)
+    val tasks by taskViewModel.tasks.collectAsStateWithLifecycle()
+
+    var clickedTask by remember { mutableStateOf<Task?>(null) }
+    var taskBeingEdited by remember { mutableStateOf<Task?>(null) }
+    var isAddingTask by remember { mutableStateOf(false) }
+
+    val authenticationResult by remember { mutableStateOf<IAuthenticationResult?>(null) }
     val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(authenticationResult) {
         authenticationResult?.let { authResult ->
             coroutineScope.launch {
-                downloadFromOneDrive(authResult, context)
-                taskViewModel.loadTasks()
+                downloadFromOneDrive(authResult, context, taskViewModel)
             }
         }
     }
 
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp)
+    Scaffold(
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { isAddingTask = true }
+            ) {
+                Icon(Icons.Filled.Add, contentDescription = "Add New Task")
+            }
+        },
+        floatingActionButtonPosition = FabPosition.End
+    ) { paddingValues ->
+        Surface(
+            modifier = Modifier.padding(paddingValues),
+            color = MaterialTheme.colorScheme.background
         ) {
-            // Display the currently selected task
-            Text(
-                text = selectedTaskForDisplay?.let { "Selected Task: ${it.taskName}" } ?: "No Task Selected",
-                style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.padding(bottom = 16.dp) // Added padding for spacing
-            )
-
-            if (isAddingTask) {
-                val initialStartTime = selectedTaskForDisplay?.endTime ?: if (tasks.isNotEmpty()) tasks.last().endTime else "08:00 AM" // Determine initial start time
-                AddTaskScreen(
-                    initialStartTime = initialStartTime, // Pass the initial start time
-                    onSave = { newTask ->
-                        selectedTaskForDisplay?.let { selectedTask ->
-                            val newStartTime = selectedTask.endTime // New task start time is the selected task's end time
-                            newTask.startTime = newStartTime
-                            newTask.endTime = TimeUtils.addDurationToTime(newStartTime, newTask.duration)
-                            taskViewModel.updatePositions(selectedTask.position + 1)
-                            newTask.position = selectedTask.position + 1
-                            taskViewModel.addTask(newTask)
-                            taskViewModel.adjustSubsequentTasks(newTask.position, newTask.endTime) // Adjust subsequent tasks
-                        } ?: run {
-                            if (tasks.isNotEmpty()) {
-                                val lastTask = tasks.last()
-                                newTask.startTime = lastTask.endTime
-                                newTask.endTime = TimeUtils.addDurationToTime(newTask.startTime, newTask.duration)
-                                newTask.position = tasks.size + 1
-                                taskViewModel.addTask(newTask)
-                            } else {
-                                // If there are no tasks, set default start time
-                                newTask.startTime = "08:00 AM"
-                                newTask.endTime = TimeUtils.addDurationToTime(newTask.startTime, newTask.duration)
-                                newTask.position = 1
-                                taskViewModel.addTask(newTask)
-                            }
-                        }
-                        isAddingTask = false
-                    },
-                    onCancel = {
-                        isAddingTask = false
-                    }
-                )
-            } else if (taskBeingEdited != null) { // Check if a task is selected for editing
-                EditTaskScreen(
-                    task = taskBeingEdited!!,
-                    onSave = { updatedTask ->
-                        taskViewModel.updateTask(updatedTask)
-                        taskBeingEdited = null
-                    },
-                    onCancel = {
-                        taskBeingEdited = null
-                    }
-                )
-            } else {
-                SignInButton(msalAuthManager, authenticationResult) { result ->
-                    authenticationResult = result
-                    msalAuthManager.saveAuthResult(result)
+            when {
+                isAddingTask -> {
+                    AddTaskScreen(
+                        initialStartTime = "08:00 AM",
+                        onSave = { newTask -> taskViewModel.handleSaveTask(newTask, null) },
+                        onCancel = { isAddingTask = false }
+                    )
                 }
 
-                LazyColumn(
-                    modifier = Modifier.weight(1f),
-                    contentPadding = PaddingValues(5.dp),
-                    verticalArrangement = Arrangement.spacedBy(3.dp)
-                ) {
-                    items(tasks, key = { it.id }) { task ->
-                        TaskItem(
+                taskBeingEdited != null -> {
+                    taskBeingEdited?.let { task ->
+                        EditTaskScreen(
                             task = task,
-                            isSelected = task == selectedTaskForDisplay, // Pass whether the task is selected
-                            onEditClick = { taskBeingEdited = it }, // Set the task to be edited
-                            onClick = { selectedTaskForDisplay = task } // Update the selected task when clicked
+                            onSave = { updatedTask ->
+                                taskViewModel.updateTask(updatedTask)
+                                taskBeingEdited = null
+                            },
+                            onCancel = { taskBeingEdited = null }
                         )
                     }
-                    items(oneDriveFiles, key = { it.id!! }) { file ->
-                        Text(text = file.name ?: "No name")
+                }
+
+                else -> {
+                    TaskList(
+                        tasks = tasks,
+                        onTaskSelected = { clickedTask = it },
+                        onTaskEdited = { taskBeingEdited = it },
+                        onTaskDelete = { taskViewModel.deleteTask(it) },
+                        isTaskFirst = { taskViewModel.isTaskFirst(it) },
+                        isTaskLast = { taskViewModel.isTaskLast(it) }
+                    )
+                    
+                    Button(
+                        onClick = {}
+                    ) {
+                        Text("Demo")
                     }
-                }
 
-                Spacer(modifier = Modifier.height(36.dp))
-
-                Button(
-                    onClick = { isAddingTask = true },
-                    modifier = Modifier.align(alignment = Alignment.CenterHorizontally)
-                ) {
-                    Text("Add New Task")
                 }
             }
         }
@@ -828,80 +1111,10 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel(factory = TaskViewModelF
 }
 
 
-suspend fun downloadFromOneDrive(authResult: IAuthenticationResult, context: Context) {
-    val authProvider = OneDriveManager.MsalAuthProvider(authResult)
-    val oneDriveManager = OneDriveManager(authProvider)
 
-    // Fetch the list of files from the root directory of OneDrive
-    val files = withContext(Dispatchers.IO) {
-        oneDriveManager.listFiles()
-    }
-
-    // Find the directory named "RoutineTurbo"
-    val routineTurboDir = files.find { it.name == "RoutineTurbo" && it.folder != null }
-
-    routineTurboDir?.let { dir ->
-        // Fetch the list of files from the "RoutineTurbo" directory
-        val dirFiles = dir.id?.let { dirId ->
-            withContext(Dispatchers.IO) {
-                oneDriveManager.listFiles(dirId)
-            }
-        }
-
-        // Find "RoutineTurbo.db" among the files
-        val dbFile = dirFiles?.find { it.name == "RoutineTurbo.db" }
-
-        dbFile?.let { driveItem ->
-            driveItem.id?.let { driveItemId ->
-                // Get the local file path for the database
-                val localDbFile = context.getDatabasePath(DatabaseHelper.DATABASE_NAME)
-
-                // Download the database file from OneDrive to the local file path
-                withContext(Dispatchers.IO) {
-                    oneDriveManager.downloadFile(driveItemId, localDbFile)
-                }
-            }
-        }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun MainScreenPreview() {
-    MainScreen()
-}
-
-
-// Content from C:\Users\Vivid\AndroidStudioProjects\RoutineTurbo_android\app\src\main\java\com\app\routineturboa\ui\components\AddTaskScreen.kt
+// Content from C:\Users\vivid\Documents\C-Creative Projects\RoutineTurboA_android\app\src\main\java\com\app\routineturboa\ui\components\AddTaskScreen.kt
 package com.app.routineturboa.ui.components
 
-import android.widget.Toast
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.unit.dp
-import com.app.routineturboa.data.model.Task
-import com.app.routineturboa.utils.TimeUtils
-import java.text.ParseException
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -931,7 +1144,7 @@ fun AddTaskScreen(
         contentColor = MaterialTheme.colorScheme.onBackground
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(5.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             TextField(
@@ -996,7 +1209,7 @@ fun AddTaskScreen(
                             startTime = initialStartTime,
                             endTime = endTime, // Set the end time
                             duration = duration.toInt(),
-                            reminders = "", // You can add a field for reminders if necessary
+                            reminder = "", // You can add a field for reminders if necessary
                             type = "", // You can add a field for type if necessary
                             position = 0 // Position will be set in MainScreen
                         )
@@ -1015,35 +1228,9 @@ fun AddTaskScreen(
 }
 
 
-// Content from C:\Users\Vivid\AndroidStudioProjects\RoutineTurbo_android\app\src\main\java\com\app\routineturboa\ui\components\EditTaskScreen.kt
+// Content from C:\Users\vivid\Documents\C-Creative Projects\RoutineTurboA_android\app\src\main\java\com\app\routineturboa\ui\components\EditTaskScreen.kt
 package com.app.routineturboa.ui.components
 
-import android.widget.Toast
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.unit.dp
-import com.app.routineturboa.data.model.Task
-import com.app.routineturboa.utils.TimeUtils
-import java.text.ParseException
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -1056,63 +1243,59 @@ fun EditTaskScreen(
     var startTime by remember { mutableStateOf(task.startTime) }
     var endTime by remember { mutableStateOf(task.endTime) }
     var duration by remember { mutableStateOf(task.duration.toString()) }
+    var reminder by remember { mutableStateOf(task.reminder) }
 
     val context = LocalContext.current
 
     Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.background,
-        contentColor = MaterialTheme.colorScheme.onBackground
+        modifier = Modifier.fillMaxWidth()
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.padding(1.dp),
+            verticalArrangement = Arrangement.spacedBy(1.dp)
         ) {
+            Text(
+                text = "Edit",
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.padding(10.dp)
+            )
+
             TextField(
                 value = taskName,
                 onValueChange = { taskName = it },
                 label = { Text("Task Name") },
-                modifier = Modifier.fillMaxWidth(),
-                colors = TextFieldDefaults.textFieldColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                    unfocusedIndicatorColor = MaterialTheme.colorScheme.onSurface
-                )
+                modifier = Modifier.fillMaxWidth()
             )
+
             TextField(
                 value = startTime,
                 onValueChange = { startTime = it },
                 label = { Text("Start Time (hh:mm a)") },
-                modifier = Modifier.fillMaxWidth(),
-                colors = TextFieldDefaults.textFieldColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                    unfocusedIndicatorColor = MaterialTheme.colorScheme.onSurface
-                )
+                modifier = Modifier.fillMaxWidth()
             )
             TextField(
                 value = endTime,
                 onValueChange = { endTime = it },
                 label = { Text("End Time (hh:mm a)") },
-                modifier = Modifier.fillMaxWidth(),
-                colors = TextFieldDefaults.textFieldColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                    unfocusedIndicatorColor = MaterialTheme.colorScheme.onSurface
-                )
+                modifier = Modifier.fillMaxWidth()
             )
+
             TextField(
                 value = duration,
                 onValueChange = { duration = it },
                 label = { Text("Duration") },
                 keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
-                modifier = Modifier.fillMaxWidth(),
-                colors = TextFieldDefaults.textFieldColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                    unfocusedIndicatorColor = MaterialTheme.colorScheme.onSurface
-                )
+                modifier = Modifier.fillMaxWidth()
             )
+
+            TextField(
+                value = reminder,
+                onValueChange = { reminder = it },
+                label = { Text("Reminder") },
+                keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth()
+            )
+
             Row(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 modifier = Modifier.fillMaxWidth()
@@ -1127,9 +1310,11 @@ fun EditTaskScreen(
                                 taskName = taskName,
                                 startTime = startTime,
                                 endTime = endTime,
+                                reminder = reminder,
                                 duration = duration.toInt()
                             )
                             onSave(updatedTask)
+
                         } catch (e: ParseException) {
                             Toast.makeText(context, "Invalid time format", Toast.LENGTH_SHORT).show()
                         }
@@ -1146,50 +1331,103 @@ fun EditTaskScreen(
 
 
 
-// Content from C:\Users\Vivid\AndroidStudioProjects\RoutineTurbo_android\app\src\main\java\com\app\routineturboa\ui\components\signInButton.kt
-package com.app.routineturboa.ui.components
+// Content from C:\Users\vivid\Documents\C-Creative Projects\RoutineTurboA_android\app\src\main\java\com\app\routineturboa\ui\components\RoutineDrawerContent.kt
 
-import android.util.Log
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Button
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
-import coil.compose.rememberAsyncImagePainter
-import com.app.routineturboa.MainActivity
-import com.app.routineturboa.services.MSALAuthManager
-import com.microsoft.identity.client.AuthenticationCallback
-import com.microsoft.identity.client.IAccount
-import com.microsoft.identity.client.IAuthenticationResult
-import com.microsoft.identity.client.ISingleAccountPublicClientApplication
-import com.microsoft.identity.client.exception.MsalException
-import kotlinx.coroutines.launch
 
 @Composable
-fun SignInButton(
-    msalAuthManager: MSALAuthManager,
-    authenticationResult: IAuthenticationResult?,
-    onSignInSuccess: (IAuthenticationResult) -> Unit
-) {
+fun RoutineDrawerContent(onItemClicked: () -> Unit) {
+    val context = LocalContext.current // Assuming you're calling this from a composable
+    val appName = context.getString(R.string.app_name)
+
+    Column(
+        modifier = Modifier
+            .padding(0.dp)
+            .background(MaterialTheme.colorScheme.primaryContainer)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 20.dp, horizontal = 1.dp) // Adjust padding as needed
+        ) {
+
+            Image(
+                painter = painterResource(id = R.drawable.routineturbo),
+                contentDescription = "App Icon",
+                modifier = Modifier.size(50.dp).clip(CircleShape)
+
+            )
+
+            Text(
+                text = appName,
+                style = MaterialTheme.typography.titleLarge // Use a larger heading style for title
+            )
+        }
+
+        Text(
+            text = "Sign in",
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { startSigningIn(context, "Ok then well") }
+                .padding(16.dp),
+            style = MaterialTheme.typography.bodyLarge
+        )
+
+        Text(
+            text = "Sync",
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onItemClicked() }
+                .padding(16.dp),
+            style = MaterialTheme.typography.bodyLarge
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "Settings",
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onItemClicked() }
+                .padding(16.dp),
+            style = MaterialTheme.typography.bodyLarge
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "Sign Out",
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onItemClicked() }
+                .padding(16.dp),
+            style = MaterialTheme.typography.bodyLarge
+        )
+    }
+}
+
+fun startSigningIn(context: Context, message: String) {
+    Toast.makeText(context, "Test: $message", Toast.LENGTH_LONG).show()
+}
+
+
+// Content from C:\Users\vivid\Documents\C-Creative Projects\RoutineTurboA_android\app\src\main\java\com\app\routineturboa\ui\components\signInButton.kt
+package com.app.routineturboa.ui.components
+
+
+@Composable
+fun SignInButton() {
     val context = LocalContext.current
+
+    val msalAuthManager = remember { MSALAuthManager.getInstance(context) }
+    var authenticationResult by remember { mutableStateOf<IAuthenticationResult?>(null) }
+    val onSignInSuccess = { result:IAuthenticationResult ->
+        authenticationResult = result
+        msalAuthManager.saveAuthResult(result)
+    }
+
     val coroutineScope = rememberCoroutineScope()
     var isSigningIn by remember { mutableStateOf(false) }
     var profilePicUrl by remember { mutableStateOf<String?>(null) }
-    var currentAuthResult by remember { mutableStateOf(authenticationResult) }
 
     // Fetch profile image URL when authentication result changes
-    LaunchedEffect(currentAuthResult) {
-        currentAuthResult?.let {
+    LaunchedEffect(authenticationResult) {
+        authenticationResult?.let {
             coroutineScope.launch {
                 profilePicUrl = msalAuthManager.getProfileImageUrl()
                 Log.d("SignInButton", "Profile image URL fetched: $profilePicUrl")
@@ -1199,11 +1437,14 @@ fun SignInButton(
 
     Button(
         onClick = {
+            Toast.makeText(context, "Signing in", Toast.LENGTH_LONG).show()
             Log.d("SignInButton", "Sign-in button clicked")
+
             isSigningIn = true
             msalAuthManager.singleAccountApp?.getCurrentAccountAsync(object : ISingleAccountPublicClientApplication.CurrentAccountCallback {
                 override fun onAccountLoaded(activeAccount: IAccount?) {
                     if (activeAccount != null) {
+
                         msalAuthManager.signOut(object : ISingleAccountPublicClientApplication.SignOutCallback {
                             override fun onSignOut() {
                                 Log.d("SignInButton", "Signed out successfully, now signing in again.")
@@ -1221,6 +1462,7 @@ fun SignInButton(
                 }
 
                 override fun onAccountChanged(priorAccount: IAccount?, currentAccount: IAccount?) {
+                    Log.d("SignInButton", "Account changed: ${currentAccount?.username}")
                 }
 
                 override fun onError(exception: MsalException) {
@@ -1229,15 +1471,15 @@ fun SignInButton(
                 }
             })
         },
-
         enabled = !isSigningIn // Disable button during sign-in process
+
     ) {
         Row {
-            if (currentAuthResult != null && profilePicUrl != null) {
+            if (authenticationResult != null) {
                 Image(
                     painter = rememberAsyncImagePainter(profilePicUrl),
                     contentDescription = "Profile Picture",
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(10.dp)
                 )
                 Text(text = "Signed In") // Show "Signed In" when signed in
             } else {
@@ -1252,6 +1494,7 @@ fun signIn(msalAuthManager: MSALAuthManager, activity: MainActivity, onSignInSuc
 
         override fun onSuccess(result: IAuthenticationResult) {
             Log.d("SignInButton", "Sign-in successful")
+            Toast.makeText(activity, "Sign-in successful", Toast.LENGTH_SHORT).show()
             onSignInSuccess(result)
         }
 
@@ -1266,94 +1509,216 @@ fun signIn(msalAuthManager: MSALAuthManager, activity: MainActivity, onSignInSuc
 }
 
 
-// Content from C:\Users\Vivid\AndroidStudioProjects\RoutineTurbo_android\app\src\main\java\com\app\routineturboa\ui\components\TaskItem.kt
+// Content from C:\Users\vivid\Documents\C-Creative Projects\RoutineTurboA_android\app\src\main\java\com\app\routineturboa\ui\components\TaskItem.kt
 package com.app.routineturboa.ui.components
 
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
-import com.app.routineturboa.data.model.Task
 
 @Composable
-fun TaskItem(task: Task, isSelected: Boolean, onEditClick: (Task) -> Unit, onClick: () -> Unit) {
-    Card(
+fun TaskList(
+    tasks: List<Task>,
+    onTaskSelected: (Task?) -> Unit,
+    onTaskEdited: (Task?) -> Unit,
+    onTaskDelete: (Task) -> Unit,
+    isTaskFirst: (Task) -> Boolean,
+    isTaskLast: (Task) -> Boolean
+) {
+    LazyColumn(
         modifier = Modifier
-            .padding(1.dp)
-            .fillMaxWidth()
-            .border(1.dp, if (isSelected) Color.Blue else MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
-            .clickable(onClick = onClick), // Make the task item clickable
-        colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) Color.LightGray else MaterialTheme.colorScheme.background // Change color if selected
-        ),
-        elevation = CardDefaults.cardElevation(3.dp)
+            .fillMaxHeight()
+            .height(350.dp),
+        contentPadding = PaddingValues(2.dp),
+        verticalArrangement = Arrangement.spacedBy(5.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-            ) {
-                Text(
-                    text = task.taskName,
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    ),
-                    modifier = Modifier.weight(3f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                IconButton(onClick = { onEditClick(task) }) {
-                    Icon(Icons.Default.Edit, contentDescription = "Edit Task")
-                }
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "${task.startTime} - ${task.endTime}",
-                    style = MaterialTheme.typography.bodyLarge.copy(
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                )
-                Text(
-                    text = "${task.duration} minutes",
-                    style = MaterialTheme.typography.bodyLarge.copy(
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                )
-            }
+        items(tasks, key = { it.id }) { task ->
+            TaskItem(
+                task = task,
+                onClick = { onTaskSelected(task) },
+                onEditClick = { onTaskEdited(it) },
+                onDelete = { onTaskDelete(task) },
+                canDelete = !(isTaskFirst(task) || isTaskLast(task))
+            )
+        }
+        item {
+            Spacer(modifier = Modifier.height(30.dp))
         }
     }
 }
 
+@Composable
+fun TaskItem(
+    task: Task,
+    onClick: () -> Unit,
+    onEditClick: (Task) -> Unit,
+    onDelete: (Task) -> Unit,
+    canDelete: Boolean
+) {
+    TaskCard(
+        modifier = Modifier
+            .padding(0.dp, 0.dp, 0.dp, 0.dp)
+            .fillMaxWidth(),
+        task = task,
+        onClick = onClick,
+        onEditClick = onEditClick,
+        onDelete = onDelete,
+        canDelete = canDelete
+    ) {
+        Column {
+            UpperRow(task, onEditClick)  // TaskName and Edit Icon
+            LowerRow(task)  // Task Duration and Timings
+        }
+    }
+}
 
-// Content from C:\Users\Vivid\AndroidStudioProjects\RoutineTurbo_android\app\src\main\java\com\app\routineturboa\ui\theme\Color.kt
+@Composable
+fun TaskCard(
+    modifier: Modifier = Modifier,
+    task: Task,
+    onClick: () -> Unit,
+    onEditClick: (Task) -> Unit,
+    onDelete: (Task) -> Unit,
+    canDelete: Boolean,
+    colors: CardColors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+    content: @Composable () -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    var longPressOffset by remember { mutableStateOf(Offset.Zero) }
+    val density = LocalDensity.current
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Card(
+            modifier = modifier
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onLongPress = { offset ->
+                            longPressOffset = offset
+                            expanded = true
+                        },
+                        onTap = {
+                            onClick()
+                        }
+                    )
+                },
+            colors = colors
+        ) {
+            content()
+        }
+
+        // Adjust the offsets for context-menu
+        val adjustedOffset = Offset(
+            x = longPressOffset.x,
+            y = longPressOffset.y - 150
+        )
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            offset = DpOffset(
+                x = with(density) { adjustedOffset.x.toDp() },
+                y = with(density) { adjustedOffset.y.toDp() }
+            )
+        ) {
+            DropdownMenuItem(
+                text = { Text("Edit") },
+                onClick = {
+                    expanded = false
+                    onEditClick(task)
+                }
+            )
+
+            DropdownMenuItem(
+                text = { Text("Delete") },
+                onClick = {
+                    expanded = false
+                    if (canDelete) {
+                        onDelete(task)
+                    }
+                },
+                enabled = canDelete
+            )
+            }
+        }
+}
+
+
+@Composable
+fun UpperRow(task: Task, onEditClick: (Task) -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(15.dp, 0.dp, 1.dp, 0.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+    ) {
+        TaskName(task)
+        EditIcon { onEditClick(task) }
+    }
+}
+
+@Composable
+fun EditIcon(onClick: () -> Unit) {
+    IconButton(
+        onClick = onClick,
+        modifier = Modifier.size(32.dp)
+    ) {
+        Icon(
+            imageVector = Icons.Default.Edit,
+            contentDescription = "Edit Task",
+            tint = MaterialTheme.colorScheme.tertiary,
+            modifier = Modifier.size(13.dp)
+        )
+    }
+}
+
+@Composable
+fun TaskName(task: Task) {
+    Text(
+        text = task.taskName,
+        maxLines = 2,
+        style = MaterialTheme.typography.bodyLarge.copy(
+            color = MaterialTheme.colorScheme.onSurface
+        )
+    )
+}
+
+@Composable
+fun LowerRow(task: Task) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(40.dp, 0.dp, 5.dp, 0.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        TaskTimings(task)
+        TaskDuration(task)
+    }
+}
+
+@Composable
+fun TaskTimings(task: Task) {
+    Text(
+        text = "${task.startTime} - ${task.endTime}",
+        style = MaterialTheme.typography.labelSmall.copy(
+            color = MaterialTheme.colorScheme.outline,
+            fontStyle = FontStyle.Italic
+        )
+    )
+}
+
+@Composable
+fun TaskDuration(task: Task) {
+    Text(
+        text = "${task.duration} minutes",
+        style = MaterialTheme.typography.bodyMedium.copy(
+            color = MaterialTheme.colorScheme.outline
+        )
+    )
+}
+
+
+
+// Content from C:\Users\vivid\Documents\C-Creative Projects\RoutineTurboA_android\app\src\main\java\com\app\routineturboa\ui\theme\Color.kt
 package com.app.routineturboa.ui.theme
 
-import androidx.compose.ui.graphics.Color
 
 val Purple80 = Color(0xFFD0BCFF)
 val PurpleGrey80 = Color(0xFFCCC2DC)
@@ -1363,18 +1728,9 @@ val Purple40 = Color(0xFF6650a4)
 val PurpleGrey40 = Color(0xFF625b71)
 val Pink40 = Color(0xFF7D5260)
 
-// Content from C:\Users\Vivid\AndroidStudioProjects\RoutineTurbo_android\app\src\main\java\com\app\routineturboa\ui\theme\Theme.kt
+// Content from C:\Users\vivid\Documents\C-Creative Projects\RoutineTurboA_android\app\src\main\java\com\app\routineturboa\ui\theme\Theme.kt
 package com.app.routineturboa.ui.theme
 
-import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 
 
 @Composable
@@ -1382,22 +1738,62 @@ fun RoutineTurboATheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
+    Log.d("RoutineTurboATheme", "Theme applied")
     val colorScheme = if (darkTheme) {
         darkColorScheme(
-            primary = Color(0xFF6200EE),
-            secondary = Color(0xFF03DAC6),
-            background = Color(0xFF202B32),
-            surfaceVariant = Color(0xFFB81818),
-            outline = Color(0xFFDADADA)
+            primary = Color(0xFF6200EE),  // Existing
+            onPrimary = Color(0xFFFFFFFF),
+            primaryContainer = Color(0xFF3700B3),
+            onPrimaryContainer = Color(0xFFEADDFF),
+            secondary = Color(0xFF03DAC6),  // Existing
+            onSecondary = Color(0xFF000000),
+            secondaryContainer = Color(0xFF018786),
+            onSecondaryContainer = Color(0xFFA1F4F1),
+            tertiary = Color(0xFFEFB8C8),
+            onTertiary = Color(0xFF492532),
+            tertiaryContainer = Color(0xFF633B48),
+            onTertiaryContainer = Color(0xFFFFD8E4),
+            error = Color(0xFFCF6679),
+            onError = Color(0xFF000000),
+            errorContainer = Color(0xFFB00020),
+            onErrorContainer = Color(0xFFFFDAD6),
+            background = Color(0xFF202B32),  // Existing
+            onBackground = Color(0xFFE6E1E5),
+            surface = Color(0xFF1C1B1F),
+            onSurface = Color(0xFFE6E1E5),
+            surfaceVariant = Color(0xFFB81818),  // Existing
+            onSurfaceVariant = Color(0xFFCAC4D0),
+            outline = Color(0xFFDADADA),  // Existing
+            outlineVariant = Color(0xFF49454F),
+            scrim = Color(0xFF000000)
         )
     } else {
         lightColorScheme(
-            primary = Color(0xFF6200EE),
-            secondary = Color(0xFF03DAC6),
-            background = Color(0xFFF3F3F3),
-            surfaceVariant = Color(0xFF5A0F0F),
-            outline = Color(0xFF8B8B8B)
-
+            primary = Color(0xFF6200EE),  // Existing
+            onPrimary = Color(0xFFFFFFFF),
+            primaryContainer = Color(0xFFEADDFF),
+            onPrimaryContainer = Color(0xFF21005D),
+            secondary = Color(0xFF03DAC6),  // Existing
+            onSecondary = Color(0xFF000000),
+            secondaryContainer = Color(0xFFCEFAF8),
+            onSecondaryContainer = Color(0xFF002021),
+            tertiary = Color(0xFFBE708C),
+            onTertiary = Color(0xFFFFFFFF),
+            tertiaryContainer = Color(0xFFFFD8E4),
+            onTertiaryContainer = Color(0xFF31111D),
+            error = Color(0xFFB00020),
+            onError = Color(0xFFFFFFFF),
+            errorContainer = Color(0xFFFCDAD6),
+            onErrorContainer = Color(0xFF410002),
+            background = Color(0xFFF3F3F3),  // Existing
+            onBackground = Color(0xFF1C1B1F),
+            surface = Color(0xFFFFFBFE),
+            onSurface = Color(0xFF1C1B1F),
+            surfaceVariant = Color(0xFFFFFFFF),  // Existing
+            onSurfaceVariant = Color(0xFF49454F),
+            outline = Color(0xFF8B8B8B),  // Existing
+            outlineVariant = Color(0xFFCAC4D0),
+            scrim = Color(0xFF000000)
         )
     }
     MaterialTheme(
@@ -1413,14 +1809,9 @@ fun RoutineTurboATheme(
     )
 }
 
-// Content from C:\Users\Vivid\AndroidStudioProjects\RoutineTurbo_android\app\src\main\java\com\app\routineturboa\ui\theme\Type.kt
+// Content from C:\Users\vivid\Documents\C-Creative Projects\RoutineTurboA_android\app\src\main\java\com\app\routineturboa\ui\theme\Type.kt
 package com.app.routineturboa.ui.theme
 
-import androidx.compose.material3.Typography
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.sp
 
 // Set of Material typography styles to start with
 val Typography = Typography(
@@ -1449,75 +1840,36 @@ val Typography = Typography(
     )
 )
 
-// Content from C:\Users\Vivid\AndroidStudioProjects\RoutineTurbo_android\app\src\main\java\com\app\routineturboa\utils\TimeUtils.kt
+// Content from C:\Users\vivid\Documents\C-Creative Projects\RoutineTurboA_android\app\src\main\java\com\app\routineturboa\utils\permissions.kt
 package com.app.routineturboa.utils
 
-import java.text.ParseException
-import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.Locale
 
-object TimeUtils {
-
-    private val inputFormat: SimpleDateFormat
-        get() = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-    private val outputFormat: SimpleDateFormat
-        get() = SimpleDateFormat("hh:mm a", Locale.getDefault())
-    private val timeOnlyFormat: SimpleDateFormat
-        get() = SimpleDateFormat("HH:mm:ss", Locale.getDefault())  // Ensure the time format includes seconds
-
-    fun convertTo12HourFormat(time: String): String {
-        val date = inputFormat.parse(time)
-        return outputFormat.format(date!!)
-    }
-
-    fun convertTo24HourFormat(time: String): String {
-        val date = outputFormat.parse(time)
-        return timeOnlyFormat.format(date!!)
-    }
-
-    fun formatToDatabaseTime(date: String, time: String): String {
-        val datetime = "$date $time:00"  // Append seconds to match "HH:mm:ss"
-        val dateObj = inputFormat.parse(datetime)
-        return inputFormat.format(dateObj!!)
-    }
-
-    fun isValidTimeFormat(time: String): Boolean {
-        return try {
-            outputFormat.parse(time)
-            true
-        } catch (e: ParseException) {
-            false
+object PermissionUtils {
+    fun hasNotificationPermission(context: Context): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+        } else {
+            true // Permission is automatically granted on older Android versions
         }
     }
+}
 
-    fun addDurationToTime(startTime: String, duration: Int): String {
-        val calendar = Calendar.getInstance()
-        val date = try {
-            inputFormat.parse(startTime)
-        } catch (e: ParseException) {
-            outputFormat.parse(startTime)
-        }
-        calendar.time = date!!
-        calendar.add(Calendar.MINUTE, duration)
-        return outputFormat.format(calendar.time)
-    }
+// Content from C:\Users\vivid\Documents\C-Creative Projects\RoutineTurboA_android\app\src\main\java\com\app\routineturboa\utils\showToast.kt
+package com.app.routineturboa.utils
 
+
+fun showToast(context: Context, message: String) {
+    Toast.makeText(context, message, Toast.LENGTH_LONG).show()
 }
 
 
-// Content from C:\Users\Vivid\AndroidStudioProjects\RoutineTurbo_android\app\src\main\java\com\app\routineturboa\viewmodel\TaskViewModel.kt
+
+// Content from C:\Users\vivid\Documents\C-Creative Projects\RoutineTurboA_android\app\src\main\java\com\app\routineturboa\viewmodel\TaskViewModel.kt
 package com.app.routineturboa.viewmodel
 
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import com.app.routineturboa.data.local.RoutineRepository
-import com.app.routineturboa.data.model.Task
-import com.app.routineturboa.utils.TimeUtils
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 
 class TaskViewModel(private val repository: RoutineRepository) : ViewModel() {
     private val _tasks = MutableStateFlow<List<Task>>(emptyList())
@@ -1534,6 +1886,16 @@ class TaskViewModel(private val repository: RoutineRepository) : ViewModel() {
         }
     }
 
+    fun isTaskFirst(task: Task): Boolean {
+        val taskList = tasks.value
+        return taskList.indexOf(task) == 0
+    }
+
+    fun isTaskLast(task: Task): Boolean {
+        val taskList = tasks.value
+        return taskList.indexOf(task) == taskList.size - 1
+    }
+
     fun addTask(task: Task) {
         viewModelScope.launch {
             repository.addTask(task)
@@ -1541,14 +1903,25 @@ class TaskViewModel(private val repository: RoutineRepository) : ViewModel() {
         }
     }
 
+    fun deleteTask(task: Task) {
+        Log.d("TaskViewModel", "Deleting task: ${task.taskName}")
+        viewModelScope.launch {
+            repository.deleteTask(task)
+            updatePositions(task.position)
+            loadTasks()
+        }
+    }
+
     fun updateTask(task: Task) {
+        Log.d("TaskViewModel", "Updating task: ${task.taskName}")
         viewModelScope.launch {
             repository.updateTask(task)
             loadTasks()
         }
     }
 
-    fun updatePositions(startPosition: Int) {
+    private fun updatePositions(startPosition: Int) {
+        Log.d("TaskViewModel", "Updating positions from $startPosition")
         viewModelScope.launch {
             repository.updatePositions(startPosition)
             loadTasks()
@@ -1568,22 +1941,38 @@ class TaskViewModel(private val repository: RoutineRepository) : ViewModel() {
             loadTasks()
         }
     }
-}
 
-
-// Content from C:\Users\Vivid\AndroidStudioProjects\RoutineTurbo_android\app\src\main\java\com\app\routineturboa\viewmodel\TaskViewModelFactory.kt
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
-import com.app.routineturboa.data.local.RoutineRepository
-import com.app.routineturboa.viewmodel.TaskViewModel
-
-class TaskViewModelFactory(private val repository: RoutineRepository) : ViewModelProvider.Factory {
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(TaskViewModel::class.java)) {
-            @Suppress("UNCHECKED_CAST")
-            return TaskViewModel(repository) as T
+    fun handleSaveTask(
+        newTask: Task,
+        selectedTaskForDisplay: Task?
+    ) {
+        Log.d("MainScreen", "Handling save task: ${newTask.taskName}")
+        val currentTasks = _tasks.value
+        selectedTaskForDisplay?.let { selectedTask ->
+            val newStartTime = selectedTask.endTime
+            newTask.startTime = newStartTime
+            newTask.endTime = TimeUtils.addDurationToTime(newStartTime, newTask.duration)
+            updatePositions(selectedTask.position + 1)
+            newTask.position = selectedTask.position + 1
+            addTask(newTask)
+            adjustSubsequentTasks(newTask.position, newTask.endTime)
+        } ?: run {
+            if (currentTasks.isNotEmpty()) {
+                val lastTask = currentTasks.last()
+                newTask.startTime = lastTask.endTime
+                newTask.endTime = TimeUtils.addDurationToTime(newTask.startTime, newTask.duration)
+                newTask.position = currentTasks.size + 1
+                addTask(newTask)
+            } else {
+                newTask.startTime = "08:00 AM"
+                newTask.endTime = TimeUtils.addDurationToTime(newTask.startTime, newTask.duration)
+                newTask.position = 1
+                addTask(newTask)
+            }
         }
-        throw IllegalArgumentException("Unknown ViewModel class")
+        Log.d("MainScreen", "Task saved: ${newTask.taskName}")
     }
+
 }
+
 

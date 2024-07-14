@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.jetbrainsKotlinAndroid)
     alias(libs.plugins.compose.compiler)
+    alias(libs.plugins.ksp)
 }
 
 android {
@@ -12,10 +13,8 @@ android {
         applicationId = "com.app.routineturboa"
         minSdk = 30
         targetSdk = 34
-
         versionCode = 2
         versionName = "1.9.0"
-
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
@@ -65,18 +64,17 @@ android {
 
 dependencies {
     implementation(libs.coil.compose)
-    implementation(libs.androidx.work.runtime.ktx.v271)
-
+    implementation(libs.androidx.work.runtime.ktx)
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
     implementation(libs.msal)
     implementation(libs.volley)
     implementation(libs.graph)
-
     implementation(libs.sqlite)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
-
     implementation(libs.androidx.material.icons.core)
     implementation(libs.androidx.material.icons.extended)
-
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -95,5 +93,4 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
-
 }

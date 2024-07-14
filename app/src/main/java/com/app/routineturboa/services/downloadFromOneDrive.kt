@@ -2,7 +2,6 @@ package com.app.routineturboa.services
 
 import android.content.Context
 import android.util.Log
-import com.app.routineturboa.data.local.DatabaseHelper
 import com.app.routineturboa.viewmodel.TaskViewModel
 import com.microsoft.identity.client.IAuthenticationResult
 import kotlinx.coroutines.Dispatchers
@@ -28,15 +27,16 @@ suspend fun downloadFromOneDrive(authResult: IAuthenticationResult, context: Con
 
         val dbFile = dirFiles?.find { it.name == "RoutineTurbo.db" }
 
-        dbFile?.let { driveItem ->
-            driveItem.id?.let { driveItemId ->
-                val localDbFile = context.getDatabasePath(DatabaseHelper.DATABASE_NAME)
-                withContext(Dispatchers.IO) {
-                    oneDriveManager.downloadFile(driveItemId, localDbFile)
-                }
-            }
-        }
+//        dbFile?.let { driveItem ->
+//            driveItem.id?.let { driveItemId ->
+//                val localDbFile = context.getDatabasePath(RoutineRepository.DATABASE_NAME)
+//                withContext(Dispatchers.IO) {
+//                    oneDriveManager.downloadFile(driveItemId, localDbFile)
+//                }
+//            }
+//        }
     }
-    taskViewModel.loadTasks()
+
+    taskViewModel.tasks
     Log.d("MainScreen", "Finished downloading from OneDrive")
 }

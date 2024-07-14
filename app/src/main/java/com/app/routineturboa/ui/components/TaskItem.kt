@@ -38,16 +38,16 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
-import com.app.routineturboa.data.model.Task
+import com.app.routineturboa.data.model.TaskEntity
 
 @Composable
 fun TaskList(
-    tasks: List<Task>,
-    onTaskSelected: (Task?) -> Unit,
-    onTaskEdited: (Task?) -> Unit,
-    onTaskDelete: (Task) -> Unit,
-    isTaskFirst: (Task) -> Boolean,
-    isTaskLast: (Task) -> Boolean
+    tasks: List<TaskEntity>,
+    onTaskSelected: (TaskEntity?) -> Unit,
+    onTaskEdited: (TaskEntity?) -> Unit,
+    onTaskDelete: (TaskEntity) -> Unit,
+    isTaskFirst: (TaskEntity) -> Boolean,
+    isTaskLast: (TaskEntity) -> Boolean
 ) {
     LazyColumn(
         modifier = Modifier
@@ -73,10 +73,10 @@ fun TaskList(
 
 @Composable
 fun TaskItem(
-    task: Task,
+    task: TaskEntity,
     onClick: () -> Unit,
-    onEditClick: (Task) -> Unit,
-    onDelete: (Task) -> Unit,
+    onEditClick: (TaskEntity) -> Unit,
+    onDelete: (TaskEntity) -> Unit,
     canDelete: Boolean
 ) {
     TaskCard(
@@ -99,10 +99,10 @@ fun TaskItem(
 @Composable
 fun TaskCard(
     modifier: Modifier = Modifier,
-    task: Task,
+    task: TaskEntity,
     onClick: () -> Unit,
-    onEditClick: (Task) -> Unit,
-    onDelete: (Task) -> Unit,
+    onEditClick: (TaskEntity) -> Unit,
+    onDelete: (TaskEntity) -> Unit,
     canDelete: Boolean,
     colors: CardColors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
     content: @Composable () -> Unit
@@ -168,7 +168,7 @@ fun TaskCard(
 
 
 @Composable
-fun UpperRow(task: Task, onEditClick: (Task) -> Unit) {
+fun UpperRow(task: TaskEntity, onEditClick: (TaskEntity) -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -197,7 +197,7 @@ fun EditIcon(onClick: () -> Unit) {
 }
 
 @Composable
-fun TaskName(task: Task) {
+fun TaskName(task: TaskEntity) {
     Text(
         text = task.taskName,
         maxLines = 2,
@@ -208,7 +208,7 @@ fun TaskName(task: Task) {
 }
 
 @Composable
-fun LowerRow(task: Task) {
+fun LowerRow(task: TaskEntity) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -221,7 +221,7 @@ fun LowerRow(task: Task) {
 }
 
 @Composable
-fun TaskTimings(task: Task) {
+fun TaskTimings(task: TaskEntity) {
     Text(
         text = "${task.startTime} - ${task.endTime}",
         style = MaterialTheme.typography.labelSmall.copy(
@@ -232,7 +232,7 @@ fun TaskTimings(task: Task) {
 }
 
 @Composable
-fun TaskDuration(task: Task) {
+fun TaskDuration(task: TaskEntity) {
     Text(
         text = "${task.duration} minutes",
         style = MaterialTheme.typography.bodyMedium.copy(

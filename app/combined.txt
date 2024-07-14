@@ -1,0 +1,267 @@
+
+// Content from C:\Users\vivid\Documents\C-Creative Projects\RoutineTurboA_android\app\src\main\AndroidManifest.xml
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+
+    <application
+        android:name=".MyApplication"
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:label="@string/app_name"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- MSAL BrowserTabActivity configuration -->
+        <activity
+            android:name="com.microsoft.identity.client.BrowserTabActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="msauth"
+                    android:host="com.app.routineturboa"
+                    android:path="/a0VHP+Yc7DrhJPus83+LbjsqzHY=" />
+            </intent-filter>
+        </activity>
+
+        <receiver android:name=".reminders.ReminderReceiver" />
+
+
+    </application>
+</manifest>
+
+// Content from C:\Users\vivid\Documents\C-Creative Projects\RoutineTurboA_android\app\src\main\java\com\app\routineturboa\MainActivity.kt
+package com.app.routineturboa
+
+
+class MainActivity : ComponentActivity() {
+    private lateinit var requestPermissionLauncher: ActivityResultLauncher<String>
+    private lateinit var reminderManager: ReminderManager
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        requestWindowFeature(Window.FEATURE_NO_TITLE)
+        super.onCreate(savedInstanceState)
+        Log.d("MainActivity", "onCreate called")
+
+        reminderManager = ReminderManager(this)
+
+        requestPermissionLauncher = registerForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { isGranted: Boolean ->
+            if (isGranted) {
+                Log.d("MainActivity", "Notification permission granted")
+                scheduleRemindersForAllTasks()
+            } else {
+                Log.d("MainActivity", "Notification permission denied")
+            }
+        }
+
+        if (PermissionUtils.hasNotificationPermission(this)) {
+            scheduleRemindersForAllTasks()
+        }
+
+        setContent {
+            RoutineTurboATheme {
+                MainScreenContent(
+                    hasNotificationPermission = PermissionUtils.hasNotificationPermission(this),
+                    onRequestPermission = { requestNotificationPermission() }
+                )
+            }
+        }
+    }
+
+    private fun requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            scheduleRemindersForAllTasks()
+        }
+    }
+
+    private fun scheduleRemindersForAllTasks() {
+        CoroutineScope(Dispatchers.IO).launch {
+            val dbRepository = RoutineRepository(applicationContext)
+            val tasks = dbRepository.getAllTasks()
+            tasks.forEach { task ->
+                task.reminder.let { reminderTime ->
+                    Log.d("MainActivity", "Reminder time: $reminderTime")
+                    val reminderMillis = TimeUtils.timeStringToMilliseconds(reminderTime)
+                    if (reminderMillis > System.currentTimeMillis()) {
+                        reminderManager.scheduleReminder(task.id, reminderMillis)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MainScreenContent(
+    hasNotificationPermission: Boolean,
+    onRequestPermission: () -> Unit
+) {
+    val drawerState = rememberDrawerState(DrawerValue.Closed)
+    val coroutineScope = rememberCoroutineScope()
+    val drawerWidth = with(LocalConfiguration.current.screenWidthDp.dp) { value * 2 / 3f }
+    val currentDate: String = SimpleDateFormat("EEEE, MMMM d, yyyy", Locale.getDefault()).format(Date())
+
+    var showPermissionDialog by remember { mutableStateOf(!hasNotificationPermission) }
+
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            ModalDrawerSheet(
+                modifier = Modifier.width(drawerWidth.dp)
+            ) {
+                RoutineDrawerContent {
+                    coroutineScope.launch { drawerState.close() }
+                }
+            }
+        }
+    ) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                    ),
+                    title = { Text(text = currentDate) },
+                    navigationIcon = {
+                        IconButton(onClick = { coroutineScope.launch { drawerState.open() } }) {
+                            Icon(Icons.Filled.Menu, contentDescription = "Menu")
+                        }
+                    }
+                )
+            },
+        ) { paddingValues ->
+            Column(modifier = Modifier.padding(paddingValues)) {
+                MainScreen()
+            }
+        }
+    }
+
+    if (showPermissionDialog) {
+        AlertDialog(
+            onDismissRequest = { showPermissionDialog = false },
+            title = { Text("Notification Permission") },
+            text = { Text("This app needs notification permission to send you reminders. Would you like to grant this permission?") },
+            confirmButton = {
+                Button(onClick = {
+                    showPermissionDialog = false
+                    onRequestPermission()
+                }) {
+                    Text("Grant Permission")
+                }
+            },
+            dismissButton = {
+                Button(onClick = { showPermissionDialog = false }) {
+                    Text("Not Now")
+                }
+            }
+        )
+    }
+}
+
+// Content from C:\Users\vivid\Documents\C-Creative Projects\RoutineTurboA_android\app\src\main\java\com\app\routineturboa\ui\MainScreen.kt
+package com.app.routineturboa.ui
+
+
+
+@Composable
+fun MainScreen() {
+    val context = LocalContext.current
+    val taskViewModelFactory = remember { TaskViewModelFactory(RoutineRepository(context)) }
+    val taskViewModel: TaskViewModel = viewModel(factory = taskViewModelFactory)
+    val tasks by taskViewModel.tasks.collectAsStateWithLifecycle()
+
+    var clickedTask by remember { mutableStateOf<Task?>(null) }
+    var taskBeingEdited by remember { mutableStateOf<Task?>(null) }
+    var isAddingTask by remember { mutableStateOf(false) }
+
+    val authenticationResult by remember { mutableStateOf<IAuthenticationResult?>(null) }
+    val coroutineScope = rememberCoroutineScope()
+
+    LaunchedEffect(authenticationResult) {
+        authenticationResult?.let { authResult ->
+            coroutineScope.launch {
+                downloadFromOneDrive(authResult, context, taskViewModel)
+            }
+        }
+    }
+
+    Scaffold(
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { isAddingTask = true }
+            ) {
+                Icon(Icons.Filled.Add, contentDescription = "Add New Task")
+            }
+        },
+        floatingActionButtonPosition = FabPosition.End
+    ) { paddingValues ->
+        Surface(
+            modifier = Modifier.padding(paddingValues),
+            color = MaterialTheme.colorScheme.background
+        ) {
+            when {
+                isAddingTask -> {
+                    AddTaskScreen(
+                        initialStartTime = "08:00 AM",
+                        onSave = { newTask -> taskViewModel.handleSaveTask(newTask, null) },
+                        onCancel = { isAddingTask = false }
+                    )
+                }
+
+                taskBeingEdited != null -> {
+                    taskBeingEdited?.let { task ->
+                        EditTaskScreen(
+                            task = task,
+                            onSave = { updatedTask ->
+                                taskViewModel.updateTask(updatedTask)
+                                taskBeingEdited = null
+                            },
+                            onCancel = { taskBeingEdited = null }
+                        )
+                    }
+                }
+
+                else -> {
+                    TaskList(
+                        tasks = tasks,
+                        onTaskSelected = { clickedTask = it },
+                        onTaskEdited = { taskBeingEdited = it },
+                        onTaskDelete = { taskViewModel.deleteTask(it) },
+                        isTaskFirst = { taskViewModel.isTaskFirst(it) },
+                        isTaskLast = { taskViewModel.isTaskLast(it) }
+                    )
+                    
+                    Button(
+                        onClick = {}
+                    ) {
+                        Text("Demo")
+                    }
+
+                }
+            }
+        }
+    }
+}
+
+
