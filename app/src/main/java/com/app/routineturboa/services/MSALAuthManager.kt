@@ -40,6 +40,11 @@ class MSALAuthManager(context: Context) {
             }
     }
 
+    init {
+        Log.d("MSALAuthManager", "Initializing MSALAuthManager")
+        createMsalApplication()
+    }
+
     private fun createMsalApplication() {
         Log.d("MSALAuthManager", "Creating MSAL single account application")
 
@@ -66,32 +71,48 @@ class MSALAuthManager(context: Context) {
         }
     }
 
-    init {
-        Log.d("MSALAuthManager", "Initializing MSALAuthManager")
-        createMsalApplication()
-    }
-
 
     private fun checkCurrentAccount() {
         Log.d("MSALAuthManager", "Checking current account")
+        singleAccountApp?.getCurrentAccountAsync(
+            object : ISingleAccountPublicClientApplication.CurrentAccountCallback {
+                override fun onAccountLoaded(activeAccount: IAccount?) {
+                    currentAccount = activeAccount
+                    if (activeAccount != null) {
+                        Log.d("MSALAuthManager", "An account is already signed in.")
+                        loadAuthResult() // Load authentication result from preferences
+                    } else {
+                        Log.d("MSALAuthManager", "No account is signed in.")
+                    }
+                }
+
+                override fun onAccountChanged(priorAccount: IAccount?, currentAccount: IAccount?) {
+                    Log.d("MSALAuthManager", "Account changed: ${currentAccount?.username}")
+                    this@MSALAuthManager.currentAccount = currentAccount
+                }
+
+                override fun onError(exception: MsalException) {
+                    Log.e("MSALAuthManager", "Error loading current account: ${exception.message}")
+                }
+            }
+        )
+    }
+
+    fun getCurrentAccount(callback: (IAccount?) -> Unit) {
         singleAccountApp?.getCurrentAccountAsync(object : ISingleAccountPublicClientApplication.CurrentAccountCallback {
             override fun onAccountLoaded(activeAccount: IAccount?) {
-                currentAccount = activeAccount
-                if (activeAccount != null) {
-                    Log.d("MSALAuthManager", "An account is already signed in.")
-                    loadAuthResult() // Load authentication result from preferences
-                } else {
-                    Log.d("MSALAuthManager", "No account is signed in.")
-                }
+                Log.d("MSALAuthManager", "Current account: ${activeAccount?.username}")
+                callback(activeAccount)
             }
 
             override fun onAccountChanged(priorAccount: IAccount?, currentAccount: IAccount?) {
                 Log.d("MSALAuthManager", "Account changed: ${currentAccount?.username}")
-                this@MSALAuthManager.currentAccount = currentAccount
+                callback(currentAccount)
             }
 
             override fun onError(exception: MsalException) {
-                Log.e("MSALAuthManager", "Error loading current account: ${exception.message}")
+                Log.e("MSALAuthManager", "Error getting current account", exception)
+                callback(null)
             }
         })
     }
@@ -110,7 +131,6 @@ class MSALAuthManager(context: Context) {
             Log.e("MSALAuthManager", "MSAL client is not initialized")
         }
     }
-
 
     fun signOut(callback: ISingleAccountPublicClientApplication.SignOutCallback) {
         Log.d("MSALAuthManager", "Attempting to sign out")
@@ -188,7 +208,7 @@ class MSALAuthManager(context: Context) {
                 override fun getAuthority(): String = "storedAuthority"
                 override fun getClaims(): MutableMap<String, *>? = null
                 override fun getIdToken(): String = idToken
-                override fun getTenantId(): String = "storedTenantId" // Implementing the tenant ID method
+                override fun getTenantId(): String = "storedTenantId"
             }
         } else {
             Log.d("MSALAuthManager", "No stored authentication result found")

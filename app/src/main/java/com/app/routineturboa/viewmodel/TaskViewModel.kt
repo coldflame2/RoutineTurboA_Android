@@ -4,13 +4,20 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.routineturboa.data.local.RoutineRepository
 import com.app.routineturboa.data.model.TaskEntity
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.io.File
 
 class TaskViewModel(private val repository: RoutineRepository) : ViewModel() {
+
+    init {
+        viewModelScope.launch { repository.initializeDefaultTasks() }
+    }
+
     val tasks: StateFlow<List<TaskEntity>> = repository.getAllTasks()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -29,6 +36,23 @@ class TaskViewModel(private val repository: RoutineRepository) : ViewModel() {
             } else {
                 repository.insertTask(task)
             }
+        }
+    }
+
+    fun reloadDatabase(newDatabasePath: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            // Close the existing database connection
+            repository.closeDatabase()
+
+            // Copy the new database file to the app's database file
+            val destinationFile = File(newDatabasePath).parentFile?.resolve("routine_database.db")
+                ?: throw IllegalStateException("Unable to determine destination file")
+            File(newDatabasePath).copyTo(destinationFile, overwrite = true)
+
+            // Reopen the database
+            repository.reopenDatabase()
+
+            // The tasks StateFlow will automatically update with the new data
         }
     }
 

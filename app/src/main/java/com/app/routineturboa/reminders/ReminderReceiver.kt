@@ -22,4 +22,12 @@ class ReminderReceiver : BroadcastReceiver() {
             }
         }
     }
+
+    fun triggerReminder(context: Context, taskId: Int) {
+        val intent = Intent(context, ReminderReceiver::class.java).apply {
+            putExtra("TASK_ID", taskId)
+        }
+        context.sendBroadcast(intent)
+    }
+
 }

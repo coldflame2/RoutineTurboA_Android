@@ -32,6 +32,7 @@ class OneDriveManager(private val authProvider: IAuthenticationProvider) {
     fun downloadFile(driveItemId: String, destinationFile: File): Boolean {
         Log.d("OneDriveManager", "Downloading file with ID: $driveItemId to ${destinationFile.absolutePath}")
         val request = graphClient.me().drive().items(driveItemId).content().buildRequest()
+
         return try {
             val inputStream = request.get()
             if (inputStream != null) {

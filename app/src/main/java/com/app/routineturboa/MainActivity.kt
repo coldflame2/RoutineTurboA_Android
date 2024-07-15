@@ -1,6 +1,5 @@
 package com.app.routineturboa
 
-import ContentForDrawer
 import android.Manifest
 import android.os.Build
 import android.os.Bundle
@@ -14,7 +13,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.automirrored.sharp.MenuOpen
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DrawerValue
@@ -41,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import com.app.routineturboa.reminders.ReminderManager
 import com.app.routineturboa.ui.MainScreen
+import com.app.routineturboa.ui.components.ContentForDrawer
 import com.app.routineturboa.ui.theme.RoutineTurboATheme
 import com.app.routineturboa.utils.PermissionUtils
 import kotlinx.coroutines.launch
@@ -54,6 +54,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var reminderManager: ReminderManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
+
         requestWindowFeature(Window.FEATURE_NO_TITLE)
         super.onCreate(savedInstanceState)
         Log.d("MainActivity", "onCreate called")
@@ -74,6 +75,7 @@ class MainActivity : ComponentActivity() {
         if (PermissionUtils.hasNotificationPermission(this)) {
             lifecycleScope.launch {
                 reminderManager.observeAndScheduleReminders(applicationContext)
+                reminderManager.triggerReminder(1)
             }
         }
 
@@ -135,7 +137,7 @@ fun MainScreenContent(
                     title = { Text(text = currentDate) },
                     navigationIcon = {
                         IconButton(onClick = { coroutineScope.launch { drawerState.open() } }) {
-                            Icon(Icons.Filled.Menu, contentDescription = "Menu")
+                            Icon(Icons.AutoMirrored.Sharp.MenuOpen, contentDescription = "Menu")
                         }
                     }
                 )

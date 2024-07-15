@@ -39,6 +39,7 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.app.routineturboa.data.model.TaskEntity
+import java.time.format.DateTimeFormatter
 
 @Composable
 fun TaskList(
@@ -222,8 +223,12 @@ fun LowerRow(task: TaskEntity) {
 
 @Composable
 fun TaskTimings(task: TaskEntity) {
+    // Display startTime and endTime in UI friendly format
+    val formattedStartTime = task.startTime.format(DateTimeFormatter.ofPattern("hh:mm a"))
+    val formattedEndTime = task.endTime.format(DateTimeFormatter.ofPattern("hh:mm a"))
+
     Text(
-        text = "${task.startTime} - ${task.endTime}",
+        text = "$formattedStartTime - $formattedEndTime",
         style = MaterialTheme.typography.labelSmall.copy(
             color = MaterialTheme.colorScheme.outline,
             fontStyle = FontStyle.Italic

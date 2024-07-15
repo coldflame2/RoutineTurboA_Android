@@ -27,6 +27,7 @@ import com.app.routineturboa.services.downloadFromOneDrive
 import com.app.routineturboa.ui.components.AddTaskScreen
 import com.app.routineturboa.ui.components.EditTaskScreen
 import com.app.routineturboa.ui.components.TaskList
+import com.app.routineturboa.utils.TimeUtils.strToDateTime
 import com.app.routineturboa.viewmodel.TaskViewModel
 import com.microsoft.identity.client.IAuthenticationResult
 import kotlinx.coroutines.launch
@@ -52,17 +53,21 @@ fun MainScreen() {
                 downloadFromOneDrive(authResult, context, taskViewModel)
             }
         }
+
+
     }
 
     Scaffold(
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { isAddingTask = true }
+                onClick = { isAddingTask = true
+                }
             ) {
                 Icon(Icons.Filled.Add, contentDescription = "Add New Task")
             }
         },
         floatingActionButtonPosition = FabPosition.End
+
     ) { paddingValues ->
         Surface(
             modifier = Modifier.padding(paddingValues),
@@ -71,7 +76,7 @@ fun MainScreen() {
             when {
                 isAddingTask -> {
                     AddTaskScreen(
-                        initialStartTime = "08:00 AM",
+                        initialStartTime = strToDateTime("00:01 AM"),
                         onSave = { newTask: TaskEntity ->
                             taskViewModel.handleSaveTask(newTask, null)
                             isAddingTask = false

@@ -17,6 +17,7 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -25,28 +26,29 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.app.routineturboa.data.model.TaskEntity
-import com.app.routineturboa.utils.TimeUtils
-import java.text.ParseException
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddTaskScreen(
-    initialStartTime: String, // Added parameter for initial start time
+    initialStartTime: LocalDateTime,
     onSave: (TaskEntity) -> Unit,
     onCancel: () -> Unit
 ) {
-    var taskName by remember { mutableStateOf("") }
-    var duration by remember { mutableStateOf("") }
-    var endTime by remember { mutableStateOf("") } // Added state for end time
     val context = LocalContext.current
+    val dateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm dd-MM-yyyy")
+
+    var taskName by remember { mutableStateOf("") }
+    var duration by remember { mutableLongStateOf(0L) }
+    var endTime by remember { mutableStateOf(initialStartTime) }
 
     LaunchedEffect(duration) {
-        try {
-            if (duration.isNotBlank()) {
-                endTime = TimeUtils.addDurationToTime(initialStartTime, duration.toInt())
-            }
-        } catch (e: NumberFormatException) {
-            endTime = ""
+        endTime = if (duration > 0) {
+            initialStartTime.plusMinutes(duration)
+        } else {
+            Toast.makeText(context, "Invalid duration. End time unchanged.", Toast.LENGTH_SHORT).show()
+            initialStartTime
         }
     }
 
@@ -56,7 +58,7 @@ fun AddTaskScreen(
         contentColor = MaterialTheme.colorScheme.onBackground
     ) {
         Column(
-            modifier = Modifier.padding(5.dp),
+            modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             TextField(
@@ -64,48 +66,56 @@ fun AddTaskScreen(
                 onValueChange = { taskName = it },
                 label = { Text("Task Name") },
                 modifier = Modifier.fillMaxWidth(),
-                colors = TextFieldDefaults.textFieldColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = MaterialTheme.colorScheme.surface,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
                     focusedIndicatorColor = MaterialTheme.colorScheme.primary,
                     unfocusedIndicatorColor = MaterialTheme.colorScheme.onSurface
                 )
             )
+
             TextField(
-                value = initialStartTime, // Show the start time
-                onValueChange = {},
+                value = initialStartTime.format(dateTimeFormatter),
+                onValueChange = { },
                 label = { Text("Start Time") },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = false, // Make it non-editable
-                colors = TextFieldDefaults.textFieldColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
+                enabled = false,
+                colors = TextFieldDefaults.colors(
+                    disabledContainerColor = MaterialTheme.colorScheme.surface,
                     disabledTextColor = MaterialTheme.colorScheme.onSurface,
-                    disabledIndicatorColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f) // Updated for Compose 1.2.0 or later
+                    disabledIndicatorColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                 )
             )
+
             TextField(
-                value = duration,
-                onValueChange = { duration = it },
+                value = duration.toString(),
+                onValueChange = {
+                    duration = it.toLongOrNull() ?: 0L
+                },
                 label = { Text("Duration (minutes)") },
                 keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth(),
-                colors = TextFieldDefaults.textFieldColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = MaterialTheme.colorScheme.surface,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
                     focusedIndicatorColor = MaterialTheme.colorScheme.primary,
                     unfocusedIndicatorColor = MaterialTheme.colorScheme.onSurface
                 )
             )
+
             TextField(
-                value = endTime, // Show the end time
-                onValueChange = {},
+                value = endTime.format(dateTimeFormatter),
+                onValueChange = { },
                 label = { Text("End Time") },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = false, // Make it non-editable
-                colors = TextFieldDefaults.textFieldColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
+                enabled = false,
+                colors = TextFieldDefaults.colors(
+                    disabledContainerColor = MaterialTheme.colorScheme.surface,
                     disabledTextColor = MaterialTheme.colorScheme.onSurface,
-                    disabledIndicatorColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f) // Updated for Compose 1.2.0 or later
+                    disabledIndicatorColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                 )
             )
+
             Row(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 modifier = Modifier.fillMaxWidth()
@@ -114,22 +124,20 @@ fun AddTaskScreen(
                     Text("Cancel")
                 }
                 Button(onClick = {
-                    try {
+                    if (taskName.isNotBlank() && duration > 0) {
                         val newTask = TaskEntity(
                             id = 0, // ID will be auto-generated by the database
                             taskName = taskName,
                             startTime = initialStartTime,
-                            endTime = endTime, // Set the end time
+                            endTime = endTime,
                             duration = duration.toInt(),
-                            reminder = "", // You can add a field for reminders if necessary
+                            reminder = initialStartTime, // You can add a field for reminders if necessary
                             type = "", // You can add a field for type if necessary
                             position = 0 // Position will be set in MainScreen
                         )
                         onSave(newTask)
-                    } catch (e: ParseException) {
-                        Toast.makeText(context, "Invalid time format", Toast.LENGTH_SHORT).show()
-                    } catch (e: NumberFormatException) {
-                        Toast.makeText(context, "Invalid duration", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(context, "Please fill all fields correctly", Toast.LENGTH_SHORT).show()
                     }
                 }) {
                     Text("Save")

@@ -27,16 +27,17 @@ suspend fun downloadFromOneDrive(authResult: IAuthenticationResult, context: Con
 
         val dbFile = dirFiles?.find { it.name == "RoutineTurbo.db" }
 
-//        dbFile?.let { driveItem ->
-//            driveItem.id?.let { driveItemId ->
-//                val localDbFile = context.getDatabasePath(RoutineRepository.DATABASE_NAME)
-//                withContext(Dispatchers.IO) {
-//                    oneDriveManager.downloadFile(driveItemId, localDbFile)
-//                }
-//            }
-//        }
+        dbFile?.let { driveItem ->
+            driveItem.id?.let { driveItemId ->
+                val localDbFile = context.getDatabasePath("RoutineTurbo.db")
+                withContext(Dispatchers.IO) {
+                    oneDriveManager.downloadFile(driveItemId, localDbFile)
+                }
+            }
+        }
     }
 
     taskViewModel.tasks
+
     Log.d("MainScreen", "Finished downloading from OneDrive")
 }

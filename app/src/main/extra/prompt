@@ -1,3 +1,13 @@
+I am building an app, compatible with API 34 for use in Android 14.0, using Kotlin, Room Library, MSAL for OneDrive integration, Jetpack compose, and KSP plugin. The app is called RoutineTurboA. It's functionality is like a to-do app, but it covers the entire 24 hours in a day. It starts from 00:00 and ends on 23:59. Each task starts from the previous task's end time.
+
+
+
+
+
+
+
+
+
 I am building an Android app called routineTurboA (A stands for Android, just so you know). It's built using Kotlin and Compose and some other libraries. There's also OneDrive integration using MSAL, but it's not implemented properly yet. As of now, it only lists the files in OneDrive, and doesn't do with them anything.
 
 I will share the complete code from this project.

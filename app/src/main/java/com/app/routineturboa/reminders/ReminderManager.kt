@@ -10,7 +10,7 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.app.routineturboa.R
 import com.app.routineturboa.data.local.RoutineRepository
-import com.app.routineturboa.utils.TimeUtils
+import java.time.ZoneId
 
 class ReminderManager(private val context: Context) {
     private val notificationManager: NotificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -59,6 +59,9 @@ class ReminderManager(private val context: Context) {
             reminderTime,
             pendingIntent
         )
+
+        context.sendBroadcast(intent)
+
     }
 
     suspend fun observeAndScheduleReminders(context: Context) {
@@ -69,21 +72,27 @@ class ReminderManager(private val context: Context) {
                 task.reminder.let { reminderTime ->
                     Log.d("ReminderManager", "Reminder time: $reminderTime")
                     try {
-                        val reminderMillis = TimeUtils.timeStringToMilliseconds(reminderTime)
-                        if (reminderMillis > System.currentTimeMillis()) {
-                            scheduleReminder(task.id, reminderMillis)
+                        // Convert Reminder time to milliseconds
+
+                        val reminderTimeZoned = reminderTime.atZone(ZoneId.systemDefault())
+                        val reminderTimeInMilli = reminderTimeZoned.toInstant().toEpochMilli()
+
+                        if (reminderTimeInMilli > System.currentTimeMillis()) {
+
+                            scheduleReminder(task.id, reminderTimeInMilli)
                             Log.d("ReminderManager", "Scheduled reminder at time: $reminderTime")
                         } else {
-                            // Optionally, cancel the reminder if it's in the past
+                            Log.d("ReminderManager", "Reminder time is in the past")
                             cancelReminder(task.id)
                         }
                     } catch (e: Exception) {
-                        Log.e("ReminderManager", "OH NO...Failed to parse reminder time ${task.id}: $reminderTime", e)
+                        Log.e("ReminderManager", "Failed to parse reminder time ${task.id}: $reminderTime", e)
                     }
                 }
             }
         }
     }
+
 
     private fun cancelReminder(taskId: Int) {
         val intent = Intent(context, ReminderReceiver::class.java)
@@ -97,6 +106,13 @@ class ReminderManager(private val context: Context) {
             alarmManager.cancel(it)
             it.cancel()
         }
+    }
+
+    fun triggerReminder(taskId: Int) {
+        val intent = Intent(context, ReminderReceiver::class.java).apply {
+            putExtra("TASK_ID", taskId)
+        }
+        context.sendBroadcast(intent)
     }
 
     companion object {
