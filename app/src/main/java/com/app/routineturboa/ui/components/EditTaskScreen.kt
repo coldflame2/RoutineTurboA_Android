@@ -17,20 +17,24 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.app.routineturboa.data.model.TaskEntity
+import com.app.routineturboa.reminders.ReminderManager
 import com.app.routineturboa.utils.TimeUtils.dateTimeToString
 import com.app.routineturboa.utils.TimeUtils.strToDateTime
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditTaskScreen(
+    reminderManager: ReminderManager,
     task: TaskEntity,
-    onSave: (TaskEntity) -> Unit,
+    onSave: suspend (TaskEntity) -> Unit,
     onCancel: () -> Unit
 ) {
     val context = LocalContext.current
@@ -47,6 +51,8 @@ fun EditTaskScreen(
     var endTimeFormatted by remember {mutableStateOf(dateTimeToString(endTime))}
     var reminderFormatted by remember {mutableStateOf(dateTimeToString(reminder))}
     var durationFormatted by remember {mutableStateOf(duration.toString())}
+
+    val coroutineScope = rememberCoroutineScope()
 
     Column(modifier = Modifier.padding(16.dp)) {
 
@@ -81,8 +87,8 @@ fun EditTaskScreen(
         )
 
         TextField(
-            value = endTimeFormatted,
-            onValueChange = {endTimeFormatted = it},
+            value = reminderFormatted,
+            onValueChange = {reminderFormatted = it},
             label = { Text("Reminder Time") },
             modifier = Modifier.fillMaxWidth()
         )
@@ -96,6 +102,7 @@ fun EditTaskScreen(
             }
 
             Button(onClick = {
+                coroutineScope.launch {
                     try {
                         startTime = strToDateTime(startTimeFormatted)
                         endTime = strToDateTime(endTimeFormatted)
@@ -107,21 +114,18 @@ fun EditTaskScreen(
                     }
 
                     val updatedTask = task.copy(
-                        taskName = taskName,
+                        taskName = task.taskName,
                         startTime = startTime,
                         endTime = endTime,
                         reminder = reminder,
                         duration = duration
                     )
-
                     onSave(updatedTask)
-
+                    reminderManager.observeAndScheduleReminders(context)
                     Toast.makeText(context, "Task Edited.", Toast.LENGTH_SHORT).show()
-
-                    }
-                )
-            {
-            Text("Save")
+                }
+            }) {
+                Text("Save")
             }
         }
 

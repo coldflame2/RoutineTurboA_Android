@@ -23,7 +23,7 @@ import okhttp3.Request
 import java.io.File
 import java.io.FileOutputStream
 
-class MSALAuthManager(context: Context) {
+class MsalAuthManager(context: Context) {
 
     private val appContext = context.applicationContext
     private val preferences: SharedPreferences = appContext.getSharedPreferences("msal_prefs", Context.MODE_PRIVATE)
@@ -32,11 +32,11 @@ class MSALAuthManager(context: Context) {
 
     companion object {
         @Volatile
-        private var INSTANCE: MSALAuthManager? = null
+        private var INSTANCE: MsalAuthManager? = null
 
-        fun getInstance(context: Context): MSALAuthManager =
+        fun getInstance(context: Context): MsalAuthManager =
             INSTANCE ?: synchronized(this) {
-                INSTANCE ?: MSALAuthManager(context).also { INSTANCE = it }
+                INSTANCE ?: MsalAuthManager(context).also { INSTANCE = it }
             }
     }
 
@@ -88,7 +88,7 @@ class MSALAuthManager(context: Context) {
 
                 override fun onAccountChanged(priorAccount: IAccount?, currentAccount: IAccount?) {
                     Log.d("MSALAuthManager", "Account changed: ${currentAccount?.username}")
-                    this@MSALAuthManager.currentAccount = currentAccount
+                    this@MsalAuthManager.currentAccount = currentAccount
                 }
 
                 override fun onError(exception: MsalException) {
@@ -142,6 +142,7 @@ class MSALAuthManager(context: Context) {
     suspend fun getProfileImageUrl(): String? {
         val account = currentAccount ?: return null
         Log.d("MSALAuthManager", "Fetching profile image URL for account: ${account.username}")
+
         return withContext(Dispatchers.IO) {
             try {
                 val parameters = AcquireTokenSilentParameters.Builder()

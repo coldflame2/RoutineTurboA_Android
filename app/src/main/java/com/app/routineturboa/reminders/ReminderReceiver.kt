@@ -17,17 +17,10 @@ class ReminderReceiver : BroadcastReceiver() {
                 val reminderManager = ReminderManager(context)
                 val task = dbRepository.getTaskById(taskId)
                 task?.let {
-                    reminderManager.showNotification(it.id, it.taskName, it.type)
+                    reminderManager.showNotification(it.id, it.type, it.taskName)
                 }
             }
         }
-    }
-
-    fun triggerReminder(context: Context, taskId: Int) {
-        val intent = Intent(context, ReminderReceiver::class.java).apply {
-            putExtra("TASK_ID", taskId)
-        }
-        context.sendBroadcast(intent)
     }
 
 }

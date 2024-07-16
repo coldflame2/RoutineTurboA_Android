@@ -10,6 +10,7 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.app.routineturboa.R
 import com.app.routineturboa.data.local.RoutineRepository
+import com.app.routineturboa.utils.TimeUtils.dateTimeToString
 import java.time.ZoneId
 
 class ReminderManager(private val context: Context) {
@@ -42,7 +43,9 @@ class ReminderManager(private val context: Context) {
         notificationManager.notify(taskId, notification)
     }
 
-    fun scheduleReminder(taskId: Int, reminderTime: Long) {
+    private fun scheduleReminder(taskId: Int, reminderTime: Long) {
+        Log.d("ReminderManager", "Scheduling reminder for task $taskId at $reminderTime")
+
         val intent = Intent(context, ReminderReceiver::class.java).apply {
             putExtra("TASK_ID", taskId)
         }
@@ -60,31 +63,34 @@ class ReminderManager(private val context: Context) {
             pendingIntent
         )
 
-        context.sendBroadcast(intent)
-
+        Log.d("ReminderManager", "Reminder scheduled for task $taskId at $reminderTime")
     }
 
     suspend fun observeAndScheduleReminders(context: Context) {
         Log.d("ReminderManager", "Observing and scheduling reminders")
         val dbRepository = RoutineRepository(context)
+
         dbRepository.getAllTasks().collect { tasks ->
             tasks.forEach { task ->
                 task.reminder.let { reminderTime ->
-                    Log.d("ReminderManager", "Reminder time: $reminderTime")
                     try {
-                        // Convert Reminder time to milliseconds
+                        val taskName = task.taskName
+                        val reminderTimeFormatted = dateTimeToString(reminderTime)
+                        Log.d("ReminderManager", "$taskName. Reminder: $reminderTimeFormatted")
 
                         val reminderTimeZoned = reminderTime.atZone(ZoneId.systemDefault())
                         val reminderTimeInMilli = reminderTimeZoned.toInstant().toEpochMilli()
 
                         if (reminderTimeInMilli > System.currentTimeMillis()) {
-
                             scheduleReminder(task.id, reminderTimeInMilli)
-                            Log.d("ReminderManager", "Scheduled reminder at time: $reminderTime")
+                            Log.d("ReminderManager", "Task: $taskName. Reminder time in system zone: $reminderTimeZoned")
+                            Log.d("ReminderManager", "Scheduling Reminder: $reminderTime")
+
                         } else {
                             Log.d("ReminderManager", "Reminder time is in the past")
                             cancelReminder(task.id)
                         }
+
                     } catch (e: Exception) {
                         Log.e("ReminderManager", "Failed to parse reminder time ${task.id}: $reminderTime", e)
                     }
@@ -109,6 +115,7 @@ class ReminderManager(private val context: Context) {
     }
 
     fun triggerReminder(taskId: Int) {
+        Log.d("ReminderManager", "Triggering reminder for task $taskId")
         val intent = Intent(context, ReminderReceiver::class.java).apply {
             putExtra("TASK_ID", taskId)
         }

@@ -1,4 +1,57 @@
+
+
 I am building an app, compatible with API 34 for use in Android 14.0, using Kotlin, Room Library, MSAL for OneDrive integration, Jetpack compose, and KSP plugin. The app is called RoutineTurboA. It's functionality is like a to-do app, but it covers the entire 24 hours in a day. It starts from 00:00 and ends on 23:59. Each task starts from the previous task's end time.
+
+Here's the structure of my app:
+
+|   |
+|-- routineturboa/
+|   |-- MainActivity.kt
+|   |-- MyApplication.kt
+|   |
+|   |-- data/
+|   |
+|   |   |-- local/
+|   |   |   |-- DatabaseHelper.kt
+|   |   |   |-- RoutineRepository.kt
+|   |
+|   |   |-- model/
+|   |   |   |-- Task.kt
+|   |
+|   |-- services/
+|   |   |-- downloadFromOneDrive.kt
+|   |   |-- MSALAuthManager.kt
+|   |   |-- OneDriveManager.kt
+|   |
+|   |-- ui/
+|   |   |-- MainScreen.kt
+|   |
+|   |   |-- components/
+|   |   |   |-- AddTaskScreen.kt
+|   |   |   |-- EditTaskScreen.kt
+|   |   |   |-- RoutineDrawerContent.kt
+|   |   |   |-- SignInButton.kt
+|   |   |   |-- TaskItem.kt
+|   |
+|   |   |-- theme/
+|   |   |   |-- Color.kt
+|   |   |   |-- Theme.kt
+|   |   |   |-- Type.kt
+|   |
+|   |-- utils/
+|   |   |-- TimeUtils.kt
+|   |   |-- showToast.kt
+|   |   |-- permissions.kt
+|   |
+|   |-- viewmodel/
+|   |   |-- TaskViewModel.kt
+|   |   |-- TaskViewModelFactory.kt
+|   |
+|   |-- reminders/
+|   |   |-- ReminderManager.kt
+|   |   |-- ReminderReceiver.kt
+|   |
+
 
 
 

@@ -1,115 +1,83 @@
 package com.app.routineturboa.ui
 
-import TaskViewModelFactory
+import android.util.Log
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.FabPosition
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.app.routineturboa.data.local.RoutineRepository
-import com.app.routineturboa.data.model.TaskEntity
-import com.app.routineturboa.services.downloadFromOneDrive
-import com.app.routineturboa.ui.components.AddTaskScreen
-import com.app.routineturboa.ui.components.EditTaskScreen
-import com.app.routineturboa.ui.components.TaskList
-import com.app.routineturboa.utils.TimeUtils.strToDateTime
-import com.app.routineturboa.viewmodel.TaskViewModel
-import com.microsoft.identity.client.IAuthenticationResult
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.unit.dp
+import com.app.routineturboa.reminders.ReminderManager
+import com.app.routineturboa.ui.components.ContentForDrawer
+import com.app.routineturboa.ui.components.TopBar
 import kotlinx.coroutines.launch
 
-
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen() {
-    val context = LocalContext.current
-    val taskViewModelFactory = remember { TaskViewModelFactory(RoutineRepository(context)) }
-    val taskViewModel: TaskViewModel = viewModel(factory = taskViewModelFactory)
-    val tasks by taskViewModel.tasks.collectAsStateWithLifecycle()
-
-    var clickedTask by remember { mutableStateOf<TaskEntity?>(null) }
-    var taskBeingEdited by remember { mutableStateOf<TaskEntity?>(null) }
-    var isAddingTask by remember { mutableStateOf(false) }
-
-    val authenticationResult by remember { mutableStateOf<IAuthenticationResult?>(null) }
+fun MainScreen(
+    hasNotificationPermission: Boolean,
+    onRequestPermission: () -> Unit,
+    reminderManager: ReminderManager
+) {
+    Log.d("MainScreen", "MainScreen called")
+    val drawerState = rememberDrawerState(DrawerValue.Closed)
     val coroutineScope = rememberCoroutineScope()
+    val drawerWidth = with(LocalConfiguration.current.screenWidthDp.dp) { value * 2 / 3f }
 
-    LaunchedEffect(authenticationResult) {
-        authenticationResult?.let { authResult ->
-            coroutineScope.launch {
-                downloadFromOneDrive(authResult, context, taskViewModel)
+    var showPermissionDialog by remember { mutableStateOf(!hasNotificationPermission) }
+
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            ModalDrawerSheet(modifier = Modifier.width(drawerWidth.dp)) {
+                ContentForDrawer(reminderManager) {
+                    coroutineScope.launch { drawerState.close() }
+                }
+            }
+        }
+    ) {
+        Scaffold(
+            topBar = {TopBar(drawerState)},
+        ) { paddingValues ->
+            Box(modifier = Modifier.padding(paddingValues)) {
+                TasksScreen(reminderManager)
             }
         }
 
-
-    }
-
-    Scaffold(
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { isAddingTask = true
-                }
-            ) {
-                Icon(Icons.Filled.Add, contentDescription = "Add New Task")
-            }
-        },
-        floatingActionButtonPosition = FabPosition.End
-
-    ) { paddingValues ->
-        Surface(
-            modifier = Modifier.padding(paddingValues),
-            color = MaterialTheme.colorScheme.background
-        ) {
-            when {
-                isAddingTask -> {
-                    AddTaskScreen(
-                        initialStartTime = strToDateTime("00:01 AM"),
-                        onSave = { newTask: TaskEntity ->
-                            taskViewModel.handleSaveTask(newTask, null)
-                            isAddingTask = false
-                        },
-                        onCancel = { isAddingTask = false }
-                    )
-                }
-
-                taskBeingEdited != null -> {
-                    taskBeingEdited?.let { task ->
-                        EditTaskScreen(
-                            task = task,
-                            onSave = { updatedTask: TaskEntity ->
-                                taskViewModel.updateTask(updatedTask)
-                                taskBeingEdited = null
-                            },
-                            onCancel = { taskBeingEdited = null }
-                        )
+        if (showPermissionDialog) {
+            AlertDialog(
+                onDismissRequest = { showPermissionDialog = false },
+                title = { Text("Notification Permission") },
+                text = { Text("This app needs notification permission to send you reminders. Would you like to grant this permission?") },
+                confirmButton = {
+                    Button(onClick = {
+                        showPermissionDialog = false
+                        onRequestPermission()
+                    }) {
+                        Text("Grant Permission")
+                    }
+                },
+                dismissButton = {
+                    Button(onClick = { showPermissionDialog = false }) {
+                        Text("Not Now")
                     }
                 }
-
-                else -> {
-                    TaskList(
-                        tasks = tasks,
-                        onTaskSelected = { clickedTask = it },
-                        onTaskEdited = { taskBeingEdited = it },
-                        onTaskDelete = { taskViewModel.deleteTask(it) },
-                        isTaskFirst = { taskViewModel.isTaskFirst(it) },
-                        isTaskLast = { taskViewModel.isTaskLast(it) }
-                    )
-                }
-            }
+            )
         }
     }
 }
-
