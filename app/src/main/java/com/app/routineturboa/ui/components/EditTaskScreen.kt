@@ -1,7 +1,9 @@
 package com.app.routineturboa.ui.components
 
+import android.os.Build
 import android.util.Log
 import android.widget.Toast
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -29,6 +31,7 @@ import com.app.routineturboa.utils.TimeUtils.dateTimeToString
 import com.app.routineturboa.utils.TimeUtils.strToDateTime
 import kotlinx.coroutines.launch
 
+@RequiresApi(Build.VERSION_CODES.S)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditTaskScreen(
@@ -114,7 +117,7 @@ fun EditTaskScreen(
                     }
 
                     val updatedTask = task.copy(
-                        taskName = task.taskName,
+                        taskName = taskName,
                         startTime = startTime,
                         endTime = endTime,
                         reminder = reminder,

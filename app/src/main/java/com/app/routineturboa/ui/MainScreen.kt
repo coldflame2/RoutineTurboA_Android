@@ -1,6 +1,8 @@
 package com.app.routineturboa.ui
 
+import android.os.Build
 import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -27,6 +29,7 @@ import com.app.routineturboa.ui.components.ContentForDrawer
 import com.app.routineturboa.ui.components.TopBar
 import kotlinx.coroutines.launch
 
+@RequiresApi(Build.VERSION_CODES.S)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(

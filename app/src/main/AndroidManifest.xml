@@ -5,14 +5,20 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 
+    <uses-permission android:name="android.permission.GET_ACCOUNTS" />
+    <uses-permission android:name="android.permission.MANAGE_ACCOUNTS" />
+    <uses-permission android:name="android.permission.USE_CREDENTIALS" />
+
     <application
         android:name=".MyApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:label="@string/app_name"
-        android:icon="@mipmap/ic_launcher"
-        android:roundIcon="@mipmap/ic_launcher_round">
+        android:icon="@drawable/routineturbo"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:enableOnBackInvokedCallback="true"
+        tools:targetApi="tiramisu">
 
         <activity
             android:name=".MainActivity"
@@ -33,9 +39,10 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="msauth"
                     android:host="com.app.routineturboa"
-                    android:path="/a0VHP+Yc7DrhJPus83+LbjsqzHY=" />
+                    android:path="/auth" />
             </intent-filter>
         </activity>
+
 
         <receiver android:name=".reminders.ReminderReceiver" />
 

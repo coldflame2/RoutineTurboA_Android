@@ -6,7 +6,9 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import com.app.routineturboa.R
 import com.app.routineturboa.data.local.RoutineRepository
@@ -43,6 +45,7 @@ class ReminderManager(private val context: Context) {
         notificationManager.notify(taskId, notification)
     }
 
+    @RequiresApi(Build.VERSION_CODES.S)
     private fun scheduleReminder(taskId: Int, reminderTime: Long) {
         Log.d("ReminderManager", "Scheduling reminder for task $taskId at $reminderTime")
 
@@ -63,9 +66,13 @@ class ReminderManager(private val context: Context) {
             pendingIntent
         )
 
+        alarmManager.canScheduleExactAlarms(
+        )
+
         Log.d("ReminderManager", "Reminder scheduled for task $taskId at $reminderTime")
     }
 
+    @RequiresApi(Build.VERSION_CODES.S)
     suspend fun observeAndScheduleReminders(context: Context) {
         Log.d("ReminderManager", "Observing and scheduling reminders")
         val dbRepository = RoutineRepository(context)
@@ -76,8 +83,6 @@ class ReminderManager(private val context: Context) {
                     try {
                         val taskName = task.taskName
                         val reminderTimeFormatted = dateTimeToString(reminderTime)
-                        Log.d("ReminderManager", "$taskName. Reminder: $reminderTimeFormatted")
-
                         val reminderTimeZoned = reminderTime.atZone(ZoneId.systemDefault())
                         val reminderTimeInMilli = reminderTimeZoned.toInstant().toEpochMilli()
 
@@ -87,7 +92,6 @@ class ReminderManager(private val context: Context) {
                             Log.d("ReminderManager", "Scheduling Reminder: $reminderTime")
 
                         } else {
-                            Log.d("ReminderManager", "Reminder time is in the past")
                             cancelReminder(task.id)
                         }
 

@@ -29,7 +29,7 @@ fun ExpandableItem(
 ) {
     var isExpanded by remember { mutableStateOf(initiallyExpanded) }
     val rotationState by animateFloatAsState(
-        targetValue = if (isExpanded) 180f else 0f
+        targetValue = if (isExpanded) 180f else 0f, label = ""
     )
 
     Column(modifier = Modifier.fillMaxWidth()) {

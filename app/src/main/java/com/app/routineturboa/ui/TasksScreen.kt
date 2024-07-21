@@ -1,8 +1,11 @@
 package com.app.routineturboa.ui
 
 import TaskViewModelFactory
+import android.os.Build
 import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.FabPosition
@@ -20,12 +23,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.app.routineturboa.data.local.RoutineRepository
 import com.app.routineturboa.data.model.TaskEntity
 import com.app.routineturboa.reminders.ReminderManager
-import com.app.routineturboa.services.downloadFromOneDrive
 import com.app.routineturboa.ui.components.AddTaskScreen
 import com.app.routineturboa.ui.components.EditTaskScreen
 import com.app.routineturboa.ui.components.TasksLazyColumn
@@ -33,12 +36,11 @@ import com.app.routineturboa.viewmodel.TaskViewModel
 import com.microsoft.identity.client.IAuthenticationResult
 import kotlinx.coroutines.launch
 
+const val TAG = "TasksScreen"
 
+@RequiresApi(Build.VERSION_CODES.S)
 @Composable
 fun TasksScreen(reminderManager: ReminderManager) {
-    val tag = "TasksScreen"
-    Log.d(tag, "Entered TasksScreen")
-
     val context = LocalContext.current
     val taskViewModelFactory = remember { TaskViewModelFactory(RoutineRepository(context)) }
     val taskViewModel: TaskViewModel = viewModel(factory = taskViewModelFactory)
@@ -52,11 +54,10 @@ fun TasksScreen(reminderManager: ReminderManager) {
     val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(authenticationResult) {
-        Log.d(tag, "LaunchedEffect called")
+        Log.d(TAG, "TasksScreen LaunchedEffect called")
         authenticationResult?.let { authResult ->
             coroutineScope.launch {
-                Log.d(tag, "Downloading from OneDrive")
-                downloadFromOneDrive(authResult, context, taskViewModel)
+                Log.d(TAG, "Downloading from OneDrive")
             }
         }
 
@@ -66,10 +67,13 @@ fun TasksScreen(reminderManager: ReminderManager) {
     Scaffold(
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { isAddingTask = true
-                }
+                onClick = { isAddingTask = true },
+                modifier = Modifier.padding(end = 46.dp, bottom = 88.dp) // Adjust padding to position the FAB
+
             ) {
-                Icon(Icons.Filled.Add, contentDescription = "Add New Task")
+                Icon(Icons.Filled.Add, contentDescription = "Add New Task",
+                    modifier = Modifier.size(66.dp)
+                )
             }
         },
         floatingActionButtonPosition = FabPosition.End
@@ -81,10 +85,11 @@ fun TasksScreen(reminderManager: ReminderManager) {
         ) {
             when {
                 isAddingTask -> {
-                    Log.d(tag, "Adding Task")
+                    Log.d(TAG, "Adding Task")
                     AddTaskScreen(
                         clickedTask = clickedTask,
-                        onSave = { newTask: TaskEntity ->
+                        onSaveNewTask = { newTask: TaskEntity ->
+                            Log.d(TAG, "Save Button in Add Screen clicked...Calling handleSaveTask")
                             taskViewModel.handleSaveTask(newTask, null)
                             isAddingTask = false
                         },
@@ -94,12 +99,12 @@ fun TasksScreen(reminderManager: ReminderManager) {
 
                 taskBeingEdited != null -> {
                     taskBeingEdited?.let { task ->
-                        Log.d(tag, "Editing Task")
+                        Log.d(TAG, "Editing Task")
                         EditTaskScreen(
                             reminderManager = reminderManager,
                             task = task,
                             onSave = { updatedTask: TaskEntity ->
-
+                                Log.d(TAG, "Save Button in Edit Screen clicked...Calling updateTask")
                                 taskViewModel.updateTask(updatedTask)
                                 taskBeingEdited = null
                             },
@@ -109,7 +114,7 @@ fun TasksScreen(reminderManager: ReminderManager) {
                 }
 
                 else -> {
-                    Log.d(tag, "Displaying Tasks Lazy Column")
+                    Log.d(TAG, "Displaying Tasks Lazy Column")
                     TasksLazyColumn(
                         tasks = tasks,
                         onTaskSelected = { clickedTask = it },

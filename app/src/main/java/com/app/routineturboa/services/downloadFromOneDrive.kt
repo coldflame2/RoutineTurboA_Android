@@ -8,7 +8,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 suspend fun downloadFromOneDrive(authResult: IAuthenticationResult, context: Context, taskViewModel: TaskViewModel) {
-    Log.d("MainScreen", "Downloading from OneDrive")
+    val tag = "downloadFromOneDrive"
+    Log.d(tag, "Downloading from OneDrive")
     val authProvider = OneDriveManager.MsalAuthProvider(authResult)
     val oneDriveManager = OneDriveManager(authProvider)
 
@@ -39,5 +40,36 @@ suspend fun downloadFromOneDrive(authResult: IAuthenticationResult, context: Con
 
     taskViewModel.tasks
 
-    Log.d("MainScreen", "Finished downloading from OneDrive")
+    Log.d(tag, "Finished downloading from OneDrive")
+}
+
+suspend fun uploadToOneDrive(authResult: IAuthenticationResult, context: Context) {
+    val tag = "uploadToOneDrive"
+    Log.d(tag, "Uploading to OneDrive")
+    val authProvider = OneDriveManager.MsalAuthProvider(authResult)
+    val oneDriveManager = OneDriveManager(authProvider)
+
+    val files = withContext(Dispatchers.IO) {
+        oneDriveManager.listFiles()
+    }
+
+    var routineTurboDir = files.find { it.name == "RoutineTurbo" && it.folder != null }
+
+    if (routineTurboDir == null) {
+        // Create RoutineTurbo folder if it doesn't exist
+        routineTurboDir = withContext(Dispatchers.IO) {
+            oneDriveManager.createFolder("RoutineTurbo")
+        }
+    }
+
+    if (routineTurboDir != null) {
+        routineTurboDir.id?.let { dirId ->
+            val localDbFile = context.getDatabasePath("RoutineTurbo.db")
+            withContext(Dispatchers.IO) {
+                oneDriveManager.uploadFile(dirId, "RoutineTurbo.db", localDbFile)
+            }
+        }
+    }
+
+    Log.d(tag, "Finished uploading to OneDrive")
 }

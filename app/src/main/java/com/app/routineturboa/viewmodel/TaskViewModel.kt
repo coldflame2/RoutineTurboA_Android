@@ -1,5 +1,6 @@
 package com.app.routineturboa.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.routineturboa.data.local.RoutineRepository
@@ -11,6 +12,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.io.File
+
+const val TAG = "TaskViewModel"
 
 class TaskViewModel(private val repository: RoutineRepository) : ViewModel() {
 
@@ -32,6 +35,7 @@ class TaskViewModel(private val repository: RoutineRepository) : ViewModel() {
     fun handleSaveTask(task: TaskEntity, existingTaskId: Int?) {
         viewModelScope.launch {
             if (existingTaskId != null) {
+                Log.d("TaskViewModel", "Updating task with ID: $existingTaskId. Task Name: ${task.taskName}")
                 repository.updateTask(task.copy(id = existingTaskId))
             } else {
                 repository.insertTask(task)
@@ -58,6 +62,7 @@ class TaskViewModel(private val repository: RoutineRepository) : ViewModel() {
 
     fun updateTask(task: TaskEntity) {
         viewModelScope.launch {
+            Log.d(TAG, "Updating task with ID: ${task.id}. Task Name: ${task.taskName}")
             repository.updateTask(task)
         }
     }

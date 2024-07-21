@@ -1,8 +1,10 @@
 package com.app.routineturboa.ui.components
 
 import android.content.Context
+import android.os.Build
 import android.util.Log
 import android.widget.Toast
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
@@ -14,7 +16,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
-import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.Icon
@@ -77,6 +78,7 @@ fun DrawerTopItem(appName: String) {
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.S)
 @Composable
 fun ContentForDrawer(reminderManager: ReminderManager, onItemClicked: () -> Unit) {
     val context = LocalContext.current
@@ -88,7 +90,6 @@ fun ContentForDrawer(reminderManager: ReminderManager, onItemClicked: () -> Unit
     SignInItem()
     RowItem("Sync", Icons.Default.Sync) { onItemClicked() }
     RowItem("Settings", Icons.Default.Settings) { onItemClicked() }
-    RowItem("Sign Out", Icons.Default.ExitToApp) { onItemClicked() }
 
     // Define the observeAndScheduleReminders lambda
     val observeAndSchedule = {

@@ -6,9 +6,14 @@ import android.app.NotificationManager
 import android.content.Context
 import android.util.Log
 import com.app.routineturboa.services.MsalAuthManager
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 
 class MyApplication : Application() {
-
+    private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     lateinit var msalAuthManager: MsalAuthManager
 
     companion object {
@@ -17,13 +22,25 @@ class MyApplication : Application() {
     }
 
     override fun onCreate() {
+        super.onCreate()
+
         Log.d("MyApplication", "     ***** STARTING APPLICATION ****** ")
 
-        super.onCreate()
         instance = this
 
         msalAuthManager = MsalAuthManager.getInstance(this)
+
+        applicationScope.launch {
+            Log.d("MyApplication", "Calling MsalAuthManager.initialize from MyApplication")
+            msalAuthManager.initialize()
+        }
+
         createNotificationChannel()
+    }
+
+    override fun onTerminate() {
+        applicationScope.cancel()
+        super.onTerminate()
     }
 
     private fun createNotificationChannel() {

@@ -35,7 +35,7 @@ import java.time.LocalDateTime
 @Composable
 fun AddTaskScreen(
     clickedTask: TaskEntity?,
-    onSave: (TaskEntity) -> Unit,
+    onSaveNewTask: (TaskEntity) -> Unit,
     onCancel: () -> Unit
 ) {
     val context = LocalContext.current
@@ -182,7 +182,12 @@ fun AddTaskScreen(
                             type = "MainTask",
                             position = position
                         )
-                        onSave(newTask)
+                        onSaveNewTask(newTask)
+                        Toast.makeText(context, "Task Added.", Toast.LENGTH_SHORT).show()
+
+                        // Update positions of tasks below
+
+
                     } else {
                         Toast.makeText(context, "Please fill all fields correctly", Toast.LENGTH_SHORT).show()
                     }

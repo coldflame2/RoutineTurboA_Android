@@ -1,10 +1,13 @@
 package com.app.routineturboa.data.local
 
 import android.content.Context
+import android.util.Log
 import com.app.routineturboa.data.model.TaskEntity
 import com.app.routineturboa.utils.TimeUtils.strToDateTime
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+
+const val TAG = "RoutineRepository"
 
 class RoutineRepository(private val context: Context) {
     private var routineDatabase = RoutineDatabase.getDatabase(context)
@@ -12,7 +15,20 @@ class RoutineRepository(private val context: Context) {
 
     fun getAllTasks(): Flow<List<TaskEntity>> = taskDao.getAllTasks()
 
-    suspend fun insertTask(task: TaskEntity): Long = taskDao.insertTask(task)
+    suspend fun insertTask(task: TaskEntity): Long {
+        Log.d(TAG, "Inserting task with ID: ${task.id}. Task Name: ${task.taskName}")
+
+        val maxPosition = taskDao.getMaxPosition(Int.MAX_VALUE) ?: -1
+        val newPosition = maxPosition + 1
+
+        // Shift positions of tasks below the new task
+        taskDao.shiftPositionsDown(newPosition, Int.MAX_VALUE)
+
+        // Set the position for the new task
+        val taskWithPosition = task.copy(position = newPosition)
+
+        return taskDao.insertTask(taskWithPosition)
+    }
 
     suspend fun updateTask(task: TaskEntity) = taskDao.updateTask(task)
 
@@ -52,6 +68,8 @@ class RoutineRepository(private val context: Context) {
                 type = "default",
                 position = 0
             )
+            insertTask(firstTask)
+
             val lastTask = TaskEntity(
                 taskName = "End of Day",
                 duration = 1079,
@@ -61,7 +79,6 @@ class RoutineRepository(private val context: Context) {
                 type = "default",
                 position = Int.MAX_VALUE
             )
-            insertTask(firstTask)
             insertTask(lastTask)
         }
     }

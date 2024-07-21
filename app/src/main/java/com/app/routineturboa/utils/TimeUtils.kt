@@ -6,23 +6,38 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
 import java.util.Calendar
 import java.util.Locale
 
 object TimeUtils {
 
-    private val formatter = DateTimeFormatter.ofPattern("hh:mm a, MM-dd-yyyy", Locale.US)
+    private val timeFormatter = DateTimeFormatter.ofPattern("hh:mm a", Locale.ROOT)
+    private val possibleFormats = listOf(
+        DateTimeFormatter.ofPattern("h:mm a", Locale.US),
+        DateTimeFormatter.ofPattern("hh:mm a", Locale.US),
+        DateTimeFormatter.ofPattern("H:mm", Locale.US),
+        DateTimeFormatter.ofPattern("HH:mm", Locale.US)
+    )
 
     /**
-     * String (hh:mm a) to LocalDateTime
+     * String (various time formats) to LocalDateTime
      * A default date is added to input string
      */
     fun strToDateTime(timeString: String): LocalDateTime {
-        val stringPatten = "hh:mm a"
-        val date = LocalDate.of(2024, 7, 15)
-        val timeFormatter = DateTimeFormatter.ofPattern(stringPatten)
-        val localTime = LocalTime.parse(timeString, timeFormatter)
-        return LocalDateTime.of(date, localTime)
+        val trimmedTimeString = timeString.trim().uppercase()
+
+        for (formatter in possibleFormats) {
+            try {
+                val localTime = LocalTime.parse(trimmedTimeString, formatter)
+                return LocalDateTime.of(LocalDate.now(), localTime)
+            } catch (e: DateTimeParseException) {
+                // Continue to the next formatter
+            }
+        }
+
+        // If we've exhausted all formatters without success, throw an exception
+        throw IllegalArgumentException("Error parsing time string: $timeString")
     }
 
     fun dateTimeToString(dateTime: LocalDateTime): String {

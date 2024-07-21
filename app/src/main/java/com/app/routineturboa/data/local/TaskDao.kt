@@ -31,4 +31,10 @@ interface TaskDao {
 
     @Query("SELECT * FROM tasks_table ORDER BY startTime DESC LIMIT 1")
     suspend fun getLastTask(): TaskEntity?
+
+    @Query("UPDATE tasks_table SET position = position + 1 WHERE position >= :fromPosition AND position < :maxPosition")
+    suspend fun shiftPositionsDown(fromPosition: Int, maxPosition: Int)
+
+    @Query("SELECT MAX(position) FROM tasks_table WHERE position < :maxPosition")
+    suspend fun getMaxPosition(maxPosition: Int): Int?
 }

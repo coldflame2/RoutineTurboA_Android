@@ -9,6 +9,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.lifecycle.lifecycleScope
 import com.app.routineturboa.reminders.ReminderManager
 import com.app.routineturboa.ui.MainScreen
@@ -21,11 +22,12 @@ class MainActivity : ComponentActivity() {
     private lateinit var requestPermissionLauncher: ActivityResultLauncher<String>
     private lateinit var reminderManager: ReminderManager
 
+    @RequiresApi(Build.VERSION_CODES.S)
     override fun onCreate(savedInstanceState: Bundle?) {
+        Log.d("MainActivity", "onCreate for MainActivity")
 
         requestWindowFeature(Window.FEATURE_NO_TITLE)
         super.onCreate(savedInstanceState)
-        Log.d("MainActivity", "onCreate called")
 
         reminderManager = ReminderManager(this)
 

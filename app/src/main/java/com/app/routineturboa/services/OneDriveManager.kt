@@ -52,6 +52,45 @@ class OneDriveManager(private val authProvider: IAuthenticationProvider) {
         }
     }
 
+    fun createFolder(folderName: String): DriveItem? {
+        Log.d("OneDriveManager", "Creating folder with name: $folderName")
+
+        val driveItem = DriveItem()
+        driveItem.name = folderName
+        driveItem.folder = com.microsoft.graph.models.Folder()
+
+        return try {
+            val result = graphClient.me().drive().root().children()
+                .buildRequest()
+                .post(driveItem)
+            Log.d("OneDriveManager", "Folder created successfully with ID: ${result.id}")
+            result
+        } catch (e: Exception) {
+            Log.e("OneDriveManager", "Error creating folder: ${e.message}")
+            e.printStackTrace()
+            null
+        }
+    }
+
+    fun uploadFile(parentFolderId: String, fileName: String, file: File): DriveItem? {
+        Log.d("OneDriveManager", "Uploading file: ${file.absolutePath} to folder: $parentFolderId")
+
+        return try {
+            val fileContent = file.readBytes()
+            val result = graphClient.me().drive().items(parentFolderId).children(fileName).content()
+                .buildRequest()
+                .put(fileContent)
+            if (result != null) {
+                Log.d("OneDriveManager", "File uploaded successfully with ID: ${result.id}")
+            }
+            result
+        } catch (e: Exception) {
+            Log.e("OneDriveManager", "Error uploading file: ${e.message}")
+            e.printStackTrace()
+            null
+        }
+    }
+
     class MsalAuthProvider(private val authenticationResult: IAuthenticationResult) : IAuthenticationProvider {
         override fun getAuthorizationTokenAsync(requestUrl: URL): CompletableFuture<String> {
             return CompletableFuture.completedFuture(authenticationResult.accessToken)

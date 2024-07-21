@@ -331,7 +331,7 @@ class DatabaseHelper(private val context: Context) : SQLiteOpenHelper(context, D
     companion object {
         const val DATABASE_VERSION = 1
         const val DATABASE_NAME = "RoutineTurbo_DEMO.db"
-        private const val TAG = "DatabaseHelper"
+        private const val com.app.routineturboa.ui.components.TAG = "DatabaseHelper"
     }
 
     object DailyRoutine {
@@ -361,25 +361,25 @@ class DatabaseHelper(private val context: Context) : SQLiteOpenHelper(context, D
     private val deleteEntries = "DROP TABLE IF EXISTS ${DailyRoutine.TABLE_NAME}"
 
     override fun onCreate(db: SQLiteDatabase) {
-        Log.d(TAG, "Creating database with the following query: $createEntries")
+        Log.d(com.app.routineturboa.ui.components.TAG, "Creating database with the following query: $createEntries")
         db.execSQL(createEntries)
         insertDefaultTasks(db)
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        Log.d(TAG, "Upgrading database from version $oldVersion to $newVersion")
+        Log.d(com.app.routineturboa.ui.components.TAG, "Upgrading database from version $oldVersion to $newVersion")
         db.execSQL(deleteEntries)
         onCreate(db)
     }
 
     override fun getReadableDatabase(): SQLiteDatabase {
-        Log.d(TAG, "Getting readable database")
+        Log.d(com.app.routineturboa.ui.components.TAG, "Getting readable database")
         copyDatabase()
         return super.getReadableDatabase()
     }
 
     override fun getWritableDatabase(): SQLiteDatabase {
-        Log.d(TAG, "Getting writable database")
+        Log.d(com.app.routineturboa.ui.components.TAG, "Getting writable database")
         copyDatabase()
         return super.getWritableDatabase()
     }
@@ -388,33 +388,33 @@ class DatabaseHelper(private val context: Context) : SQLiteOpenHelper(context, D
         val dbPath: String = context.getDatabasePath(DATABASE_NAME).absolutePath
         val dbFile = File(dbPath)
         if (!dbFile.exists()) {
-            Log.d(TAG, "Database does not exist, copying from external storage.")
+            Log.d(com.app.routineturboa.ui.components.TAG, "Database does not exist, copying from external storage.")
             val externalDbPath = Environment.getExternalStorageDirectory().absolutePath + "/$DATABASE_NAME"
             val externalDbFile = File(externalDbPath)
 
             try {
                 if (externalDbFile.exists()) {
-                    Log.d(TAG, "External database exists, copying from external storage.")
+                    Log.d(com.app.routineturboa.ui.components.TAG, "External database exists, copying from external storage.")
                     FileInputStream(externalDbFile).use { inputStream ->
                         FileOutputStream(dbPath).use { outputStream ->
-                            Log.d(TAG, "Copying database from $externalDbPath to $dbPath")
+                            Log.d(com.app.routineturboa.ui.components.TAG, "Copying database from $externalDbPath to $dbPath")
                             copyStream(inputStream, outputStream)
                         }
                     }
                 } else {
-                    Log.d(TAG, "External database does not exist, copying from assets.")
+                    Log.d(com.app.routineturboa.ui.components.TAG, "External database does not exist, copying from assets.")
                     context.assets.open(DATABASE_NAME).use { inputStream ->
                         FileOutputStream(dbPath).use { outputStream ->
-                            Log.d(TAG, "Copying database from assets to $dbPath")
+                            Log.d(com.app.routineturboa.ui.components.TAG, "Copying database from assets to $dbPath")
                             copyStream(inputStream, outputStream)
                         }
                     }
                 }
             } catch (e: IOException) {
-                Log.e(TAG, "Error copying database: ${e.message}", e)
+                Log.e(com.app.routineturboa.ui.components.TAG, "Error copying database: ${e.message}", e)
             }
         } else {
-            Log.d(TAG, "Database exists, skipping copy.")
+            Log.d(com.app.routineturboa.ui.components.TAG, "Database exists, skipping copy.")
         }
     }
 
@@ -425,7 +425,7 @@ class DatabaseHelper(private val context: Context) : SQLiteOpenHelper(context, D
         while (inputStream.read(buffer).also { length = it } > 0) {
             outputStream.write(buffer, 0, length)
         }
-        Log.d(TAG, "Finished copying stream")
+        Log.d(com.app.routineturboa.ui.components.TAG, "Finished copying stream")
     }
 
     private fun insertDefaultTasks(db: SQLiteDatabase) {
@@ -435,7 +435,7 @@ class DatabaseHelper(private val context: Context) : SQLiteOpenHelper(context, D
         cursor.close()
 
         if (count == 0) {
-            Log.d(TAG, "Inserting default tasks")
+            Log.d(com.app.routineturboa.ui.components.TAG, "Inserting default tasks")
 
             val defaultTasks = listOf(
                 DefaultTask("00:00", "06:00", "Sleep/Wake up", 0),
@@ -477,11 +477,11 @@ class RoutineRepository(context: Context) {
     private val db: SQLiteDatabase = dbHelper.readableDatabase
 
     companion object {
-        private const val TAG = "RoutineRepository"
+        private const val com.app.routineturboa.ui.components.TAG = "RoutineRepository"
     }
 
     suspend fun getAllTasks(): List<Task> = withContext(Dispatchers.IO) {
-        Log.d(TAG, "Fetching all tasks from database")
+        Log.d(com.app.routineturboa.ui.components.TAG, "Fetching all tasks from database")
         val tasks = mutableListOf<Task>()
         val cursor: Cursor = db.query(
             DatabaseHelper.DailyRoutine.TABLE_NAME,
@@ -522,18 +522,18 @@ class RoutineRepository(context: Context) {
                     getString(getColumnIndexOrThrow(DatabaseHelper.DailyRoutine.COLUMN_NAME_TYPE)),
                     getInt(getColumnIndexOrThrow(DatabaseHelper.DailyRoutine.COLUMN_NAME_POSITION))
                 )
-                Log.d(TAG, "Fetched task: $task")
+                Log.d(com.app.routineturboa.ui.components.TAG, "Fetched task: $task")
                 tasks.add(task)
             }
         }
 
         cursor.close()
-        Log.d(TAG, "Completed fetching all tasks")
+        Log.d(com.app.routineturboa.ui.components.TAG, "Completed fetching all tasks")
         return@withContext tasks
     }
 
     fun getTaskById(taskId: Int): Task?{
-        Log.d(TAG, "Fetching task with ID: $taskId")
+        Log.d(com.app.routineturboa.ui.components.TAG, "Fetching task with ID: $taskId")
         val cursor: Cursor = db.query(
             DatabaseHelper.DailyRoutine.TABLE_NAME,
             arrayOf(
@@ -572,16 +572,16 @@ class RoutineRepository(context: Context) {
                     getString(getColumnIndexOrThrow(DatabaseHelper.DailyRoutine.COLUMN_NAME_TYPE)),
                     getInt(getColumnIndexOrThrow(DatabaseHelper.DailyRoutine.COLUMN_NAME_POSITION))
                 )
-                Log.d(TAG, "Fetched task: $task")
+                Log.d(com.app.routineturboa.ui.components.TAG, "Fetched task: $task")
             }
         }
         cursor.close()
-        Log.d(TAG, "Completed fetching task with ID: $taskId")
+        Log.d(com.app.routineturboa.ui.components.TAG, "Completed fetching task with ID: $taskId")
         return task
     }
 
     suspend fun addTask(task: Task) = withContext(Dispatchers.IO) {
-        Log.d(TAG, "Adding new task: $task")
+        Log.d(com.app.routineturboa.ui.components.TAG, "Adding new task: $task")
 
         val values = ContentValues().apply {
             val currentDate = "2024-01-01"
@@ -599,11 +599,11 @@ class RoutineRepository(context: Context) {
         }
 
         db.insert(DatabaseHelper.DailyRoutine.TABLE_NAME, null, values)
-        Log.d(TAG, "Task added successfully: ${task.taskName}")
+        Log.d(com.app.routineturboa.ui.components.TAG, "Task added successfully: ${task.taskName}")
     }
 
     suspend fun updateTask(task: Task) = withContext(Dispatchers.IO) {
-        Log.d(TAG, "Updating task: $task")
+        Log.d(com.app.routineturboa.ui.components.TAG, "Updating task: $task")
         val values = ContentValues().apply {
             val currentDate = "2024-01-01"  // Example, you should replace it with the actual date
             put(DatabaseHelper.DailyRoutine.COLUMN_NAME_START_TIME, TimeUtils.formatToDatabaseTime(currentDate, TimeUtils.convertTo24HourFormat(task.startTime)))
@@ -622,22 +622,22 @@ class RoutineRepository(context: Context) {
             selection,
             selectionArgs
         )
-        Log.d(TAG, "Task updated successfully: ${task.taskName}")
+        Log.d(com.app.routineturboa.ui.components.TAG, "Task updated successfully: ${task.taskName}")
     }
 
     suspend fun deleteTask(task: Task) = withContext(Dispatchers.IO) {
-        Log.d(TAG, "Deleting task: ${task.taskName}")
+        Log.d(com.app.routineturboa.ui.components.TAG, "Deleting task: ${task.taskName}")
         val selection = "${DatabaseHelper.DailyRoutine.COLUMN_NAME_ID} = ?"
         val selectionArgs = arrayOf(task.id.toString())
         db.delete(DatabaseHelper.DailyRoutine.TABLE_NAME, selection, selectionArgs)
-        Log.d(TAG, "Task deleted successfully: ${task.taskName}")
+        Log.d(com.app.routineturboa.ui.components.TAG, "Task deleted successfully: ${task.taskName}")
     }
 
     suspend fun updatePositions(startPosition: Int) = withContext(Dispatchers.IO) {
-        Log.d(TAG, "Updating positions starting from: $startPosition")
+        Log.d(com.app.routineturboa.ui.components.TAG, "Updating positions starting from: $startPosition")
         val updateQuery = "UPDATE ${DatabaseHelper.DailyRoutine.TABLE_NAME} SET ${DatabaseHelper.DailyRoutine.COLUMN_NAME_POSITION} = ${DatabaseHelper.DailyRoutine.COLUMN_NAME_POSITION} + 1 WHERE ${DatabaseHelper.DailyRoutine.COLUMN_NAME_POSITION} >= ?" // Added query to update positions
         db.execSQL(updateQuery, arrayOf(startPosition)) // Execute the query with the start position
-        Log.d(TAG, "Positions updated successfully from: $startPosition")
+        Log.d(com.app.routineturboa.ui.components.TAG, "Positions updated successfully from: $startPosition")
     }
 
 

@@ -1,7 +1,10 @@
 package com.app.routineturboa.ui.components
 
 import android.util.Log
+import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -10,127 +13,200 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.app.routineturboa.MainActivity
 import com.app.routineturboa.MyApplication
-import com.app.routineturboa.services.MsalAuthManager
-import com.microsoft.identity.client.AuthenticationCallback
-import com.microsoft.identity.client.IAccount
-import com.microsoft.identity.client.IAuthenticationResult
-import com.microsoft.identity.client.exception.MsalException
 import kotlinx.coroutines.launch
 
 @Composable
 fun SignInItem() {
+    val tag = "SignInItem"
     val context = LocalContext.current
-    val msalAuthManager = MyApplication.instance.msalAuthManager
-    var account by remember { mutableStateOf<IAccount?>(null) }
-    var isSigningIn by remember { mutableStateOf(false) }
-    var profilePicUrl by remember { mutableStateOf<String?>(null) }
+    val msalAuthManager = remember { MyApplication.instance.msalAuthManager }
+    var isSignedIn by remember { mutableStateOf(false) }
+    var username by remember { mutableStateOf("") }
+    var isExpanded by remember { mutableStateOf(false) }
+    var profileImageUrl by remember { mutableStateOf<String?>(null) }
+    val coroutineScope = rememberCoroutineScope()
 
-    LaunchedEffect(Unit) {
-        msalAuthManager.getCurrentAccount { result ->
-            account = result
-            if (result != null) {
-                Log.d("SignInItem", "This is LaunchedEffect.")
-                launch {
-                    profilePicUrl = msalAuthManager.getProfileImageUrl()
+    val isMsalInitialized by msalAuthManager.isInitialized.collectAsState()
+
+    LaunchedEffect(isMsalInitialized, isSignedIn) {
+        if (isMsalInitialized) {
+            Log.d(
+                "SignInItem",
+                "LaunchedEffect: msalAuthManager is initialized. Getting current account and profile image..."
+            )
+
+            msalAuthManager.getCurrentAccount { account ->
+                isSignedIn = account != null
+                username = account?.username ?: ""
+
+                //strip username of @ if present
+                if (username.contains("@")) {
+                    username = username.substringBefore("@")
                 }
 
+                Log.d(tag, "isSignedIn:$isSignedIn and username:$username")
+
+                if (account != null) {
+                    Log.d(tag, "LaunchedEffect: account is not null. Getting profile image URL.")
+                    coroutineScope.launch {
+                        profileImageUrl = msalAuthManager.getProfileImageUrl()
+                    }
+                } else {
+                    Log.d(tag, "LaunchedEffect: account is null. No profile image URL.")
+                }
+            }
+        }
+
+        else {
+            Log.d(tag, "LaunchedEffect: msalAuthManager is not initialized yet.")
+        }
+    }
+
+    fun handleSignIn() {
+        coroutineScope.launch {
+            try {
+                val result = msalAuthManager.signIn(context as MainActivity)
+                isSignedIn = true
+                username = result.account.username
+                profileImageUrl = msalAuthManager.getProfileImageUrl()
+            } catch (e: Exception) {
+                Log.e("SignInItem", "Sign-in error", e)
+                Toast.makeText(context, "Sign-in error: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
     }
 
-    val onSignInSuccess = { result: IAuthenticationResult ->
-        msalAuthManager.saveAuthResult(result)
-        account = result.account
+    fun handleSignOut() {
+        coroutineScope.launch {
+            try {
+                val success = msalAuthManager.signOutSuspend()
+                if (success) {
+                    isSignedIn = false
+                    username = ""
+                    profileImageUrl = null
+                    isExpanded = false
+                }
+                // Always show a message, success or failure
+                Toast.makeText(context, if (success) "Signed out successfully" else "Sign-out failed", Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                Log.e("SignInItem", "Sign-out error", e)
+                Toast.makeText(context, "Sign-out error: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(
-                enabled = !isSigningIn,
-                onClick = {
-                    if (account == null) {
-                        isSigningIn = true
-                        signIn(msalAuthManager, context as MainActivity) { result ->
-                            onSignInSuccess(result)
-                            isSigningIn = false
-                        }
+    Column {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable {
+                    if (isSignedIn) {
+                        isExpanded = !isExpanded
                     } else {
-                        // Handle signed-in state click (e.g., show profile or sign out)
+                        Log.d(tag, "Sign in button clicked")
+                        coroutineScope.launch {
+                            handleSignIn()
+                        }
                     }
                 }
-            )
-            .padding(16.dp)
-    ) {
-        Icon(
-            imageVector = Icons.Default.Person,
-            contentDescription = null,
-            modifier = Modifier.size(24.dp)
-        )
-        Spacer(modifier = Modifier.width(16.dp))
+                .padding(16.dp)
+        ) {
+            if (isSignedIn) {
+                AsyncImage(
+                    model = profileImageUrl,
+                    contentDescription = "Profile Picture",
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.Person,
+                    contentDescription = if (isExpanded) "Collapse" else "Expand",
+                    modifier = Modifier.size(34.dp)
+                )
+            }
 
-        Text(
-            text = if (isSigningIn) "Signing in..." else account?.username ?: "Sign in",
-            modifier = Modifier.weight(1f)
-        )
+            Spacer(modifier = Modifier.width(15.dp))
 
-        Spacer(modifier = Modifier.width(16.dp))
+            Text(
+                text = if (isSignedIn) username else "Sign in",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.weight(1f),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
 
-        if (account != null && profilePicUrl != null) {
-            Log.d("SignInItem", "Profile pic URL: $profilePicUrl")
-            AsyncImage(
-                model = profilePicUrl,
-                contentDescription = "Profile Picture",
-                modifier = Modifier.size(24.dp).clip(CircleShape),
-                contentScale = ContentScale.Crop
-            )
-        } else {
-            Icon(
-                imageVector = Icons.Default.AccountCircle,
-                contentDescription = "Profile Picture",
-                modifier = Modifier.size(24.dp)
-            )
+            if (isSignedIn) {
+                Icon(
+                    imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                    contentDescription = if (isExpanded) "Collapse" else "Expand",
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+
+
         }
+
+        AnimatedVisibility(visible = isSignedIn && isExpanded) {
+            Column(
+                modifier = Modifier
+                    .padding(start = 56.dp, end = 16.dp, bottom = 8.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            coroutineScope.launch {
+                                handleSignOut()
+                                isSignedIn = false
+                                username = ""
+                                profileImageUrl = null
+                                isExpanded = false
+                            }
+                        }
+                        .padding(vertical = 8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ExitToApp,
+                        contentDescription = "Sign out",
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Text(
+                        text = "Sign out",
+                        style = MaterialTheme.typography.bodyLarge
+                    ) // Text
+                } // Row
+            } // Column
+        } // animated visibility4
     }
-}
-
-private fun signIn(msalAuthManager: MsalAuthManager, activity: MainActivity, onSignInSuccess: (IAuthenticationResult) -> Unit) {
-    msalAuthManager.signIn(
-        activity,
-        object : AuthenticationCallback {
-            override fun onSuccess(result: IAuthenticationResult) {
-                onSignInSuccess(result)
-            }
-
-            override fun onError(exception: MsalException) {
-                Log.e("SignInItem", "Sign-in error: ${exception.message}")
-                // Handle error (e.g., show error message to user)
-            }
-
-            override fun onCancel() {
-                Log.d("SignInItem", "Sign-in canceled")
-                // Handle cancellation (e.g., reset UI state)
-            }
-        }
-    )
 }

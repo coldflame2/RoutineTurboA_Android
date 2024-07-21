@@ -31,6 +31,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -68,6 +69,12 @@ fun TasksLazyColumn(
             .height(350.dp)
     ) {
         items(tasks, key = { it.id }) { task ->
+            VerticalDivider(
+                modifier = Modifier.padding(horizontal = 10.dp),
+                thickness = 10.dp,
+                color = Color.Magenta,
+            )
+
             TaskCard(
                 task = task,
                 onClick = { taskClicked.value = task

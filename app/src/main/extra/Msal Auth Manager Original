@@ -16,8 +16,6 @@ import com.microsoft.identity.client.ISingleAccountPublicClientApplication
 import com.microsoft.identity.client.PublicClientApplication
 import com.microsoft.identity.client.exception.MsalException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -31,25 +29,41 @@ import kotlin.coroutines.suspendCoroutine
 class MsalAuthManager(context: Context) {
     var tag = "MsalAuthManager"
 
-    private val _isInitialized = MutableStateFlow(false)
-    val isInitialized: StateFlow<Boolean> get() = _isInitialized
+    var isInitialized = false
+    private val initializationCallbacks = mutableListOf<() -> Unit>()
 
     private val appContext = context.applicationContext
     var singleAccountApp: ISingleAccountPublicClientApplication? = null
     var currentAccount: IAccount? = null
 
     init {
-        Log.d(tag, "init: Creating Msal Application.")
+        Log.d(tag, "Init function of MSALAuthManager. Calling createMsalApplication. Value of isInitialized=$isInitialized")
+
         createMsalApplication()
     }
 
     suspend fun initialize() {
         Log.d(tag, "MsalAuthManager initialize function...")
 
+        if (isInitialized){
+            Log.d(tag, "MsalAuthManager is already initialized. Returning...")
+            return
+        } else {
+            Log.d(tag, "MsalAuthManager is not yet initialized. setting isInitialized true manually.")
+            isInitialized = true
+
+            Log.d(tag, "Calling getCurrentAccountSuspend")
+            currentAccount = getCurrentAccountSuspend()
+        }
     }
 
     private fun onInitialized(callback: () -> Unit) {
         Log.d(tag, "MsalAuthManager onInitialized")
+        if (isInitialized) {
+            callback()
+        } else {
+            initializationCallbacks.add(callback)
+        }
     }
 
     private fun createMsalApplication() {
@@ -71,8 +85,12 @@ class MsalAuthManager(context: Context) {
         return object : IPublicClientApplication.ISingleAccountApplicationCreatedListener {
             override fun onCreated(msalApplication: ISingleAccountPublicClientApplication) {
                 Log.d(tag, "MSAL client created successfully")
+
                 singleAccountApp = msalApplication
-                _isInitialized.value = true
+                isInitialized = true
+                initializationCallbacks.forEach { it() }
+                initializationCallbacks.clear()
+                checkCurrentAccount()
             }
 
             override fun onError(exception: MsalException) {
@@ -107,27 +125,38 @@ class MsalAuthManager(context: Context) {
         )
     }
 
-    fun getCurrentAccount(callback: ((IAccount?) -> Unit)?) {
-        Log.d(tag, "Getting current account...")
+    fun getCurrentAccount(callback: (IAccount?) -> Unit) {
+        Log.d(tag, "Getting current account (non-suspend function)")
+
+        if (!isInitialized) {
+            Log.w(tag, "MsalAuthManager is not yet initialized. Waiting for initialization.")
+            onInitialized {
+                getCurrentAccount(callback)
+            }
+            return
+        }
+
+        if (singleAccountApp == null) {
+            Log.e(tag, "singleAccountApp is null. MSAL might not be initialized.")
+            callback(null)
+            return
+        }
 
         singleAccountApp?.getCurrentAccountAsync(
             object : ISingleAccountPublicClientApplication.CurrentAccountCallback {
                 override fun onAccountLoaded(activeAccount: IAccount?) {
-                    Log.d(tag, "getCurrentAccount: onAccountLoaded-currentAccount: ${activeAccount?.username}")
-                    callback?.invoke(activeAccount)
-                    currentAccount = activeAccount
+                    Log.d(tag, "Current account: ${activeAccount?.username}")
+                    callback(activeAccount)
                 }
 
                 override fun onAccountChanged(priorAccount: IAccount?, currentAccount: IAccount?) {
-                    Log.d(tag, "getCurrentAccount: onAccountChanged-currentAccount: ${currentAccount?.username} and priorAccount: ${priorAccount?.username}")
-                    callback?.invoke(currentAccount)
-
+                    Log.d(tag, "Account changed: ${currentAccount?.username}")
+                    callback(currentAccount)
                 }
 
                 override fun onError(exception: MsalException) {
                     Log.e(tag, "Error getting current account", exception)
-                    callback?.invoke(null)
-
+                    callback(null)
                 }
             }
         )
@@ -195,6 +224,7 @@ class MsalAuthManager(context: Context) {
         }
     }
 
+    // Existing signOut function
     fun signOut(onComplete: () -> Unit) {
         singleAccountApp?.signOut(object : ISingleAccountPublicClientApplication.SignOutCallback {
             override fun onSignOut() {
@@ -216,75 +246,45 @@ class MsalAuthManager(context: Context) {
         }
     }
 
-    /**
-     * This function performs a silent token acquisition. If a valid access token is found in the cache, it is returned.
-     * Otherwise, it attempts to use a refresh token to obtain a new access token.
-     *
-     * @param account The account for which the token is being acquired.
-     * @return The access token, or null if an error occurs.
-     */
-    private suspend fun acquireTokenSilently(account: IAccount): String? = suspendCoroutine { continuation ->
-        Log.d(tag, "acquiring tokens silently...")
-        val parameters = AcquireTokenSilentParameters.Builder()
-            .forAccount(account)
-            .fromAuthority(account.authority)
-            .withScopes(listOf("User.Read", "Files.Read"))
-            .withCallback(object : AuthenticationCallback {
-                override fun onSuccess(result: IAuthenticationResult) {
-                    continuation.resume(result.accessToken)
-                }
-
-                override fun onError(exception: MsalException) {
-                    Log.e(tag, "Error acquiring token silently $exception. LocalAccountID: $account")
-                    continuation.resumeWithException(exception)
-                }
-
-                override fun onCancel() {
-                    Log.e(tag, "Token acquisition cancelled")
-                    continuation.resumeWithException(Exception("Token acquisition cancelled"))
-                }
-            })
-            .build()
-
-        singleAccountApp?.acquireTokenSilentAsync(parameters)
-    }
-
-
-    private fun saveImageToFile(byteArray: ByteArray): String {
-        val bitmap = BitmapFactory.decodeByteArray(byteArray, 0, byteArray.size)
-        val file = File(appContext.cacheDir, "profile_image.png")
-        FileOutputStream(file).use { out ->
-            bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
-        }
-        return file.absolutePath
-    }
-
     suspend fun getProfileImageUrl(): String? {
-        Log.d(tag, "Getting profile image URL...")
         val account = currentAccount ?: return null
+        Log.d(tag, "Fetching profile image URL for account: ${account.username}")
 
         return withContext(Dispatchers.IO) {
             try {
-                val token = acquireTokenSilently(account) ?: return@withContext null
-                val client = OkHttpClient()
-                val request = Request.Builder()
-                    .url("https://graph.microsoft.com/v1.0/me/photo/\$value")
-                    .addHeader("Authorization", "Bearer $token")
+                val parameters = AcquireTokenSilentParameters.Builder()
+                    .withScopes(listOf("User.Read"))
+                    .forAccount(account)
+                    .fromAuthority(account.authority)
                     .build()
 
-                val response = client.newCall(request).execute()
-                if (response.isSuccessful) {
-                    val byteArray = response.body?.bytes()
-                    byteArray?.let {
-                        val localProfileImagePath = saveImageToFile(it)
-                        Log.d(tag, "Local profile image path: $localProfileImagePath")
-                        localProfileImagePath  // this is the value that the function returns
-                    }
-                } else {
-                    Log.e(tag, "Failed to fetch profile image, response code: ${response.code}")
-                    null
-                }
+                val result = singleAccountApp?.acquireTokenSilent(parameters)
+                val token = result?.accessToken
 
+                token?.let {
+                    val client = OkHttpClient()
+                    val request = Request.Builder()
+                        .url("https://graph.microsoft.com/v1.0/me/photo/\$value")
+                        .addHeader("Authorization", "Bearer $token")
+                        .build()
+                    val response = client.newCall(request).execute()
+                    Log.d(tag, "Account authority: ${account.authority}")
+                    if (response.isSuccessful) {
+                        val byteArray = response.body?.bytes()
+                        byteArray?.let {
+                            val bitmap = BitmapFactory.decodeByteArray(byteArray, 0, byteArray.size)
+                            val file = File(appContext.cacheDir, "profile_image.png")
+                            FileOutputStream(file).use { out ->
+                                bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+                            }
+                            Log.d(tag, "Profile image saved at: ${file.absolutePath}")
+                            file.absolutePath
+                        }
+                    } else {
+                        Log.e(tag, "Failed to fetch profile image, response code: ${response.code}")
+                        null
+                    }
+                }
             } catch (e: Exception) {
                 Log.e(tag, "Error fetching profile image: ${e.message}")
                 e.printStackTrace()
