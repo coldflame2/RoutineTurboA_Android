@@ -52,9 +52,9 @@ fun RoutineTurboATheme(
             onPrimary = Color(0xFFFFFFFF),
             primaryContainer = Color(0xFFEADDFF),
             onPrimaryContainer = Color(0xFF21005D),
-            secondary = Color(0xFF03DAC6),  // Existing
+            secondary = Color(0xFFF5FFFE),  // Existing
             onSecondary = Color(0xFF000000),
-            secondaryContainer = Color(0xFFCEFAF8),
+            secondaryContainer = Color(0xFFF6FFFF),
             onSecondaryContainer = Color(0xFF002021),
             tertiary = Color(0xFFBE708C),
             onTertiary = Color(0xFFFFFFFF),

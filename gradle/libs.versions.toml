@@ -20,6 +20,9 @@ kspVersion = "2.0.0-1.0.23"
 roomRuntime = "2.5.0"
 
 [libraries]
+androidx-compose-material3-window-size = { module = "androidx.compose.material3:material3-window-size-class" }
+
+
 androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "roomRuntime" }
 androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "roomRuntime" }
 androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "roomRuntime" }

@@ -3,9 +3,14 @@ package com.app.routineturboa.ui
 import TaskViewModelFactory
 import android.os.Build
 import android.util.Log
+import android.widget.Toast
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.FabPosition
@@ -22,6 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -36,11 +42,11 @@ import com.app.routineturboa.viewmodel.TaskViewModel
 import com.microsoft.identity.client.IAuthenticationResult
 import kotlinx.coroutines.launch
 
-const val TAG = "TasksScreen"
-
 @RequiresApi(Build.VERSION_CODES.S)
 @Composable
 fun TasksScreen(reminderManager: ReminderManager) {
+    val tag = "TasksScreen"
+
     val context = LocalContext.current
     val taskViewModelFactory = remember { TaskViewModelFactory(RoutineRepository(context)) }
     val taskViewModel: TaskViewModel = viewModel(factory = taskViewModelFactory)
@@ -54,80 +60,89 @@ fun TasksScreen(reminderManager: ReminderManager) {
     val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(authenticationResult) {
-        Log.d(TAG, "TasksScreen LaunchedEffect called")
+        Log.d(tag, "TasksScreen LaunchedEffect called")
         authenticationResult?.let { authResult ->
             coroutineScope.launch {
-                Log.d(TAG, "Downloading from OneDrive")
+                Log.d(tag, "Downloading from OneDrive")
             }
         }
-
-
     }
 
     Scaffold(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { isAddingTask = true },
-                modifier = Modifier.padding(end = 46.dp, bottom = 88.dp) // Adjust padding to position the FAB
-
+                modifier = Modifier.padding(end = 26.dp, bottom = 40.dp).size(60.dp, 60.dp),
+                containerColor = Color.Blue.copy(alpha = 0.9f),
+                contentColor = Color.White,
+                shape = RoundedCornerShape(50.dp)
             ) {
-                Icon(Icons.Filled.Add, contentDescription = "Add New Task",
-                    modifier = Modifier.size(66.dp)
+                Icon(
+                    Icons.Filled.Add,
+                    contentDescription = "Add New Task",
+                    modifier = Modifier.size(40.dp),
                 )
             }
         },
         floatingActionButtonPosition = FabPosition.End
-
     ) { paddingValues ->
-        Surface(
-            modifier = Modifier.padding(paddingValues),
-            color = MaterialTheme.colorScheme.background
-        ) {
-            when {
-                isAddingTask -> {
-                    Log.d(TAG, "Adding Task")
+        Box(modifier = Modifier.fillMaxSize()) {
+            Surface(
+                modifier = Modifier.padding(paddingValues),
+                color = MaterialTheme.colorScheme.background
+            ) {
+                TasksLazyColumn(
+                    tasks = tasks,
+                    onTaskSelected = { clickedTask = it },
+                    onTaskEdited = { taskBeingEdited = it },
+                    onTaskDelete = { taskViewModel.deleteTask(it) },
+                    isTaskFirst = { taskViewModel.isTaskFirst(it) },
+                    isTaskLast = { taskViewModel.isTaskLast(it) }
+                )
+            }
+
+            // Show the add task screen as a dialog overlay
+            if (isAddingTask) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.3f))
+                ) {
                     AddTaskScreen(
                         clickedTask = clickedTask,
                         onSaveNewTask = { newTask: TaskEntity ->
-                            Log.d(TAG, "Save Button in Add Screen clicked...Calling handleSaveTask")
+                            Log.d(tag, "Save Button in Add Screen clicked...Calling handleSaveTask")
                             taskViewModel.handleSaveTask(newTask, null)
                             isAddingTask = false
                         },
                         onCancel = { isAddingTask = false }
                     )
                 }
+            }
 
-                taskBeingEdited != null -> {
-                    taskBeingEdited?.let { task ->
-                        Log.d(TAG, "Editing Task")
-                        EditTaskScreen(
-                            reminderManager = reminderManager,
-                            task = task,
-                            onSave = { updatedTask: TaskEntity ->
-                                Log.d(TAG, "Save Button in Edit Screen clicked...Calling updateTask")
+            // Show the edit task screen as a dialog overlay
+            if (taskBeingEdited != null) {
+                Log.d(tag, "Show Edit Task Screen")
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.1f))
+                ) {
+                    EditTaskScreen(
+                        reminderManager = reminderManager,
+                        task = taskBeingEdited!!,
+                        onSave = { updatedTask ->
+                            taskBeingEdited = null
+                            Toast.makeText(context, "Task Edited.", Toast.LENGTH_SHORT).show()
+                            coroutineScope.launch {
                                 taskViewModel.updateTask(updatedTask)
-                                taskBeingEdited = null
-                            },
-                            onCancel = { taskBeingEdited = null }
-                        )
-                    }
-                }
-
-                else -> {
-                    Log.d(TAG, "Displaying Tasks Lazy Column")
-                    TasksLazyColumn(
-                        tasks = tasks,
-                        onTaskSelected = { clickedTask = it },
-                        onTaskEdited = { taskBeingEdited = it },
-                        onTaskDelete = { taskViewModel.deleteTask(it) },
-                        isTaskFirst = { taskViewModel.isTaskFirst(it) },
-                        isTaskLast = { taskViewModel.isTaskLast(it) }
+                                reminderManager.observeAndScheduleReminders(context)
+                            }
+                        },
+                        onCancel = { taskBeingEdited = null }
                     )
-
-
                 }
             }
         }
     }
 }
-

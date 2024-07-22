@@ -10,6 +10,8 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
+import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
+import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.lifecycle.lifecycleScope
 import com.app.routineturboa.reminders.ReminderManager
 import com.app.routineturboa.ui.MainScreen
@@ -22,6 +24,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var requestPermissionLauncher: ActivityResultLauncher<String>
     private lateinit var reminderManager: ReminderManager
 
+    @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
     @RequiresApi(Build.VERSION_CODES.S)
     override fun onCreate(savedInstanceState: Bundle?) {
         Log.d("MainActivity", "onCreate for MainActivity")
@@ -49,17 +52,20 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
+            val windowSizeClass = calculateWindowSizeClass(this)
+
             RoutineTurboATheme {
                 MainScreen(
+                    windowWidthSizeClass = windowSizeClass.widthSizeClass,
                     hasNotificationPermission = PermissionUtils.hasNotificationPermission(this),
                     onRequestPermission = { requestNotificationPermission()},
                     reminderManager = reminderManager
                 )
-
             }
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.S)
     private fun requestNotificationPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -69,7 +75,5 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-
-
 }
 

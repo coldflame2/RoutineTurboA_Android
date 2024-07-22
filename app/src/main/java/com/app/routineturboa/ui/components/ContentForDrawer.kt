@@ -1,19 +1,20 @@
 package com.app.routineturboa.ui.components
 
-import android.content.Context
 import android.os.Build
-import android.util.Log
-import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Settings
@@ -66,7 +67,9 @@ fun DrawerTopItem(appName: String) {
         Image(
             painter = painterResource(id = R.drawable.routineturbo),
             contentDescription = "App Icon",
-            modifier = Modifier.size(50.dp).clip(CircleShape)
+            modifier = Modifier
+                .size(50.dp)
+                .clip(CircleShape)
         )
 
         Spacer(modifier = Modifier.width(16.dp))
@@ -85,25 +88,27 @@ fun ContentForDrawer(reminderManager: ReminderManager, onItemClicked: () -> Unit
     val appName = context.getString(R.string.app_name)
     val coroutineScope = rememberCoroutineScope()
 
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+    ) {
+        DrawerTopItem(appName)
+        SignInItem()
+        RowItem("Sync", Icons.Default.Sync) { onItemClicked() }
+        RowItem("Settings", Icons.Default.Settings) { onItemClicked() }
 
-    DrawerTopItem(appName)
-    SignInItem()
-    RowItem("Sync", Icons.Default.Sync) { onItemClicked() }
-    RowItem("Settings", Icons.Default.Settings) { onItemClicked() }
-
-    // Define the observeAndScheduleReminders lambda
-    val observeAndSchedule = {
-        Log.d("ContentForDrawer", "observeAndSchedule called")
-        coroutineScope.launch {
-            reminderManager.observeAndScheduleReminders(context)
+        RowItem("Schedule Reminders", Icons.Default.Build) {
+            coroutineScope.launch {
+                reminderManager.observeAndScheduleReminders(context)
+            }
         }
+
+        RowItem("Testing 3", Icons.Default.Settings) { onItemClicked() }
+        RowItem("Testing 4", Icons.Default.Settings) { onItemClicked() }
+
+
     }
 
-    RowItem("Test", Icons.Default.Build) { observeAndSchedule() }
 
 }
-
-fun startSigningIn(context: Context, message: String) {
-    Toast.makeText(context, "Test: $message", Toast.LENGTH_LONG).show()
-}
-
