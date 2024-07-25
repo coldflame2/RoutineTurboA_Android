@@ -17,6 +17,7 @@ import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -142,7 +143,7 @@ fun SignInItem() {
                     model = profileImageUrl,
                     contentDescription = "Profile Picture",
                     modifier = Modifier
-                        .size(44.dp)
+                        .size(30.dp)
                         .clip(CircleShape),
                     contentScale = ContentScale.Crop
                 )
@@ -150,7 +151,7 @@ fun SignInItem() {
                 Icon(
                     imageVector = Icons.Default.Person,
                     contentDescription = if (isExpanded) "Collapse" else "Expand",
-                    modifier = Modifier.size(34.dp)
+                    modifier = Modifier.size(30.dp)
                 )
             }
 
@@ -158,7 +159,7 @@ fun SignInItem() {
 
             Text(
                 text = if (isSignedIn) username else "Sign in",
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.weight(1f),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
@@ -206,7 +207,31 @@ fun SignInItem() {
                         style = MaterialTheme.typography.bodyLarge
                     ) // Text
                 } // Row
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { Log.d("SignInItem", "Sync Clicked")
+                        }
+                        .padding(vertical = 8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Sync,
+                        contentDescription = "Sign out",
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Text(
+                        text = "Sync",
+                        style = MaterialTheme.typography.bodyLarge
+                    ) // Text
+                } // Row
+
             } // Column
+
+
+
         } // animated visibility4
     }
 }

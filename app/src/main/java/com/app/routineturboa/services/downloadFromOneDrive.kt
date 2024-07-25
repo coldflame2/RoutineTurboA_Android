@@ -2,12 +2,12 @@ package com.app.routineturboa.services
 
 import android.content.Context
 import android.util.Log
-import com.app.routineturboa.viewmodel.TaskViewModel
+import com.app.routineturboa.viewmodel.TasksViewModel
 import com.microsoft.identity.client.IAuthenticationResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-suspend fun downloadFromOneDrive(authResult: IAuthenticationResult, context: Context, taskViewModel: TaskViewModel) {
+suspend fun downloadFromOneDrive(authResult: IAuthenticationResult, context: Context, tasksViewModel: TasksViewModel) {
     val tag = "downloadFromOneDrive"
     Log.d(tag, "Downloading from OneDrive")
     val authProvider = OneDriveManager.MsalAuthProvider(authResult)
@@ -38,7 +38,7 @@ suspend fun downloadFromOneDrive(authResult: IAuthenticationResult, context: Con
         }
     }
 
-    taskViewModel.tasks
+    tasksViewModel.tasks
 
     Log.d(tag, "Finished downloading from OneDrive")
 }

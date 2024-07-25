@@ -11,6 +11,7 @@ import java.time.LocalDateTime
 data class TaskEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val taskName: String,
+    val notes: String,
     val duration: Int,
     val startTime: LocalDateTime,
     val endTime: LocalDateTime,

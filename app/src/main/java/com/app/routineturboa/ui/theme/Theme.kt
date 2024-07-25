@@ -1,6 +1,5 @@
 package com.app.routineturboa.ui.theme
 
-import android.util.Log
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
@@ -17,64 +16,88 @@ fun RoutineTurboATheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
-    Log.d("RoutineTurboATheme", "Theme applied")
     val colorScheme = if (darkTheme) {
         darkColorScheme(
-            primary = Color(0xFF6200EE),  // Existing
-            onPrimary = Color(0xFFFFFFFF),
-            primaryContainer = Color(0xFF3700B3),
-            onPrimaryContainer = Color(0xFFEADDFF),
-            secondary = Color(0xFF03DAC6),  // Existing
-            onSecondary = Color(0xFF000000),
-            secondaryContainer = Color(0xFF018786),
-            onSecondaryContainer = Color(0xFFA1F4F1),
-            tertiary = Color(0xFFEFB8C8),
-            onTertiary = Color(0xFF492532),
-            tertiaryContainer = Color(0xFF633B48),
-            onTertiaryContainer = Color(0xFFFFD8E4),
-            error = Color(0xFFCF6679),
-            onError = Color(0xFF000000),
-            errorContainer = Color(0xFFB00020),
-            onErrorContainer = Color(0xFFFFDAD6),
-            background = Color(0xFF202B32),  // Existing
-            onBackground = Color(0xFFE6E1E5),
-            surface = Color(0xFF1C1B1F),
-            onSurface = Color(0xFFE6E1E5),
-            surfaceVariant = Color(0xFFB81818),  // Existing
-            onSurfaceVariant = Color(0xFFCAC4D0),
-            outline = Color(0xFFDADADA),  // Existing
-            outlineVariant = Color(0xFF49454F),
-            scrim = Color(0xFF000000)
+            primary = Color(0xFFBB86FC), // Light Purple
+            onPrimary = Color(0xFF000000), // Black
+            primaryContainer = Color(0xFF6200EE), // Purple
+            onPrimaryContainer = Color(0xFFFFFFFF), // White
+            inversePrimary = Color(0xFF03DAC6), // Teal
+            secondary = Color(0xFF03DAC6), // Teal
+            onSecondary = Color(0xFF000000), // Black
+            secondaryContainer = Color(0xFF018786), // Dark Teal
+            onSecondaryContainer = Color(0xFFFFFFFF), // White
+            tertiary = Color(0xFF03DAC6), // Teal
+            onTertiary = Color(0xFF000000), // Black
+            tertiaryContainer = Color(0xFF018786), // Dark Teal
+            onTertiaryContainer = Color(0xFFFFFFFF), // White
+            background = Color(0xFF121212), // Dark Gray
+            onBackground = Color(0xFFFFFFFF), // White
+            surface = Color(0xFF1E1E1E), // Slightly lighter Gray
+            onSurface = Color(0xFFFFFFFF), // White
+            surfaceVariant = Color(0xFF2C2C2C), // Medium Dark Gray
+            onSurfaceVariant = Color(0xFFFFFFFF), // White
+            surfaceTint = Color(0xFFBB86FC), // Light Purple
+            inverseSurface = Color(0xFFFAFAFA), // Almost White
+            inverseOnSurface = Color(0xFF000000), // Black
+            error = Color(0xFFCF6679), // Light Red
+            onError = Color(0xFF000000), // Black
+            errorContainer = Color(0xFFB00020), // Red
+            onErrorContainer = Color(0xFFFFFFFF), // White
+            outline = Color(0xFF444444), // Dark Gray
+            outlineVariant = Color(0xFF333333), // Darker Gray
+            scrim = Color(0x80000000), // Semi-transparent Black
+            surfaceBright = Color(0xFF2C2C2C), // Medium Dark Gray
+            surfaceContainer = Color(0xFF1E1E1E), // Slightly lighter Gray
+            surfaceContainerHigh = Color(0xFF2C2C2C), // Medium Dark Gray
+            surfaceContainerHighest = Color(0xFF121212), // Dark Gray
+            surfaceContainerLow = Color(0xFF333333), // Darker Gray
+            surfaceContainerLowest = Color(0xFF444444) // Dark Gray
+
+
         )
+
     } else {
         lightColorScheme(
-            primary = Color(0xFF6200EE),  // Existing
-            onPrimary = Color(0xFFFFFFFF),
-            primaryContainer = Color(0xFFEADDFF),
-            onPrimaryContainer = Color(0xFF21005D),
-            secondary = Color(0xFFF5FFFE),  // Existing
-            onSecondary = Color(0xFF000000),
-            secondaryContainer = Color(0xFFF6FFFF),
-            onSecondaryContainer = Color(0xFF002021),
-            tertiary = Color(0xFFBE708C),
-            onTertiary = Color(0xFFFFFFFF),
-            tertiaryContainer = Color(0xFFFFD8E4),
-            onTertiaryContainer = Color(0xFF31111D),
-            error = Color(0xFFB00020),
-            onError = Color(0xFFFFFFFF),
-            errorContainer = Color(0xFFFCDAD6),
-            onErrorContainer = Color(0xFF410002),
-            background = Color(0xFFF3F3F3),  // Existing
-            onBackground = Color(0xFF1C1B1F),
-            surface = Color(0xFFFFFBFE),
-            onSurface = Color(0xFF1C1B1F),
-            surfaceVariant = Color(0xFFFFFFFF),  // Existing
-            onSurfaceVariant = Color(0xFF49454F),
-            outline = Color(0xFF8B8B8B),  // Existing
-            outlineVariant = Color(0xFFCAC4D0),
-            scrim = Color(0xFF000000)
+            primary = Color(0xFF6200EE), // Purple
+            onPrimary = Color(0xFFFFFFFF), // White
+            primaryContainer = Color(0xFFBB86FC), // Light Purple
+            onPrimaryContainer = Color(0xFF000000), // Black
+            inversePrimary = Color(0xFF03DAC6), // Teal
+            secondary = Color(0xFF03DAC5), // Teal
+            onSecondary = Color(0xFFFFFFFF), // White
+            secondaryContainer = Color(0xFF018786), // Dark Teal
+            onSecondaryContainer = Color(0xFF000000), // Black
+            tertiary = Color(0xFF03DAC6), // Teal
+            onTertiary = Color(0xFFFFFFFF), // White
+            tertiaryContainer = Color(0xFF018786), // Dark Teal
+            onTertiaryContainer = Color(0xFF000000), // Black
+            background = Color(0xFFFFFFFF), // White
+            onBackground = Color(0xFF000000), // Black
+            surface = Color(0xFFFFFFFF), // White
+            onSurface = Color(0xFF000000), // Black
+            surfaceVariant = Color(0xFFF1F1F1), // Light Gray
+            onSurfaceVariant = Color(0xFF000000), // Black
+            surfaceTint = Color(0xFF6200EE), // Purple
+            inverseSurface = Color(0xFF000000), // Black
+            inverseOnSurface = Color(0xFFFFFFFF), // White
+            error = Color(0xFFB00020), // Red
+            onError = Color(0xFFFFFFFF), // White
+            errorContainer = Color(0xFFCF6679), // Light Red
+            onErrorContainer = Color(0xFF000000), // Black
+            outline = Color(0xFF000000), // Black
+            outlineVariant = Color(0xFFDDDDDD), // Light Gray
+            scrim = Color(0xFF0D1492), // Semi-transparent Black
+            surfaceBright = Color(0xFFF5F5F5), // Off-White
+            surfaceContainer = Color(0xFFF5F5F5), // Off-White
+            surfaceContainerHigh = Color(0xFFEEEEEE), // Very Light Gray
+            surfaceContainerHighest = Color(0xFFFAFAFA), // Almost White
+            surfaceContainerLow = Color(0xFFC5C5C5), // Light Gray
+            surfaceContainerLowest = Color(0xFFBDBDBD) // Gray
+
         )
     }
+
     MaterialTheme(
         colorScheme = colorScheme,
         content = {

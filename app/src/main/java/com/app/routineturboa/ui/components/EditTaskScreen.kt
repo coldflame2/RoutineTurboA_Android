@@ -4,15 +4,16 @@ import android.os.Build
 import android.util.Log
 import android.widget.Toast
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
@@ -25,7 +26,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -48,30 +48,45 @@ fun EditTaskScreen(
     val context = LocalContext.current
 
     // Actual data in State variables from 'task'
+    var id by remember { mutableIntStateOf(task.id) }
     var taskName by remember { mutableStateOf(task.taskName) }
+    var notes by remember { mutableStateOf(task.notes) }
     var startTime by remember { mutableStateOf(task.startTime) }
     var endTime by remember { mutableStateOf(task.endTime) }
     var duration by remember { mutableIntStateOf(task.duration) }
     var reminder by remember { mutableStateOf(task.reminder) }
+    var position by remember { mutableIntStateOf(task.position) }
 
     // Convert state variables to  string for display
     var startTimeFormatted by remember {mutableStateOf(dateTimeToString(startTime))}
     var endTimeFormatted by remember {mutableStateOf(dateTimeToString(endTime))}
     var reminderFormatted by remember {mutableStateOf(dateTimeToString(reminder))}
     var durationFormatted by remember {mutableStateOf(duration.toString())}
+    var idFormatted by remember {mutableStateOf(id.toString())}
+    var positionFormatted by remember {mutableStateOf(position.toString())}
 
     val coroutineScope = rememberCoroutineScope()
 
     Dialog(
         onDismissRequest = {onCancel()},
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier
+            .padding(16.dp)
+        ) {
 
             TextField(
                 value = taskName,
                 onValueChange = { taskName = it },
                 label = { Text("Task Name") },
                 modifier = Modifier.fillMaxWidth()
+            )
+
+            TextField(
+                value = notes,
+                minLines = 3,
+                onValueChange = { notes = it },
+                label = { Text("Notes") },
+                modifier = Modifier.fillMaxWidth().verticalScroll(ScrollState(1))
             )
 
             Spacer(modifier = Modifier.padding(1.dp))
@@ -109,15 +124,29 @@ fun EditTaskScreen(
             )
             Spacer(modifier = Modifier.padding(1.dp))
 
+            TextField(
+                value = idFormatted,
+                onValueChange = {idFormatted = it},
+                label = { Text("Task ID") },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = false
+            )
+
+            TextField(
+                value = positionFormatted,
+                onValueChange = {positionFormatted = it},
+                label = { Text("Task Position") },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = false
+            )
+
             Row(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 // Cancel Button
                 Button(
-                    modifier = Modifier
-                        .size(110.dp, 60.dp)
-                        .shadow(100.dp),
+                    modifier = Modifier.padding(10.dp),
                     shape = RoundedCornerShape(25.dp),
                     onClick = { onCancel() }) {
                     Text("Cancel")
@@ -125,9 +154,7 @@ fun EditTaskScreen(
 
                 // Save Button
                 Button(
-                    modifier = Modifier
-                        .size(110.dp, 60.dp)
-                        .shadow(100.dp),
+                    modifier = Modifier.padding(10.dp),
                     shape = RoundedCornerShape(25.dp),
                     onClick = {
                         Log.d("EditTaskScreen", "Save Button clicked...")
@@ -137,6 +164,8 @@ fun EditTaskScreen(
                                 endTime = strToDateTime(endTimeFormatted)
                                 reminder = strToDateTime(reminderFormatted)
                                 duration = durationFormatted.toInt()
+                                id = idFormatted.toInt()
+                                position = positionFormatted.toInt()
 
                             } catch (e: Exception) {
                                 Log.e("EditTaskScreen", "Error: $e")
@@ -144,6 +173,8 @@ fun EditTaskScreen(
                             }
                             val updatedTask = task.copy(
                                 taskName = taskName,
+                                position = position,
+                                notes = notes,
                                 startTime = startTime,
                                 endTime = endTime,
                                 reminder = reminder,

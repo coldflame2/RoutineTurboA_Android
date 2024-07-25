@@ -16,8 +16,10 @@ import com.app.routineturboa.utils.TimeUtils.dateTimeToString
 import java.time.ZoneId
 
 class ReminderManager(private val context: Context) {
-    private val notificationManager: NotificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-    private val alarmManager: AlarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+    private val notificationManager: NotificationManager = context.getSystemService(
+        Context.NOTIFICATION_SERVICE) as NotificationManager
+    private val alarmManager: AlarmManager = context.getSystemService(
+        Context.ALARM_SERVICE) as AlarmManager
 
     init {
         createNotificationChannel()

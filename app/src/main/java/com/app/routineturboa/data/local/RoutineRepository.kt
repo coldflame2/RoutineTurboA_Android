@@ -4,33 +4,52 @@ import android.content.Context
 import android.util.Log
 import com.app.routineturboa.data.model.TaskEntity
 import com.app.routineturboa.utils.TimeUtils.strToDateTime
+import com.app.routineturboa.utils.demoTaskFive
+import com.app.routineturboa.utils.demoTaskFour
+import com.app.routineturboa.utils.demoTaskOne
+import com.app.routineturboa.utils.demoTaskSeven
+import com.app.routineturboa.utils.demoTaskSix
+import com.app.routineturboa.utils.demoTaskThree
+import com.app.routineturboa.utils.demoTaskTwo
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 
-const val TAG = "RoutineRepository"
 
 class RoutineRepository(private val context: Context) {
+    val tag = "RoutineRepository"
     private var routineDatabase = RoutineDatabase.getDatabase(context)
     private var taskDao: TaskDao = routineDatabase.taskDao()
 
     fun getAllTasks(): Flow<List<TaskEntity>> = taskDao.getAllTasks()
 
+    private suspend fun insertDefaultTasks(defaultTask: TaskEntity): Long {
+        Log.d(tag,"Inserting default task.")
+        return taskDao.insertTask(defaultTask)
+    }
+
     suspend fun insertTask(task: TaskEntity): Long {
-        Log.d(TAG, "Inserting task with ID: ${task.id}. Task Name: ${task.taskName}")
+        Log.d(tag, "Inserting task with ID: ${task.id}. Task Name: ${task.taskName}")
 
-        val maxPosition = taskDao.getMaxPosition(Int.MAX_VALUE) ?: -1
-        val newPosition = maxPosition + 1
+        // Ensure the first and last tasks are correctly identified
+        val firstTask = taskDao.getFirstTask()
+        val lastTask = taskDao.getLastTask()
 
-        // Shift positions of tasks below the new task
-        taskDao.shiftPositionsDown(newPosition, Int.MAX_VALUE)
+        if (firstTask == null || lastTask == null) {
+            Log.e(tag, "First or last task not found. Please ensure default tasks are initialized.")
+            throw IllegalStateException("First or last task not found.")
+        }
 
-        // Set the position for the new task
-        val taskWithPosition = task.copy(position = newPosition)
-
-        return taskDao.insertTask(taskWithPosition)
+        // Insert the new task with its correct properties (id will be auto-generated)
+        return taskDao.insertTask(task)
     }
 
     suspend fun updateTask(task: TaskEntity) = taskDao.updateTask(task)
+
+    suspend fun updateTasksWithNewPositions(tasks: List<TaskEntity>) {
+        taskDao.updateTasksWithNewPositions(tasks)
+    }
+
+    suspend fun updateAllTasks(tasks: List<TaskEntity>) = taskDao.updateAllTasks(tasks)
 
     suspend fun deleteTask(task: TaskEntity) = taskDao.deleteTask(task)
 
@@ -45,41 +64,51 @@ class RoutineRepository(private val context: Context) {
         taskDao = routineDatabase.taskDao()
     }
 
-    suspend fun isTaskFirst(task: TaskEntity): Boolean {
-        val firstTask = taskDao.getFirstTask()
-        return firstTask?.id == task.id
-    }
-
-    suspend fun isTaskLast(task: TaskEntity): Boolean {
-        val lastTask = taskDao.getLastTask()
-        return lastTask?.id == task.id
-    }
-
     suspend fun initializeDefaultTasks() {
         val tasks = taskDao.getAllTasks().first()
 
         if (tasks.isEmpty()) {
             val firstTask = TaskEntity(
+                id = -1,
+                position = 1,
                 taskName = "Start of Day",
+                notes = "",
                 duration = 359,
                 startTime = strToDateTime("00:01 AM"),
                 endTime = strToDateTime("06:00 AM"),
                 reminder = strToDateTime("06:00 AM"),
-                type = "default",
-                position = 0
+                type = "default"
             )
-            insertTask(firstTask)
+
+            insertDefaultTasks(firstTask)
 
             val lastTask = TaskEntity(
+                id = -2,
+                position = Int.MAX_VALUE,
                 taskName = "End of Day",
+                notes = "",
                 duration = 1079,
                 startTime = strToDateTime("06:00 AM"),
                 endTime = strToDateTime("11:59 PM"),
                 reminder = strToDateTime("06:00 AM"),
                 type = "default",
-                position = Int.MAX_VALUE
             )
-            insertTask(lastTask)
+
+            insertDefaultTasks(lastTask)
+        }
+    }
+
+    suspend fun initializeDemoTasks() {
+        val tasks = taskDao.getAllTasks().first()
+
+        if (tasks.isNotEmpty()) {
+            insertTask(demoTaskOne)
+            insertTask(demoTaskTwo)
+            insertTask(demoTaskThree)
+            insertTask(demoTaskFour)
+            insertTask(demoTaskFive)
+            insertTask(demoTaskSix)
+            insertTask(demoTaskSeven)
         }
     }
 }

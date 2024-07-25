@@ -1,5 +1,6 @@
 package com.app.routineturboa.ui.components
 
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -13,7 +14,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import com.app.routineturboa.data.model.TaskEntity
 import com.app.routineturboa.utils.TimeUtils.dateTimeToString
 import com.app.routineturboa.utils.TimeUtils.strToDateTime
@@ -38,27 +39,33 @@ fun AddTaskScreen(
     onSaveNewTask: (TaskEntity) -> Unit,
     onCancel: () -> Unit
 ) {
-    val context = LocalContext.current
+    val tag = "AddTaskScreen"
+    Log.d(tag, "AddTaskScreen: clickedTask: $clickedTask")
 
+    val context = LocalContext.current
     val clickedTaskEndTime = clickedTask?.endTime
+    val clickedTaskID = clickedTask?.id
     val clickedTaskPosition = clickedTask?.position
 
-    // Actual data in State variables
+    // Data in State variables
+    val id by remember { mutableIntStateOf(clickedTaskID?.plus(1) ?: 1) }
     var taskName by remember { mutableStateOf(" ") }
+    var taskNotes by remember { mutableStateOf( " ") }
     var startTime by remember { mutableStateOf(clickedTaskEndTime ?: LocalDateTime.now()) }
     var duration by remember { mutableLongStateOf(1L) }
     var endTime by remember { mutableStateOf(
         clickedTaskEndTime?.plusMinutes(duration) ?: LocalDateTime.now().plusMinutes(1)) }
-    var reminder by remember { mutableStateOf(startTime) }  // equal to startTime by default
-
-    var position by remember { mutableIntStateOf(clickedTaskPosition?.plus(1) ?: 1) } // Add 1 to clickedTaskPosition if it's not null
+    var reminder by remember { mutableStateOf(startTime) }
+    var taskType by remember { mutableStateOf("") }
+    var taskPosition by remember { mutableIntStateOf(clickedTaskPosition?.plus(1)?: 2) }
 
     // Convert state variables to  string for display
     var startTimeFormatted by remember {mutableStateOf(dateTimeToString(startTime))}
     var endTimeFormatted by remember {mutableStateOf(dateTimeToString(endTime))}
     var reminderFormatted by remember {mutableStateOf(dateTimeToString(reminder))}
     var durationFormatted by remember {mutableStateOf(duration.toString())}
-    var positionFormatted by remember {mutableStateOf(position.toString())}
+    val idFormatted by remember {mutableStateOf(id.toString())}
+    val taskPositionFormatted by remember {mutableStateOf(taskPosition.toString())}
 
     // Calculate endTime based on duration input
     LaunchedEffect(durationFormatted) {
@@ -79,120 +86,120 @@ fun AddTaskScreen(
     }
 
 
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.background,
-        contentColor = MaterialTheme.colorScheme.onBackground
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+
+    Dialog(onDismissRequest = { onCancel() }) {
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = MaterialTheme.colorScheme.background,
+            contentColor = MaterialTheme.colorScheme.onBackground
         ) {
-            Text("EDIT TASK", style = MaterialTheme.typography.titleLarge)
-
-            TextField(
-                value = taskName,
-                onValueChange = { taskName = it },
-                label = { Text("Task Name") },
-                modifier = Modifier.fillMaxWidth(),
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = MaterialTheme.colorScheme.surface,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                    focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                    unfocusedIndicatorColor = MaterialTheme.colorScheme.onSurface
-                )
-            )
-
-            TextField(
-                value = startTimeFormatted,
-                onValueChange = { startTimeFormatted = it },
-                label = { Text("Start Time") },
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            TextField(
-                value = durationFormatted,
-                onValueChange = { durationFormatted = it },
-                label = { Text("Duration (minutes)") },
-                keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
-                modifier = Modifier.fillMaxWidth(),
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = MaterialTheme.colorScheme.surface,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                    focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                    unfocusedIndicatorColor = MaterialTheme.colorScheme.onSurface
-                )
-            )
-
-            TextField(
-                value = endTimeFormatted,
-                onValueChange = { endTimeFormatted = it },
-                label = { Text("End Time") },
-                modifier = Modifier.fillMaxWidth(),
-                colors = TextFieldDefaults.colors(
-                    disabledContainerColor = MaterialTheme.colorScheme.surface,
-                    disabledTextColor = MaterialTheme.colorScheme.onSurface,
-                    disabledIndicatorColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                )
-            )
-
-            TextField(
-                value = reminderFormatted,
-                onValueChange = { reminderFormatted = it },
-                label = { Text("Reminder") },
-                modifier = Modifier.fillMaxWidth(),
-                colors = TextFieldDefaults.colors(
-                    disabledContainerColor = MaterialTheme.colorScheme.surface,
-                    disabledTextColor = MaterialTheme.colorScheme.onSurface,
-                    disabledIndicatorColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                )
-            )
-
-            TextField(
-                value = positionFormatted,
-                onValueChange = {positionFormatted.plus(1)},
-                label = { Text("Position") },
-                enabled = false,
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            Row(
-                horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier.fillMaxWidth()
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Button(onClick = { onCancel() }) {
-                    Text("Cancel")
-                }
-                Button(onClick = {
-                    if (taskName.isNotBlank() && duration > 0) {
+                Text("EDIT TASK", style = MaterialTheme.typography.titleLarge)
 
-                        startTime = strToDateTime(startTimeFormatted)
-                        endTime = strToDateTime(endTimeFormatted)
-                        reminder = strToDateTime(reminderFormatted)
-                        duration = durationFormatted.toLong()
-                        position = positionFormatted.toInt()
+                TextField(
+                    value = taskName,
+                    onValueChange = { taskName = it },
+                    label = { Text("Task Name") },
+                    modifier = Modifier.fillMaxWidth()
+                )
 
-                        val newTask = TaskEntity(
-                            id = 0, // ID will be auto-generated by the database
-                            taskName = taskName,
-                            startTime = startTime,
-                            endTime = endTime,
-                            duration = duration.toInt(),
-                            reminder = reminder,
-                            type = "MainTask",
-                            position = position
-                        )
-                        onSaveNewTask(newTask)
-                        Toast.makeText(context, "Task Added.", Toast.LENGTH_SHORT).show()
+                TextField(
+                    value = taskNotes,
+                    onValueChange = { taskNotes = it },
+                    label = { Text("Task Notes") },
+                    modifier = Modifier.fillMaxWidth()
+                )
 
-                        // Update positions of tasks below
+                TextField(
+                    value = taskType,
+                    onValueChange = { taskType = it },
+                    label = { Text("Task Type") },
+                    modifier = Modifier.fillMaxWidth()
+                )
 
+                TextField(
+                    value = startTimeFormatted,
+                    onValueChange = { startTimeFormatted = it },
+                    label = { Text("Start Time") },
+                    modifier = Modifier.fillMaxWidth()
+                )
 
-                    } else {
-                        Toast.makeText(context, "Please fill all fields correctly", Toast.LENGTH_SHORT).show()
+                TextField(
+                    value = durationFormatted,
+                    onValueChange = { durationFormatted = it },
+                    label = { Text("Duration (minutes)") },
+                    keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                TextField(
+                    value = endTimeFormatted,
+                    onValueChange = { endTimeFormatted = it },
+                    label = { Text("End Time") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                TextField(
+                    value = reminderFormatted,
+                    onValueChange = { reminderFormatted = it },
+                    label = { Text("Reminder") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                TextField(
+                    value = idFormatted,
+                    onValueChange = { },
+                    label = { Text("Task ID") },
+                    enabled = false,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+
+                TextField(
+                    value = taskPositionFormatted,
+                    onValueChange = { },
+                    label = { Text("Task Position") },
+                    enabled = false,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+
+                Row(
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Button(onClick = { onCancel() }) {
+                        Text("Cancel")
                     }
-                }) {
-                    Text("Save")
+                    Button(onClick = {
+                        if (taskName.isNotBlank() && duration > 0) {
+                            startTime = strToDateTime(startTimeFormatted)
+                            endTime = strToDateTime(endTimeFormatted)
+                            reminder = strToDateTime(reminderFormatted)
+                            duration = durationFormatted.toLong()
+                            taskPosition = taskPositionFormatted.toInt()
+
+                            val newTask = TaskEntity(
+                                position = taskPosition,
+                                taskName = taskName,
+                                notes = taskNotes,
+                                startTime = startTime,
+                                endTime = endTime,
+                                duration = duration.toInt(),
+                                reminder = reminder,
+                                type = taskType,
+                            )
+
+                            onSaveNewTask(newTask)
+                            Toast.makeText(context, "Task Added.", Toast.LENGTH_SHORT).show()
+
+                        } else {
+                            Toast.makeText(context, "Please fill all fields correctly", Toast.LENGTH_SHORT).show()
+                        }
+                    }) {
+                        Text("Save")
+                    }
                 }
             }
         }

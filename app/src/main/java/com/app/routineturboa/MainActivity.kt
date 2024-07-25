@@ -56,7 +56,6 @@ class MainActivity : ComponentActivity() {
 
             RoutineTurboATheme {
                 MainScreen(
-                    windowWidthSizeClass = windowSizeClass.widthSizeClass,
                     hasNotificationPermission = PermissionUtils.hasNotificationPermission(this),
                     onRequestPermission = { requestNotificationPermission()},
                     reminderManager = reminderManager
