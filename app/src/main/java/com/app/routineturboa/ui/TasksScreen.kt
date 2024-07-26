@@ -13,8 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -42,8 +40,6 @@ import com.app.routineturboa.ui.components.SingleTaskCard
 import com.app.routineturboa.viewmodel.TasksViewModel
 import com.microsoft.identity.client.IAuthenticationResult
 import kotlinx.coroutines.launch
-import themeAwareColor
-import java.time.format.DateTimeFormatter
 
 @RequiresApi(Build.VERSION_CODES.S)
 @Composable
@@ -93,34 +89,16 @@ fun TasksScreen(context: Context, tasksViewModel: TasksViewModel, reminderManage
         floatingActionButtonPosition = FabPosition.EndOverlay
 
     ) { paddingValues ->
-
-        // Define a shared scroll state
-        val columnScrollState = rememberScrollState()
-        val lazyListState = rememberLazyListState()
-
-
-
-
         // Tasks list
         LazyColumn(
             modifier = Modifier
                 .fillMaxHeight()
                 .padding(paddingValues),
-
-            state = lazyListState
         ) {
             items(tasks, key = { task ->
                 Log.d("TaskID", "Task ID: ${task.id}")
                 task.id
             }) { task ->
-                val formattedStartTime = task.startTime.format(DateTimeFormatter.ofPattern("hh:mm"))
-                val formattedEndTime = task.endTime.format(DateTimeFormatter.ofPattern("hh:mm"))
-                val textColor = themeAwareColor(
-                    lightColor = Color(0xFF000000),
-                    darkColor = Color(0xFF6D6D6D)
-                )
-
-
                 SingleTaskCard(
                     task = task,
                     onClick = { clickedTask = task },
@@ -129,7 +107,6 @@ fun TasksScreen(context: Context, tasksViewModel: TasksViewModel, reminderManage
                     onDelete = { tasksViewModel.deleteTask(it) },
                     isClicked = task == clickedTask
                 )
-
             }
             item {
                 Text(text = "${clickedTask?.taskName}")
@@ -148,8 +125,7 @@ fun TasksScreen(context: Context, tasksViewModel: TasksViewModel, reminderManage
                 AddTaskScreen(
                     clickedTask = clickedTask,
                     onSaveNewTask = { newTask: TaskEntity ->
-                        Log.d(tag, "newTask details: $newTask")
-                        Log.d(tag, "Save Button in Add Screen clicked...Calling updateTaskIds")
+                        Log.d(tag, "Save Button in Add Screen clicked...newTask details: $newTask")
                         tasksViewModel.updateTaskPositions(clickedTask)
                         tasksViewModel.insertTask(newTask)
                         isAddingTask = false
@@ -183,15 +159,4 @@ fun TasksScreen(context: Context, tasksViewModel: TasksViewModel, reminderManage
             }
         }
     }
-}
-
-@Composable
-fun QuickTaskCard(task: TaskEntity) {
-
-    val tag = "QuickTaskCard"
-    Log.d(tag, "QuickTaskCard: $task")
-
-    val taskName = task.taskName
-
-    Text(text = "Quick Task")
 }

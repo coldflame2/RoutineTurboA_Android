@@ -85,8 +85,6 @@ fun AddTaskScreen(
         }
     }
 
-
-
     Dialog(onDismissRequest = { onCancel() }) {
         Surface(
             modifier = Modifier.fillMaxWidth(),

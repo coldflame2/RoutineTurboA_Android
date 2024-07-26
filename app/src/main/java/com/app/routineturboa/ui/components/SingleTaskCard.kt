@@ -8,7 +8,6 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,7 +24,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.sharp.LibraryBooks
 import androidx.compose.material.icons.filled.Alarm
-import androidx.compose.material.icons.filled.ArrowBackIosNew
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.AlertDialog
@@ -48,6 +46,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.SpanStyle
@@ -57,7 +56,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.app.routineturboa.data.model.TaskEntity
+import com.app.routineturboa.utils.DottedLine
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -78,14 +79,15 @@ fun SingleTaskCard(
     val tag = "SingleTaskCard"
     var expanded by remember { mutableStateOf(false) }
     var longPressOffset by remember { mutableStateOf(Offset.Zero) }
+
     val density = LocalDensity.current
     var showNotesDialog by remember { mutableStateOf(false) }
     val taskType = task.type
     val formattedStartTime = task.startTime.format(DateTimeFormatter.ofPattern("hh:mm a"))
-    val formattedEndTime = task.endTime.format(DateTimeFormatter.ofPattern("hh:mm a"))
     val currentTime = LocalDateTime.now()
     val isTaskNow = currentTime.isAfter(task.startTime) && currentTime.isBefore(task.endTime)
     val infiniteTransition = rememberInfiniteTransition(label = "BorderAnimation")
+
     val borderAlpha by infiniteTransition.animateFloat(
         initialValue = 0.1f,
         targetValue = 1f,
@@ -107,73 +109,98 @@ fun SingleTaskCard(
     }
     Log.d(tag, "Top Padding: $topPadding. task name: ${task.taskName}")
 
-    Box(modifier = Modifier.fillMaxWidth()) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .alpha(1f)
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onLongPress = { offset ->
+                        longPressOffset = offset
+                        expanded = true
+                        onClick()
+                        Log.d("SingleTaskCard", "Long Press Offset: $longPressOffset")
 
-        Icon(
-            imageVector = Icons.Default.ArrowBackIosNew,
-            contentDescription = "Show Notes",
-            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-            modifier = Modifier.offset(x = 70.dp, y = (-2).dp).size(15.dp)
-        )
-
-        // line
+                    },
+                    onTap = {
+                        onClick()
+                    }
+                )
+            }
+    ) {
+        // Dotted Line above Start-End times and Task Card
         Box(
             modifier = Modifier
-                .width(90.dp)
-                .height(2.dp)
-                .offset(x = 0.dp, y = 5.dp)
-                .background(Color.LightGray.copy(alpha=0.9f))
+                .fillMaxWidth()
+                .offset(x = 0.dp, y = 2.dp)
                 .align(Alignment.TopStart)
-        )
+        ) {
+            DottedLine(
+                color = if (isClicked)
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                else
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                thickness = if (isClicked) 3.dp else 1.dp
+            )
+        }
 
+        // Main TaskCard and Start-End times
         Row {
-            // Start time and end time
+            // Start-End times
             Column(
                 verticalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier.height(if (taskType == "QuickTask") 50.dp else 110.dp)
-                    .padding(end = 8.dp, top = if (taskType in setOf("MainTask", "default", "")) 5.dp else 0.dp)
+                modifier = Modifier
+                    .height(if (taskType == "QuickTask") 50.dp else 110.dp)
+                    .width(75.dp)
+                    .padding(
+                        start = 10.dp,
+                        end = 1.dp,
+                        top = 5.dp,
+                    )
             ) {
                 Text (
-                    text = formattedStartTime
+                    text = formattedStartTime,
+                    style = MaterialTheme.typography.bodyLarge.copy(
+                        fontSize = 13.sp,
+                    ),
                 )
-                Spacer(modifier = Modifier.weight(2f))
                 Text (
                     text = ""
                 )
             }
 
 
-            // Main Task Card
+            // Main Task Card With Details
             Card(
                 modifier = modifier
                     .height(if (taskType == "QuickTask") 50.dp else 110.dp)
-                    .pointerInput(Unit) {
-                        detectTapGestures(
-                            onLongPress = { offset ->
-                                longPressOffset = offset
-                                expanded = true
-                            },
-                            onTap = {
-                                onClick()
-                            }
-                        )
-                    }
+
                     .fillMaxWidth()
-                    .padding(vertical = if (taskType == "QuickTask") 0.dp else 5.dp),
+                    .padding(
+                        start = if (taskType == "QuickTask") 0.dp else 5.dp,
+                        end = 15.dp, top = 5.dp, bottom = 5.dp
+                    )
+                    .graphicsLayer {
+                        clip = true
+                        shadowElevation = if (isClicked) 20f else 1f // Increased shadow elevation
+                        shape = RoundedCornerShape(15.dp)
+                        spotShadowColor =
+                            Color.Black // Changed shadow color to black for more prominence
+                        ambientShadowColor =
+                            Color.Black // Ambient shadow color can be adjusted as well
+                    },
                 colors = CardDefaults.cardColors(),
                 shape = RoundedCornerShape(15.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
                 border = if (isTaskNow) {
-                    BorderStroke(3.dp, MaterialTheme.colorScheme.scrim.copy(alpha = borderAlpha))
+                    BorderStroke(1.dp, MaterialTheme.colorScheme.scrim.copy(alpha = borderAlpha))
                 } else { null }
             ) {
-
 
                 // Main content of the card
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(10.dp)
+                        .padding(5.dp)
                 ) {
                     // Task Name, Duration, Reminder
                     Row(
@@ -185,10 +212,9 @@ fun SingleTaskCard(
                             style = MaterialTheme.typography.titleLarge,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier
+                                .weight(1f)
                         )
-
-                        Spacer(modifier = Modifier.width(25.dp))
 
                         // Show notes
                         IconButton(
@@ -203,6 +229,7 @@ fun SingleTaskCard(
                                 tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f)
                             )
                         }
+                        Spacer(modifier = Modifier.width(10.dp))
 
                         IconButton(
                             onClick = { onEditClick(task) },
@@ -277,37 +304,47 @@ fun SingleTaskCard(
 
         }
 
-    }
 
-
-
-    // DropdownMenu on long press
-    DropdownMenu(
-        expanded = expanded,
-        onDismissRequest = { expanded = false },
-        offset = DpOffset(
-            x = with(density) { longPressOffset.x.toDp() },
-            y = with(density) { longPressOffset.y.toDp() - 150.dp }
-        )
-    ) {
-        DropdownMenuItem(
-            text = { Text("Edit") },
-            onClick = {
-                expanded = false
-                onEditClick(task)
-            }
-        )
-        DropdownMenuItem(
-            text = { Text("Delete") },
-            onClick = {
-                expanded = false
-                if (canDelete) {
-                    onDelete(task)
+        // DropdownMenu on long press
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            offset = DpOffset(
+                x = with(density) { longPressOffset.x.toDp() + 10.dp },
+                y = with(density) { longPressOffset.y.toDp() - 112.dp }
+            ),
+            modifier = Modifier
+                .graphicsLayer {
+                    // Apply rotation based on the expansion state
+                    // Add shadow with elevation
+                    shadowElevation = if (expanded) 8f else 0f
+                    // Animate the changes
                 }
-            },
-            enabled = canDelete
-        )
+        ) {
+            DropdownMenuItem(
+                text = { Text("Edit") },
+                onClick = {
+                    expanded = false
+                    onEditClick(task)
+                }
+            )
+
+            DropdownMenuItem(
+                text = { Text("Delete") },
+                onClick = {
+                    expanded = false
+                    if (canDelete) {
+                        onDelete(task)
+                    }
+                },
+                enabled = canDelete
+            )
+        }
+
     }
+
+
+
 
     // Dialog to show notes
     if (showNotesDialog) {
@@ -329,3 +366,62 @@ object SineEasing : Easing {
         return sin(fraction * PI.toFloat() / 2)
     }
 }
+
+
+//Box () {
+//    Box () {
+//        DottedLine ()
+//    }
+//
+//    Row () {
+//        Column () {
+//            Text ()
+//            Text ()
+//        }
+//
+//        Card () {
+//            Column () {
+//                Row () {
+//                    Text ()
+//
+//                    IconButton () {
+//                        Icon ()
+//                    }
+//                    Spacer ()
+//
+//                    IconButton () {
+//                        Icon ()
+//                    }
+//                }
+//
+//                Spacer ()
+//
+//                Row () {
+//                    Icon ()
+//
+//                    Text ()
+//                }
+//
+//                Spacer ()
+//
+//                Row () {
+//                    Icon ()
+//                    Text ()
+//                }
+//            }
+//        }
+//    }
+//}
+//
+//DropdownMenu () {
+//    DropdownMenuItem ()
+//    DropdownMenuItem ()
+//}
+//
+//AlertDialog () {
+//    Text ()
+//    Text ()
+//    Button () {
+//        Text ()
+//    }
+//}
