@@ -1,5 +1,6 @@
 package com.app.routineturboa.utils
 
+import android.util.Log
 import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.time.LocalDate
@@ -13,7 +14,7 @@ import java.util.Locale
 object TimeUtils {
 
     private val timeFormatter = DateTimeFormatter.ofPattern("hh:mm a", Locale.ROOT)
-    private val possibleFormats = listOf(
+    val possibleFormats = listOf(
         DateTimeFormatter.ofPattern("h:mm a", Locale.US),
         DateTimeFormatter.ofPattern("hh:mm a", Locale.US),
         DateTimeFormatter.ofPattern("H:mm", Locale.US),
@@ -32,7 +33,7 @@ object TimeUtils {
                 val localTime = LocalTime.parse(trimmedTimeString, formatter)
                 return LocalDateTime.of(LocalDate.now(), localTime)
             } catch (e: DateTimeParseException) {
-                // Continue to the next formatter
+                Log.e("TimeUtils", "Error parsing time string: $timeString")
             }
         }
 

@@ -87,10 +87,10 @@ fun SingleTaskCard(
     val infiniteTransition = rememberInfiniteTransition(label = "BorderAnimation")
 
     val borderAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.1f,
-        targetValue = 1f,
+        initialValue = 0.2f,
+        targetValue = 0.5f,
         animationSpec = infiniteRepeatable(
-            animation = tween(5000, easing = SineEasing),
+            animation = tween(500, easing = SineEasing),
             repeatMode = RepeatMode.Reverse
         ), label = "BorderAlpha"
     )
@@ -189,7 +189,7 @@ fun SingleTaskCard(
                 colors = CardDefaults.cardColors(),
                 shape = RoundedCornerShape(15.dp),
                 border = if (isTaskNow) {
-                    BorderStroke(1.dp, MaterialTheme.colorScheme.scrim.copy(alpha = borderAlpha))
+                    BorderStroke(3.dp, MaterialTheme.colorScheme.scrim.copy(alpha = borderAlpha))
                 } else { null }
             ) {
 
@@ -241,6 +241,7 @@ fun SingleTaskCard(
                         }
                     }
 
+                    // Duration and Reminder
                     if (taskType != "QuickTask") {
                         Spacer(modifier = Modifier.height(8.dp))
 

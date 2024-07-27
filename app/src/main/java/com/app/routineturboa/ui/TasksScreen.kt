@@ -179,7 +179,6 @@ fun TasksScreen(context: Context, tasksViewModel: TasksViewModel, reminderManage
         if (isAddingTask && clickedTask != null) {
             Box(
                 modifier = Modifier
-                    .fillMaxSize()
                     .background(Color.Black.copy(alpha = 0.3f))
             ) {
                 AddTaskScreen(
@@ -200,8 +199,9 @@ fun TasksScreen(context: Context, tasksViewModel: TasksViewModel, reminderManage
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.1f))
+                    .background(Color.Black.copy(alpha = 0.3f))
             ) {
+
                 EditTaskScreen(
                     reminderManager = reminderManager,
                     task = taskBeingEdited!!,

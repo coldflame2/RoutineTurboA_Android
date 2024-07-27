@@ -14,8 +14,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddTask
+import androidx.compose.material.icons.filled.Task
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
@@ -30,6 +36,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.app.routineturboa.data.model.TaskEntity
 import com.app.routineturboa.reminders.ReminderManager
 import com.app.routineturboa.utils.TimeUtils.dateTimeToString
@@ -69,126 +76,138 @@ fun EditTaskScreen(
 
     Dialog(
         onDismissRequest = {onCancel()},
+        properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
-        Column(modifier = Modifier
-            .padding(16.dp)
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth(0.9f),
+            color = MaterialTheme.colorScheme.background,
+            contentColor = MaterialTheme.colorScheme.onBackground
         ) {
-
-            TextField(
-                value = taskName,
-                onValueChange = { taskName = it },
-                label = { Text("Task Name") },
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            TextField(
-                value = notes,
-                minLines = 3,
-                onValueChange = { notes = it },
-                label = { Text("Notes") },
-                modifier = Modifier.fillMaxWidth().verticalScroll(ScrollState(1))
-            )
-
-            Spacer(modifier = Modifier.padding(1.dp))
-
-            TextField(
-                value = startTimeFormatted,
-                onValueChange = {startTimeFormatted = it},
-                label = { Text("Start Time") },
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(modifier = Modifier.padding(1.dp))
-
-            TextField(
-                value = endTimeFormatted,
-                onValueChange = {endTimeFormatted = it},
-                label = { Text("End Time") },
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(modifier = Modifier.padding(1.dp))
-
-            TextField(
-                value = durationFormatted,
-                onValueChange = {durationFormatted = it},
-                label = { Text("Duration (minutes)") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(modifier = Modifier.padding(1.dp))
-
-            TextField(
-                value = reminderFormatted,
-                onValueChange = {reminderFormatted = it},
-                label = { Text("Reminder Time") },
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(modifier = Modifier.padding(1.dp))
-
-            TextField(
-                value = idFormatted,
-                onValueChange = {idFormatted = it},
-                label = { Text("Task ID") },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = false
-            )
-
-            TextField(
-                value = positionFormatted,
-                onValueChange = {positionFormatted = it},
-                label = { Text("Task Position") },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = false
-            )
-
-            Row(
-                horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier.fillMaxWidth()
+            Column(
+                modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(15.dp)
             ) {
-                // Cancel Button
-                Button(
-                    modifier = Modifier.padding(10.dp),
-                    shape = RoundedCornerShape(25.dp),
-                    onClick = { onCancel() }) {
-                    Text("Cancel")
-                }
 
-                // Save Button
-                Button(
-                    modifier = Modifier.padding(10.dp),
-                    shape = RoundedCornerShape(25.dp),
-                    onClick = {
-                        Log.d("EditTaskScreen", "Save Button clicked...")
-                        coroutineScope.launch {
-                            try {
-                                startTime = strToDateTime(startTimeFormatted)
-                                endTime = strToDateTime(endTimeFormatted)
-                                reminder = strToDateTime(reminderFormatted)
-                                duration = durationFormatted.toInt()
-                                id = idFormatted.toInt()
-                                position = positionFormatted.toInt()
+                TextField(
+                    value = taskName,
+                    onValueChange = { taskName = it },
+                    label = { Text("Task Name") },
+                    placeholder = { Text("Enter task name") },
+                    modifier = Modifier.fillMaxWidth(),
+                    leadingIcon = { Icon(imageVector = Icons.Default.AddTask, contentDescription = "Add New Task") },
+                    trailingIcon = { Icon(imageVector = Icons.Default.Task, contentDescription = "Add New Task") },
+                )
 
-                            } catch (e: Exception) {
-                                Log.e("EditTaskScreen", "Error: $e")
-                                Toast.makeText(context, "Error saving task: ${e.message}", Toast.LENGTH_LONG).show()
-                            }
-                            val updatedTask = task.copy(
-                                taskName = taskName,
-                                position = position,
-                                notes = notes,
-                                startTime = startTime,
-                                endTime = endTime,
-                                reminder = reminder,
-                                duration = duration
-                            )
-                            onSave(updatedTask)
-                            reminderManager.observeAndScheduleReminders(context)
-                        }
-                    }
+                TextField(
+                    value = notes,
+                    minLines = 3,
+                    onValueChange = { notes = it },
+                    label = { Text("Notes") },
+                    modifier = Modifier.fillMaxWidth().verticalScroll(ScrollState(1))
+                )
+
+                Spacer(modifier = Modifier.padding(1.dp))
+
+                TextField(
+                    value = startTimeFormatted,
+                    onValueChange = {startTimeFormatted = it},
+                    label = { Text("Start Time") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.padding(1.dp))
+
+                TextField(
+                    value = endTimeFormatted,
+                    onValueChange = {endTimeFormatted = it},
+                    label = { Text("End Time") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.padding(1.dp))
+
+                TextField(
+                    value = durationFormatted,
+                    onValueChange = {durationFormatted = it},
+                    label = { Text("Duration (minutes)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.padding(1.dp))
+
+                TextField(
+                    value = reminderFormatted,
+                    onValueChange = {reminderFormatted = it},
+                    label = { Text("Reminder Time") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.padding(1.dp))
+
+                TextField(
+                    value = idFormatted,
+                    onValueChange = {idFormatted = it},
+                    label = { Text("Task ID") },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = false
+                )
+
+                TextField(
+                    value = positionFormatted,
+                    onValueChange = {positionFormatted = it},
+                    label = { Text("Task Position") },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = false
+                )
+
+                Row(
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Save")
-                }
-            }
+                    // Cancel Button
+                    Button(
+                        modifier = Modifier.padding(10.dp),
+                        shape = RoundedCornerShape(25.dp),
+                        onClick = { onCancel() }) {
+                        Text("Cancel")
+                    }
 
+                    // Save Button
+                    Button(
+                        modifier = Modifier.padding(10.dp),
+                        shape = RoundedCornerShape(25.dp),
+                        onClick = {
+                            Log.d("EditTaskScreen", "Save Button clicked...")
+                            coroutineScope.launch {
+                                try {
+                                    startTime = strToDateTime(startTimeFormatted)
+                                    endTime = strToDateTime(endTimeFormatted)
+                                    reminder = strToDateTime(reminderFormatted)
+                                    duration = durationFormatted.toInt()
+                                    id = idFormatted.toInt()
+                                    position = positionFormatted.toInt()
+
+                                } catch (e: Exception) {
+                                    Log.e("EditTaskScreen", "Error: $e")
+                                    Toast.makeText(context, "Error saving task: ${e.message}", Toast.LENGTH_LONG).show()
+                                }
+                                val updatedTask = task.copy(
+                                    taskName = taskName,
+                                    position = position,
+                                    notes = notes,
+                                    startTime = startTime,
+                                    endTime = endTime,
+                                    reminder = reminder,
+                                    duration = duration
+                                )
+                                onSave(updatedTask)
+                                reminderManager.observeAndScheduleReminders(context)
+                            }
+                        }
+                    ) {
+                        Text("Save")
+                    }
+                }
+
+            }
         }
     }
 }

@@ -2,14 +2,26 @@ package com.app.routineturboa.ui.components
 
 import android.util.Log
 import android.widget.Toast
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddTask
+import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.LinkOff
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -22,18 +34,24 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.app.routineturboa.data.model.TaskEntity
 import com.app.routineturboa.utils.TimeUtils.dateTimeToString
+import com.app.routineturboa.utils.TimeUtils.possibleFormats
 import com.app.routineturboa.utils.TimeUtils.strToDateTime
 import com.app.routineturboa.viewmodel.TasksViewModel
+import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.format.DateTimeParseException
 
-@OptIn(ExperimentalMaterial3Api::class)
+
 @Composable
 fun AddTaskScreen(
     tasksViewModel: TasksViewModel,
@@ -64,6 +82,9 @@ fun AddTaskScreen(
     var taskType by remember { mutableStateOf("") }
     var taskPosition by remember { mutableIntStateOf(clickedTaskPosition?.plus(1)?: 2) }
 
+    var isReminderLinked by remember { mutableStateOf(true) }
+    var isDurationLinked by remember { mutableStateOf(true) }
+
     // Convert state variables to  string for display
     var startTimeFormatted by remember {mutableStateOf(dateTimeToString(startTime))}
     var endTimeFormatted by remember {mutableStateOf(dateTimeToString(endTime))}
@@ -90,67 +111,145 @@ fun AddTaskScreen(
         }
     }
 
-    Dialog(onDismissRequest = { onCancel() }) {
+    fun endTimeStringToLDT(timeString: String): LocalDateTime? {
+        val trimmedTimeString = timeString.trim().uppercase()
+        for (formatter in possibleFormats) {
+            try {
+                val localTime = LocalTime.parse(trimmedTimeString, formatter)
+                return LocalDateTime.of(LocalDate.now(), localTime)
+            } catch (e: DateTimeParseException) {
+                Log.e("TimeUtils", "Error parsing time string: $timeString")
+            }
+        }
+
+        return null
+    }
+
+    // Calculate Duration based on End Time
+    LaunchedEffect(endTimeFormatted) {
+        if (endTimeFormatted.isNotEmpty()) {
+            try {
+                // Attempt to parse the end time string
+                val endTimeParsed = endTimeStringToLDT(endTimeFormatted)
+
+                if (endTimeParsed != null && endTimeParsed.isAfter(startTime)) {
+                    // Calculate the duration in minutes
+                    val durationInMinutes = java.time.Duration.between(startTime, endTimeParsed).toMinutes()
+
+                    // Update the durationFormatted state variable
+                    durationFormatted = durationInMinutes.toString()
+                } else {
+                    // End time is not valid or is not after start time, do nothing or reset durationFormatted
+                    Toast.makeText(context, "End time must be after start time and valid.", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                // Handle any unexpected exceptions
+                Toast.makeText(context, "Error processing end time.", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+
+
+    // Update reminder time if linked
+    LaunchedEffect(startTimeFormatted) {
+        if (isReminderLinked) {
+            reminderFormatted = startTimeFormatted
+        }
+    }
+
+    Dialog(
+        onDismissRequest = { onCancel() },
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
         Surface(
-            modifier = Modifier.fillMaxWidth(),
-            color = MaterialTheme.colorScheme.background,
-            contentColor = MaterialTheme.colorScheme.onBackground
+            modifier = Modifier
+                .fillMaxWidth(0.9f),
+            color = MaterialTheme.colorScheme.secondaryContainer,
+            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
         ) {
             Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                modifier = Modifier
+                    .padding(16.dp)
+                    .fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(15.dp)
             ) {
-                Text("EDIT TASK", style = MaterialTheme.typography.titleLarge)
+                Text("Add New Task", style = MaterialTheme.typography.titleLarge)
 
                 TextField(
                     value = taskName,
                     onValueChange = { taskName = it },
                     label = { Text("Task Name") },
-                    modifier = Modifier.fillMaxWidth()
+                    placeholder = { Text("Enter task name") },
+                    modifier = Modifier.fillMaxWidth(),
+                    leadingIcon = { Icon(imageVector = Icons.Default.AddTask, contentDescription = "Add New Task")},
                 )
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    TextField(
+                        value = startTimeFormatted,
+                        onValueChange = { startTimeFormatted = it },
+                        label = { Text("Start Time") },
+                        modifier = Modifier.weight(1f),
+                    )
+
+                    Icon (
+                        imageVector = if (isReminderLinked) Icons.Default.Link else Icons.Default.LinkOff,
+                        contentDescription = "Link Reminder",
+                        modifier = Modifier
+                            .clickable {
+                                isReminderLinked = !isReminderLinked
+                                if (isReminderLinked) {
+                                    reminderFormatted = startTimeFormatted
+                                }
+                            }
+                            .align(Alignment.CenterVertically)
+                            .size(30.dp)
+                    )
+
+                    TextField(
+                        value = reminderFormatted,
+                        onValueChange = { reminderFormatted = it },
+                        label = { Text("Reminder") },
+                        enabled = !isReminderLinked,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    TextField(
+                        value = durationFormatted,
+                        onValueChange = { durationFormatted = it },
+                        label = { Text("Duration (minutes)") },
+                        keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f),
+                    )
+
+                    TextField(
+                        value = endTimeFormatted,
+                        onValueChange = { endTimeFormatted = it },
+                        label = { Text("End Time") },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
 
                 TextField(
                     value = taskNotes,
                     onValueChange = { taskNotes = it },
                     label = { Text("Task Notes") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = {Text ("Add task notes")}
                 )
 
-                TextField(
-                    value = taskType,
-                    onValueChange = { taskType = it },
-                    label = { Text("Task Type") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                TextField(
-                    value = startTimeFormatted,
-                    onValueChange = { startTimeFormatted = it },
-                    label = { Text("Start Time") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                TextField(
-                    value = durationFormatted,
-                    onValueChange = { durationFormatted = it },
-                    label = { Text("Duration (minutes)") },
-                    keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                TextField(
-                    value = endTimeFormatted,
-                    onValueChange = { endTimeFormatted = it },
-                    label = { Text("End Time") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                TextField(
-                    value = reminderFormatted,
-                    onValueChange = { reminderFormatted = it },
-                    label = { Text("Reminder") },
-                    modifier = Modifier.fillMaxWidth()
-                )
+                TaskTypeDropdown()
 
                 TextField(
                     value = idFormatted,
@@ -202,6 +301,56 @@ fun AddTaskScreen(
                         Text("Save")
                     }
                 }
+            }
+        }
+    }
+}
+
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TaskTypeDropdown() {
+    val taskTypes = listOf("MainTask", "QuickTask")
+    val expanded = remember { mutableStateOf(false) }
+    val selectedTaskType = remember { mutableStateOf(taskTypes[0]) }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded.value,
+        onExpandedChange = { expanded.value = it },
+        modifier = Modifier.fillMaxWidth(),
+
+    ) {
+        TextField(
+            readOnly = true,
+            value = selectedTaskType.value,
+            onValueChange = {},
+            label = { Text("Task Type") },
+            trailingIcon = {
+                ExposedDropdownMenuDefaults.TrailingIcon(
+                    expanded = expanded.value
+                )
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor() // Ensures the dropdown menu aligns correctly with the TextField
+        )
+        ExposedDropdownMenu(
+            expanded = expanded.value,
+            onDismissRequest = { expanded.value = false },
+            modifier = Modifier.fillMaxWidth() // Ensure the dropdown menu fills the width of the TextField
+        ) {
+            taskTypes.forEach { taskType ->
+                DropdownMenuItem(
+                    onClick = {
+                        selectedTaskType.value = taskType
+                        expanded.value = false
+                    },
+                    text = { Text(taskType) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh), // Ensure each item fills the width of the TextField
+                )
+                HorizontalDivider(thickness = 4.dp)
             }
         }
     }
