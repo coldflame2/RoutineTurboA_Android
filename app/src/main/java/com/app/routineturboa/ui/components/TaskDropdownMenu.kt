@@ -1,13 +1,14 @@
 package com.app.routineturboa.ui.components
 
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 
@@ -25,7 +26,6 @@ fun TaskDropdownMenu(
         expanded = true,
         onDismissRequest = onDismissRequest,
         offset = offset,
-        modifier = modifier
     ) {
         DropdownMenuItem(
             text = {
@@ -33,25 +33,34 @@ fun TaskDropdownMenu(
                     text = "Edit",
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.padding(8.dp)
                 )
             },
-            onClick = onEditClick
+            onClick = onEditClick,
         )
 
-        HorizontalDivider()
+        HorizontalDivider(
+            thickness = 2.dp
+        )
 
         DropdownMenuItem(
             text = {
                 Text(
                     text = "Delete",
                     style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.padding(8.dp)
+                    color = if (canDelete) {
+                        MaterialTheme.colorScheme.onPrimaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                    modifier = Modifier
+                        .alpha(if (canDelete) 1f else 0.3f)
                 )
             },
             onClick = onDeleteClick,
-            enabled = canDelete
+            enabled = canDelete,
+            colors = MenuDefaults.itemColors(
+                disabledTextColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.9f)
+            )
         )
     }
 }

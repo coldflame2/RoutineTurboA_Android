@@ -56,7 +56,7 @@ import java.time.format.DateTimeParseException
 fun AddTaskScreen(
     tasksViewModel: TasksViewModel,
     clickedTask: TaskEntity?,
-    onSave: (TaskEntity) -> Unit,
+    onAddClick: (TaskEntity) -> Unit,
     onCancel: () -> Unit
 ) {
     val tag = "AddTaskScreen"
@@ -92,6 +92,10 @@ fun AddTaskScreen(
     var durationFormatted by remember {mutableStateOf(duration.toString())}
     val idFormatted by remember {mutableStateOf(id.toString())}
     val taskPositionFormatted by remember {mutableStateOf(taskPosition.toString())}
+
+    Log.d(tag, "clicked task name and position: ${clickedTask.taskName} ${clickedTask.position}")
+    Log.d(tag, "clicked task end time: ${clickedTask.endTime}")
+    Log.d(tag, "new task start time: $startTimeFormatted")
 
     // Calculate endTime based on duration input
     LaunchedEffect(durationFormatted) {
@@ -292,7 +296,7 @@ fun AddTaskScreen(
                                 reminder = reminder,
                                 type = taskType,
                             )
-                            onSave(newTask)
+                            onAddClick(newTask)
 
                         } else {
                             Toast.makeText(context, "Please fill all fields correctly", Toast.LENGTH_SHORT).show()

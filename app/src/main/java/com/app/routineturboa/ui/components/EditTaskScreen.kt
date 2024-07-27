@@ -155,7 +155,7 @@ fun EditTaskScreen(
                     onValueChange = {positionFormatted = it},
                     label = { Text("Task Position") },
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = false
+                    enabled = true
                 )
 
                 Row(

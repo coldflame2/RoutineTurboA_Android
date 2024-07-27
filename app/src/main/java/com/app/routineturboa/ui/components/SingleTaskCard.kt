@@ -1,6 +1,8 @@
 package com.app.routineturboa.ui.components
 
+import android.content.Context
 import android.util.Log
+import android.widget.Toast
 import androidx.compose.animation.core.Easing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -34,7 +36,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -52,27 +57,34 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.app.routineturboa.data.model.TaskEntity
 import com.app.routineturboa.utils.DottedLine
+import com.app.routineturboa.utils.TimeUtils.dateTimeToString
+import com.app.routineturboa.utils.TimeUtils.strToDateTime
+import com.app.routineturboa.viewmodel.TasksViewModel
 import java.time.LocalDateTime
-import java.time.LocalTime
 import java.time.format.DateTimeFormatter
-import java.time.temporal.ChronoUnit
 import kotlin.math.PI
 import kotlin.math.sin
 
 @Composable
 fun SingleTaskCard(
+    context: Context,
+    tasksViewModel: TasksViewModel,
     modifier: Modifier = Modifier,
     task: TaskEntity,
     onClick: () -> Unit,
     onEditClick: (TaskEntity) -> Unit,
     canDelete: Boolean,
     onDelete: (TaskEntity) -> Unit,
-    isClicked: Boolean
+    isClicked: Boolean,
+    taskBeingEdited: TaskEntity?,
+    onTaskUpdate: (TaskEntity) -> Unit,
+    onCancel: () -> Unit
 ) {
     val tag = "SingleTaskCard"
     var expanded by remember { mutableStateOf(false) }
@@ -95,17 +107,20 @@ fun SingleTaskCard(
         ), label = "BorderAlpha"
     )
 
-    val startTime = task.startTime
-    val startOfDay = LocalDateTime.of(startTime.toLocalDate(), LocalTime.MIDNIGHT)
-
-    // Calculate the top padding based on the difference in minutes from the start of the day
-    val minutesFromStartOfDay = ChronoUnit.MINUTES.between(startOfDay, startTime).toFloat()
-
-    // Adjusted for the height of each hour (100.dp)
-    val topPadding = remember(minutesFromStartOfDay) {
-        with(density) { (minutesFromStartOfDay * (10.dp.toPx() / 60)).toDp() }
+    val border = when {
+        isTaskNow -> BorderStroke(
+            width = 3.dp,
+            color = MaterialTheme.colorScheme.primary.copy(alpha = borderAlpha)
+        )
+        isClicked -> BorderStroke(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f)
+        )
+        else -> null
     }
 
+
+    // Main Box container that contains everything
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -125,7 +140,7 @@ fun SingleTaskCard(
                 )
             }
     ) {
-        // Dotted Line above Start-End times and Task Card
+        // Dotted Line at top
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -137,7 +152,7 @@ fun SingleTaskCard(
                     MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
                 else
                     MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
-                thickness = if (isClicked) 3.dp else 1.dp
+                thickness = if (isClicked) 2.dp else 0.5.dp
             )
         }
 
@@ -166,136 +181,217 @@ fun SingleTaskCard(
                 )
             }
 
-
             // Main Task Card With Details
+            val taskHeight: Dp = when {
+                taskBeingEdited != null && taskBeingEdited.id == task.id -> 220.dp
+                task.type == "QuickTask" -> 50.dp
+                task.type == "MainTask" -> 110.dp
+                else -> 110.dp // Default height, in case there are other task types
+            }
+
             Card(
                 modifier = modifier
-                    .height(if (taskType == "QuickTask") 50.dp else 110.dp)
-
+                    .height(taskHeight)
                     .fillMaxWidth()
                     .padding(
-                        start = if (taskType == "QuickTask") 0.dp else 5.dp,
+                        start = if (taskType == "QuickTask") 0.dp else 4.dp,
                         end = 15.dp, top = 5.dp, bottom = 5.dp
                     )
                     .graphicsLayer {
                         clip = true
-                        shadowElevation = if (isClicked) 20f else 1f // Increased shadow elevation
+                        shadowElevation = if (isClicked) 10f else 1f // Increased shadow elevation
                         shape = RoundedCornerShape(15.dp)
                         spotShadowColor =
-                            Color.Black // Changed shadow color to black for more prominence
+                            Color.Blue // Changed shadow color to black for more prominence
                         ambientShadowColor =
-                            Color.Black // Ambient shadow color can be adjusted as well
+                            Color.Yellow // Ambient shadow color can be adjusted as well
                     },
                 colors = CardDefaults.cardColors(),
                 shape = RoundedCornerShape(15.dp),
-                border = if (isTaskNow) {
-                    BorderStroke(3.dp, MaterialTheme.colorScheme.scrim.copy(alpha = borderAlpha))
-                } else { null }
+                border = border
             ) {
 
                 // Main content of the card
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(5.dp)
+                        .padding(
+                            if (taskBeingEdited?.id == task.id) 2.dp else 15.dp,
+                            if (taskBeingEdited?.id == task.id) 2.dp else 10.dp,
+                            0.dp, 0.dp
+                        )
                 ) {
-                    // Task Name, Duration, Reminder
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = task.taskName,
-                            style = MaterialTheme.typography.titleLarge,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier
-                                .weight(1f)
+                    // In-place editing of Task Name and Duration
+                    if (taskBeingEdited?.id == task.id) {
+                        var startTime by remember { mutableStateOf(task.startTime) }
+                        var editedTaskName by remember { mutableStateOf(task.taskName) }
+                        var editedDurationString by remember { mutableStateOf(task.duration.toString()) }
+                        var endTimeString by remember { mutableStateOf(dateTimeToString(task.endTime)) }
+
+                        val taskBelow = tasksViewModel.getTaskBelow(task)
+                        val durationTaskBelow = taskBelow?.duration
+
+                        LaunchedEffect(editedDurationString) {
+                            if (editedDurationString.isNotEmpty()) {
+                                try {
+                                    val durationLong = editedDurationString.toLong()
+
+                                    // Check for valid positive duration
+                                    if (durationLong <= 0) {
+                                        Toast.makeText(context, "Duration must be positive. End time unchanged.", Toast.LENGTH_SHORT).show()
+                                    } else if (durationTaskBelow != null && durationLong >= durationTaskBelow) {
+                                        Toast.makeText(context, "Invalid duration. End time unchanged.", Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        endTimeString = dateTimeToString(startTime.plusMinutes(durationLong))
+                                    }
+                                } catch (e: NumberFormatException) {
+                                    Toast.makeText(context, "Invalid duration format. End time unchanged.", Toast.LENGTH_SHORT).show()
+                                }
+                            } else {
+                                Toast.makeText(context, "Duration is empty. End time unchanged.", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+
+
+
+                        TextField(
+                            value = editedTaskName,
+                            onValueChange = { editedTaskName = it },
+                            label = { Text("Task Name") }
                         )
 
-                        // Show notes
-                        IconButton(
-                            onClick = { showNotesDialog = true },
-                            modifier = Modifier
-                                .alpha(if (taskType == "QuickTask") 0f else 0.9f)
-                                .size(30.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Sharp.LibraryBooks,
-                                contentDescription = "Show Notes",
-                                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f)
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(10.dp))
+                        TextField(
+                            value = editedDurationString,
+                            onValueChange = { editedDurationString = it },
+                            label = { Text("Duration (minutes)") }
+                        )
 
-                        IconButton(
-                            onClick = { onEditClick(task) },
-                            modifier = Modifier
-                                .alpha(if (taskType == "QuickTask") 0f else 0.9f)
-                                .size(18.dp)
+                        TextField(
+                            value = endTimeString,
+                            onValueChange = { endTimeString = it },
+                            label = { Text("End Time") }
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Edit,
-                                contentDescription = "Edit Task"
+                            TextButton(onClick = { onCancel() }) {
+                                Text("Cancel")
+                            }
+                            Button(onClick = {
+                                val updatedTask = task.copy(
+                                    taskName = editedTaskName,
+                                    duration = editedDurationString.toIntOrNull() ?: task.duration,
+                                    endTime = strToDateTime(endTimeString)
+                                )
+                                onTaskUpdate(updatedTask)
+                            }) {
+                                Text("Save")
+                            }
+                        }
+
+                    } else {
+                        // Task Name, Duration, Reminder
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = task.taskName,
+                                style = MaterialTheme.typography.titleLarge,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier
+                                    .weight(1f)
                             )
+
+                            // Show notes
+                            IconButton(
+                                onClick = { showNotesDialog = true },
+                                modifier = Modifier
+                                    .alpha(if (taskType == "QuickTask") 0f else 0.9f)
+                                    .size(30.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Sharp.LibraryBooks,
+                                    contentDescription = "Show Notes",
+                                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(10.dp))
+
+                            IconButton(
+                                onClick = { onEditClick(task) },
+                                modifier = Modifier
+                                    .alpha(if (taskType == "QuickTask") 0f else 0.9f)
+                                    .size(18.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Edit,
+                                    contentDescription = "Edit Task"
+                                )
+                            }
+                        }
+
+                        // Duration and Reminder
+                        if (taskType != "QuickTask") {
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            // Duration
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(start = 10.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Timer,
+                                    contentDescription = "Duration",
+                                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                                    modifier = Modifier.size(16.dp)
+                                )
+
+                                Text(
+                                    text = buildAnnotatedString {
+                                        append("Duration: ")
+                                        withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                                            append(task.duration.toString())
+                                        }
+                                    },
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f),
+                                    modifier = Modifier.padding(start = 4.dp)
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            // Reminder
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(start = 10.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Alarm,
+                                    contentDescription = "Reminder",
+                                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    text = buildAnnotatedString {
+                                        append("Remind at: ")
+                                        withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                                            append(task.reminder.format(DateTimeFormatter.ofPattern("hh:mm a")))
+                                        }
+                                    },
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f),
+                                    modifier = Modifier.padding(start = 4.dp)
+                                )
+                            }
                         }
                     }
 
-                    // Duration and Reminder
-                    if (taskType != "QuickTask") {
-                        Spacer(modifier = Modifier.height(8.dp))
 
-                        // Duration
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(start = 10.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Timer,
-                                contentDescription = "Duration",
-                                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
-                                modifier = Modifier.size(16.dp)
-                            )
-
-                            Text(
-                                text = buildAnnotatedString {
-                                    append("Duration: ")
-                                    withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
-                                        append(task.duration.toString())
-                                    }
-                                },
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f),
-                                modifier = Modifier.padding(start = 4.dp)
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        // Reminder
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(start = 10.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Alarm,
-                                contentDescription = "Reminder",
-                                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Text(
-                                text = buildAnnotatedString {
-                                    append("Remind at: ")
-                                    withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
-                                        append(task.reminder.format(DateTimeFormatter.ofPattern("hh:mm a")))
-                                    }
-                                },
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f),
-                                modifier = Modifier.padding(start = 4.dp)
-                            )
-                        }
-                    }
                 }
             }
         }

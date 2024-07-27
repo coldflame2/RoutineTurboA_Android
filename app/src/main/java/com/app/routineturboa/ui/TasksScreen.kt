@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -43,7 +44,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.app.routineturboa.data.model.TaskEntity
 import com.app.routineturboa.reminders.ReminderManager
 import com.app.routineturboa.ui.components.AddTaskScreen
-import com.app.routineturboa.ui.components.EditTaskScreen
 import com.app.routineturboa.ui.components.EmptyTaskCardPlaceholder
 import com.app.routineturboa.ui.components.SingleTaskCard
 import com.app.routineturboa.viewmodel.TasksViewModel
@@ -62,14 +62,28 @@ fun TasksScreen(context: Context, tasksViewModel: TasksViewModel, reminderManage
     var taskBeingEdited by remember { mutableStateOf<TaskEntity?>(null) }
     var isAddingTask by remember { mutableStateOf(false) }
 
-    var isTaskLast by remember { mutableStateOf(clickedTask?.let { tasksViewModel.isTaskLast(it) }) }
-    var isTaskFirst by remember { mutableStateOf(clickedTask?.let { tasksViewModel.isTaskFirst(it) }) }
-
     val authenticationResult by remember { mutableStateOf<IAuthenticationResult?>(null) }
     val coroutineScope = rememberCoroutineScope()
     var isLoading by remember { mutableStateOf(true) }
 
     val isRefreshing by tasksViewModel.isRefreshing.collectAsState()
+
+    val listState = rememberLazyListState()
+    val currentDateTime = remember { java.time.LocalDateTime.now() }
+
+    // Find the index of the task whose time range includes the current time
+    val targetIndex = tasks.indexOfFirst { task ->
+        val startTime = task.startTime
+        val endTime = task.endTime
+        currentDateTime.isAfter(startTime) && currentDateTime.isBefore(endTime)
+    }
+
+    // Use LaunchedEffect to perform scrolling when the targetIndex changes
+    LaunchedEffect(targetIndex) {
+        if (targetIndex != -1) {
+            listState.animateScrollToItem(targetIndex)
+        }
+    }
 
     LaunchedEffect(authenticationResult, key2 = true) {
         Log.d(tag, "TasksScreen LaunchedEffect called")
@@ -135,6 +149,7 @@ fun TasksScreen(context: Context, tasksViewModel: TasksViewModel, reminderManage
     ) { paddingValues ->
         // Tasks list
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .fillMaxHeight()
                 .padding(paddingValues),
@@ -158,19 +173,34 @@ fun TasksScreen(context: Context, tasksViewModel: TasksViewModel, reminderManage
                         task.id
                     }) { task ->
                         SingleTaskCard(
+                            context = context,
+                            tasksViewModel = tasksViewModel,
                             task = task,
                             onClick = { clickedTask = task },
-                            onEditClick = { taskBeingEdited = it },
-                            canDelete = !(isTaskFirst == true || isTaskLast == true),
+                            onEditClick = {
+                                taskBeingEdited = it
+                                clickedTask = task
+                            },
+                            canDelete = !tasksViewModel.isTaskFirst(task) && !tasksViewModel.isTaskLast(task),
                             onDelete = { tasksViewModel.deleteTask(it) },
-                            isClicked = task == clickedTask
+                            isClicked = task == clickedTask,
+                            taskBeingEdited = taskBeingEdited,
+                            onTaskUpdate = { updatedTask ->
+                                taskBeingEdited = null
+                                Toast.makeText(context, "Task Edited.", Toast.LENGTH_SHORT).show()
+                                coroutineScope.launch {
+                                    tasksViewModel.updateTask(updatedTask)
+                                    reminderManager.observeAndScheduleReminders(context)
+                                }
+//                                tasksViewModel.refreshTasks()
+                            },
+                            onCancel = { taskBeingEdited = null }
                         )
                     }
                     item {
                         Text(text = "${clickedTask?.taskName}")
                     }
                 }
-
             }
         }
 
@@ -184,7 +214,7 @@ fun TasksScreen(context: Context, tasksViewModel: TasksViewModel, reminderManage
                 AddTaskScreen(
                     tasksViewModel = tasksViewModel,
                     clickedTask = clickedTask,
-                    onSave = {newTask ->
+                    onAddClick = { newTask ->
                         tasksViewModel.beginNewTaskOperations(clickedTask!!, newTask)
                         isAddingTask = false
                     },
@@ -193,30 +223,30 @@ fun TasksScreen(context: Context, tasksViewModel: TasksViewModel, reminderManage
             }
         }
 
-        // Show the edit task screen as a dialog overlay
-        if (taskBeingEdited != null) {
-            Log.d(tag, "Show Edit Task Screen")
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.3f))
-            ) {
+//        // Show the edit task screen as a dialog overlay
+//        if (taskBeingEdited != null) {
+//            Log.d(tag, "Show Edit Task Screen")
+//            Box(
+//                modifier = Modifier
+//                    .fillMaxSize()
+//                    .background(Color.Black.copy(alpha = 0.3f))
+//            ) {
 
-                EditTaskScreen(
-                    reminderManager = reminderManager,
-                    task = taskBeingEdited!!,
-                    onSave = { updatedTask ->
-                        taskBeingEdited = null
-                        Toast.makeText(context, "Task Edited.", Toast.LENGTH_SHORT).show()
-                        coroutineScope.launch {
-                            tasksViewModel.updateTask(updatedTask)
-                            reminderManager.observeAndScheduleReminders(context)
-                        }
-                        tasksViewModel.refreshTasks()
-                    },
-                    onCancel = { taskBeingEdited = null }
-                )
-            }
-        }
+//                EditTaskScreen(
+//                    reminderManager = reminderManager,
+//                    task = taskBeingEdited!!,
+//                    onSave = { updatedTask ->
+//                        taskBeingEdited = null
+//                        Toast.makeText(context, "Task Edited.", Toast.LENGTH_SHORT).show()
+//                        coroutineScope.launch {
+//                            tasksViewModel.updateTask(updatedTask)
+//                            reminderManager.observeAndScheduleReminders(context)
+//                        }
+//                        tasksViewModel.refreshTasks()
+//                    },
+//                    onCancel = { taskBeingEdited = null }
+//                )
+//            }
+//        }
     }
 }

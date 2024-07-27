@@ -64,7 +64,7 @@ fun RoutineTurboATheme(
             primaryContainer = Color(0xFFBB86FC), // Light Purple
             onPrimaryContainer = Color(0xFF332727), // Black
             inversePrimary = Color(0xFF03DAC6), // Teal
-            secondary = Color(0xFF03DAC5), // Teal
+            secondary = Color(0xFF005E14), // Teal
             onSecondary = Color(0xFFFFFFFF), // White
             secondaryContainer = Color(0xFF018786), // Dark Teal
             onSecondaryContainer = Color(0xFF000000), // Black
