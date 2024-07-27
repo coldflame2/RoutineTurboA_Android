@@ -30,8 +30,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -107,7 +105,6 @@ fun SingleTaskCard(
     val topPadding = remember(minutesFromStartOfDay) {
         with(density) { (minutesFromStartOfDay * (10.dp.toPx() / 60)).toDp() }
     }
-    Log.d(tag, "Top Padding: $topPadding. task name: ${task.taskName}")
 
     Box(
         modifier = modifier
@@ -300,51 +297,29 @@ fun SingleTaskCard(
                     }
                 }
             }
-
-
         }
 
-
-        // DropdownMenu on long press
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-            offset = DpOffset(
-                x = with(density) { longPressOffset.x.toDp() + 10.dp },
-                y = with(density) { longPressOffset.y.toDp() - 112.dp }
-            ),
-            modifier = Modifier
-                .graphicsLayer {
-                    // Apply rotation based on the expansion state
-                    // Add shadow with elevation
-                    shadowElevation = if (expanded) 8f else 0f
-                    // Animate the changes
-                }
-        ) {
-            DropdownMenuItem(
-                text = { Text("Edit") },
-                onClick = {
+        if (expanded){
+            TaskDropdownMenu(
+                onEditClick = {
                     expanded = false
                     onEditClick(task)
-                }
-            )
-
-            DropdownMenuItem(
-                text = { Text("Delete") },
-                onClick = {
+                },
+                canDelete = canDelete,
+                onDeleteClick = {
                     expanded = false
                     if (canDelete) {
                         onDelete(task)
                     }
                 },
-                enabled = canDelete
+                onDismissRequest = { expanded = false },
+                offset = DpOffset(
+                    x = with(density) { longPressOffset.x.toDp() + 10.dp },
+                    y = with(density) { longPressOffset.y.toDp() - 112.dp }
+                )
             )
         }
-
-    }
-
-
-
+    } // End of main parent Box
 
     // Dialog to show notes
     if (showNotesDialog) {
@@ -366,62 +341,3 @@ object SineEasing : Easing {
         return sin(fraction * PI.toFloat() / 2)
     }
 }
-
-
-//Box () {
-//    Box () {
-//        DottedLine ()
-//    }
-//
-//    Row () {
-//        Column () {
-//            Text ()
-//            Text ()
-//        }
-//
-//        Card () {
-//            Column () {
-//                Row () {
-//                    Text ()
-//
-//                    IconButton () {
-//                        Icon ()
-//                    }
-//                    Spacer ()
-//
-//                    IconButton () {
-//                        Icon ()
-//                    }
-//                }
-//
-//                Spacer ()
-//
-//                Row () {
-//                    Icon ()
-//
-//                    Text ()
-//                }
-//
-//                Spacer ()
-//
-//                Row () {
-//                    Icon ()
-//                    Text ()
-//                }
-//            }
-//        }
-//    }
-//}
-//
-//DropdownMenu () {
-//    DropdownMenuItem ()
-//    DropdownMenuItem ()
-//}
-//
-//AlertDialog () {
-//    Text ()
-//    Text ()
-//    Button () {
-//        Text ()
-//    }
-//}

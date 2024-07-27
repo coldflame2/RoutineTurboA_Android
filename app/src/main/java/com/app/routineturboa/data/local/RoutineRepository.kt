@@ -2,6 +2,7 @@ package com.app.routineturboa.data.local
 
 import android.content.Context
 import android.util.Log
+import androidx.room.withTransaction
 import com.app.routineturboa.data.model.TaskEntity
 import com.app.routineturboa.utils.TimeUtils.strToDateTime
 import com.app.routineturboa.utils.demoTaskFive
@@ -11,20 +12,49 @@ import com.app.routineturboa.utils.demoTaskSeven
 import com.app.routineturboa.utils.demoTaskSix
 import com.app.routineturboa.utils.demoTaskThree
 import com.app.routineturboa.utils.demoTaskTwo
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
 
 
-class RoutineRepository(private val context: Context) {
+class RoutineRepository(val context: Context) {
     val tag = "RoutineRepository"
     private var routineDatabase = RoutineDatabase.getDatabase(context)
     private var taskDao: TaskDao = routineDatabase.taskDao()
 
     fun getAllTasks(): Flow<List<TaskEntity>> = taskDao.getAllTasks()
 
+    suspend fun <T> runAsTransaction(block: suspend () -> T): T {
+        return withContext(Dispatchers.IO) {
+            routineDatabase.withTransaction {
+                block()
+            }
+        }
+    }
+
     private suspend fun insertDefaultTasks(defaultTask: TaskEntity): Long {
         Log.d(tag,"Inserting default task.")
         return taskDao.insertTask(defaultTask)
+    }
+
+    suspend fun refreshTasks() {
+        Log.d(tag, "Refreshing tasks")
+        try {
+            // In a real-world scenario, you might fetch data from a remote source here
+            // For now, we'll just re-fetch all tasks from the local database
+            val tasks = taskDao.getAllTasksList()
+            Log.d(tag, "Refreshed ${tasks.size} tasks")
+
+            // Optionally, you could perform some processing on the tasks here
+            // For example, updating task statuses based on the current time
+
+            // If you made any changes, you would update the database:
+            // updateAllTasks(tasks)
+        } catch (e: Exception) {
+            Log.e(tag, "Error refreshing tasks", e)
+            throw e // Re-throw the exception to be handled by the ViewModel
+        }
     }
 
     suspend fun insertTask(task: TaskEntity): Long {

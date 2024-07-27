@@ -22,13 +22,16 @@ interface TaskDao {
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertTask(task: TaskEntity): Long
 
+    @Query("SELECT * FROM tasks_table")
+    suspend fun getAllTasksList(): List<TaskEntity>
+
     @Update
     suspend fun updateTask(task: TaskEntity)
 
     @Transaction
     suspend fun updateTasksWithNewPositions(tasks: List<TaskEntity>) {
         tasks.forEach { task ->
-            Log.d(tag, "Updating task '${task.taskName}'. task ID: ${task.id}" )
+            Log.d(tag, "Updating task '${task.taskName}'. task ID: ${task.id}, position: ${task.position}" )
             updateTaskPosition(task.id, task.position)
         }
     }
@@ -61,5 +64,4 @@ interface TaskDao {
 
     @Query("SELECT * FROM tasks_table WHERE id = (SELECT MAX(id) FROM tasks_table)")
     suspend fun getLastTask(): TaskEntity?
-
 }

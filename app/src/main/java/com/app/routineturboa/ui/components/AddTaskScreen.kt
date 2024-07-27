@@ -30,13 +30,15 @@ import androidx.compose.ui.window.Dialog
 import com.app.routineturboa.data.model.TaskEntity
 import com.app.routineturboa.utils.TimeUtils.dateTimeToString
 import com.app.routineturboa.utils.TimeUtils.strToDateTime
+import com.app.routineturboa.viewmodel.TasksViewModel
 import java.time.LocalDateTime
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddTaskScreen(
+    tasksViewModel: TasksViewModel,
     clickedTask: TaskEntity?,
-    onSaveNewTask: (TaskEntity) -> Unit,
+    onSave: (TaskEntity) -> Unit,
     onCancel: () -> Unit
 ) {
     val tag = "AddTaskScreen"
@@ -46,6 +48,9 @@ fun AddTaskScreen(
     val clickedTaskEndTime = clickedTask?.endTime
     val clickedTaskID = clickedTask?.id
     val clickedTaskPosition = clickedTask?.position
+
+    val taskBelowBeforeAdding = tasksViewModel.getTaskBelow(clickedTask!!)
+    val durationTaskBelowBeforeAdding = taskBelowBeforeAdding?.duration
 
     // Data in State variables
     val id by remember { mutableIntStateOf(clickedTaskID?.plus(1) ?: 1) }
@@ -72,7 +77,7 @@ fun AddTaskScreen(
         if (durationFormatted.isNotEmpty()) {
             try {
                 val durationLong = durationFormatted.toLong()
-                if (durationLong > 0) {
+                if (durationLong > 0 || durationLong < durationTaskBelowBeforeAdding!!) {
                     endTimeFormatted = dateTimeToString(startTime.plusMinutes(durationLong))
                 } else {
                     Toast.makeText(context, "Invalid duration. End time unchanged.", Toast.LENGTH_SHORT).show()
@@ -188,9 +193,7 @@ fun AddTaskScreen(
                                 reminder = reminder,
                                 type = taskType,
                             )
-
-                            onSaveNewTask(newTask)
-                            Toast.makeText(context, "Task Added.", Toast.LENGTH_SHORT).show()
+                            onSave(newTask)
 
                         } else {
                             Toast.makeText(context, "Please fill all fields correctly", Toast.LENGTH_SHORT).show()
