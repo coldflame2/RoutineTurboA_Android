@@ -1,8 +1,10 @@
 package com.app.routineturboa.ui.components
 
 import android.content.Context
+import android.os.Build
 import android.util.Log
 import android.widget.Toast
+import androidx.annotation.RequiresApi
 import androidx.compose.animation.core.Easing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -10,6 +12,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -43,6 +46,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -62,19 +66,23 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.app.routineturboa.data.model.TaskEntity
+import com.app.routineturboa.reminders.ReminderManager
 import com.app.routineturboa.utils.DottedLine
 import com.app.routineturboa.utils.TimeUtils.dateTimeToString
 import com.app.routineturboa.utils.TimeUtils.strToDateTime
 import com.app.routineturboa.viewmodel.TasksViewModel
+import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import kotlin.math.PI
 import kotlin.math.sin
 
+@RequiresApi(Build.VERSION_CODES.S)
 @Composable
 fun SingleTaskCard(
     context: Context,
     tasksViewModel: TasksViewModel,
+    reminderManager: ReminderManager,
     modifier: Modifier = Modifier,
     task: TaskEntity,
     onClick: () -> Unit,
@@ -89,6 +97,7 @@ fun SingleTaskCard(
     val tag = "SingleTaskCard"
     var expanded by remember { mutableStateOf(false) }
     var longPressOffset by remember { mutableStateOf(Offset.Zero) }
+    val coroutineScope = rememberCoroutineScope()
 
     val density = LocalDensity.current
     var showNotesDialog by remember { mutableStateOf(false) }
@@ -97,6 +106,8 @@ fun SingleTaskCard(
     val currentTime = LocalDateTime.now()
     val isTaskNow = currentTime.isAfter(task.startTime) && currentTime.isBefore(task.endTime)
     val infiniteTransition = rememberInfiniteTransition(label = "BorderAnimation")
+
+    var isFullEditing by remember { mutableStateOf(false) }
 
     val borderAlpha by infiniteTransition.animateFloat(
         initialValue = 0.2f,
@@ -223,35 +234,49 @@ fun SingleTaskCard(
                 ) {
                     // In-place editing of Task Name and Duration
                     if (taskBeingEdited?.id == task.id) {
-                        var startTime by remember { mutableStateOf(task.startTime) }
+                        val startTime by remember { mutableStateOf(task.startTime) }
                         var editedTaskName by remember { mutableStateOf(task.taskName) }
                         var editedDurationString by remember { mutableStateOf(task.duration.toString()) }
                         var endTimeString by remember { mutableStateOf(dateTimeToString(task.endTime)) }
 
-                        val taskBelow = tasksViewModel.getTaskBelow(task)
-                        val durationTaskBelow = taskBelow?.duration
+                        val taskBelow by remember { mutableStateOf(tasksViewModel.getTaskBelow(task)) }
 
                         LaunchedEffect(editedDurationString) {
                             if (editedDurationString.isNotEmpty()) {
                                 try {
-                                    val durationLong = editedDurationString.toLong()
+//                                    Log.d("DurationCheck", "Entered duration: $editedDurationString minutes")
+//                                    Log.d("DurationCheck", "Task below duration: ${taskBelow?.duration} minutes")
 
-                                    // Check for valid positive duration
-                                    if (durationLong <= 0) {
-                                        Toast.makeText(context, "Duration must be positive. End time unchanged.", Toast.LENGTH_SHORT).show()
-                                    } else if (durationTaskBelow != null && durationLong >= durationTaskBelow) {
-                                        Toast.makeText(context, "Invalid duration. End time unchanged.", Toast.LENGTH_SHORT).show()
+                                    if (taskBelow?.duration != null) {
+                                        val maxValidDuration = editedDurationString.toInt() + taskBelow?.duration!! - 1
+
+                                        if (editedDurationString.toInt() >= maxValidDuration) {
+//                                            val message = "Invalid duration. Must be less than $maxValidDuration minutes."
+                                            Toast.makeText(
+                                                context, "must be less than $maxValidDuration minutes.",
+                                                Toast.LENGTH_SHORT).show()
+//                                            Log.d("DurationCheck", message)
+                                        }
+
+                                        if (editedDurationString.toInt() ==0 ){
+//                                            val message = "Duration cannot be 0. Please enter a valid number."
+                                            Toast.makeText(context, "Duration cannot be 0", Toast.LENGTH_SHORT).show()
+//                                            Log.d("DurationCheck", message)
+                                        } else {
+                                            endTimeString = dateTimeToString(startTime.plusMinutes(editedDurationString.toLong()))
+//                                            Log.d("DurationCheck", "End time updated to: $endTimeString")
+                                        }
                                     } else {
-                                        endTimeString = dateTimeToString(startTime.plusMinutes(durationLong))
+                                        endTimeString = dateTimeToString(startTime.plusMinutes(editedDurationString.toLong()))
+//                                        Log.d("DurationCheck", "No task below. End time updated to: $endTimeString")
                                     }
                                 } catch (e: NumberFormatException) {
-                                    Toast.makeText(context, "Invalid duration format. End time unchanged.", Toast.LENGTH_SHORT).show()
+//                                    val message = "Invalid duration format. Please enter a valid number."
+                                    Toast.makeText(context, "Invalid duration format", Toast.LENGTH_SHORT).show()
+//                                    Log.d("DurationCheck", message)
                                 }
-                            } else {
-                                Toast.makeText(context, "Duration is empty. End time unchanged.", Toast.LENGTH_SHORT).show()
                             }
                         }
-
 
 
                         TextField(
@@ -279,15 +304,45 @@ fun SingleTaskCard(
                             TextButton(onClick = { onCancel() }) {
                                 Text("Cancel")
                             }
-                            Button(onClick = {
-                                val updatedTask = task.copy(
-                                    taskName = editedTaskName,
-                                    duration = editedDurationString.toIntOrNull() ?: task.duration,
-                                    endTime = strToDateTime(endTimeString)
+
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = "Edit Task",
+                                modifier = Modifier.clickable{
+                                    isFullEditing = true
+                                }
+                                    .align(Alignment.CenterVertically)
+                            )
+
+                            if (isFullEditing) {
+                                EditTaskScreen(
+                                    reminderManager = reminderManager,
+                                    task = taskBeingEdited,
+                                    onSave = { updatedTask ->
+                                        onCancel()
+                                        coroutineScope.launch {
+                                            tasksViewModel.updateTask(updatedTask)
+                                            reminderManager.observeAndScheduleReminders(context)
+                                        }
+                                        tasksViewModel.refreshTasks()
+                                    },
+                                    onCancel = { isFullEditing = false }
                                 )
-                                onTaskUpdate(updatedTask)
-                            }) {
-                                Text("Save")
+                            }
+
+                            Button(onClick = {
+                                    val updatedTask = task.copy(
+                                        taskName = editedTaskName,
+                                        duration = editedDurationString.toIntOrNull() ?: task.duration,
+                                        endTime = strToDateTime(endTimeString)
+                                    )
+                                    onTaskUpdate(updatedTask)
+                                }
+                            ) {
+                                Text(
+                                    text = "Save",
+                                    modifier = Modifier.padding(start = 5.dp)
+                                )
                             }
                         }
 

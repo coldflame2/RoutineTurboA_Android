@@ -45,6 +45,13 @@ class TasksViewModel(private val repository: RoutineRepository) : ViewModel() {
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun getTaskBelow(clickedTask: TaskEntity): TaskEntity? {
+        Log.d(TAG, "Getting task below clickedTask...")
+        Log.d(TAG, "clickedTask: $clickedTask")
+
+        viewModelScope.launch {
+            repository.refreshTasks()
+        }
+
         if (isTaskLast(clickedTask)){
             return null
         }
@@ -55,10 +62,10 @@ class TasksViewModel(private val repository: RoutineRepository) : ViewModel() {
 
         return if (clickedTaskIndex != -1 && clickedTaskIndex < currentTasks.size - 1) {
             val nextTask = currentTasks[clickedTaskIndex + 1]
-//            Log.d("getTaskBelow", "Next Task: ${nextTask.taskName}")
+            Log.d("getTaskBelow", "Next Task: ${nextTask.taskName}")
             nextTask
         } else {
-//            Log.d("getTaskBelow", "No task found below or clicked task is not in the list.")
+            Log.d("getTaskBelow", "No task found below or clicked task is not in the list.")
             null // Return null if the clicked task is not found or is at the bottom
         }
     }

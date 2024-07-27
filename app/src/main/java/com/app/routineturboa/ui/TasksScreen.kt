@@ -175,6 +175,7 @@ fun TasksScreen(context: Context, tasksViewModel: TasksViewModel, reminderManage
                         SingleTaskCard(
                             context = context,
                             tasksViewModel = tasksViewModel,
+                            reminderManager = reminderManager,
                             task = task,
                             onClick = { clickedTask = task },
                             onEditClick = {
@@ -192,7 +193,7 @@ fun TasksScreen(context: Context, tasksViewModel: TasksViewModel, reminderManage
                                     tasksViewModel.updateTask(updatedTask)
                                     reminderManager.observeAndScheduleReminders(context)
                                 }
-//                                tasksViewModel.refreshTasks()
+                                tasksViewModel.refreshTasks()
                             },
                             onCancel = { taskBeingEdited = null }
                         )
