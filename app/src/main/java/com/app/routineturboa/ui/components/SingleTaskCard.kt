@@ -118,6 +118,13 @@ fun SingleTaskCard(
         ), label = "BorderAlpha"
     )
 
+    val taskHeight: Dp = when {
+        taskBeingEdited != null && taskBeingEdited.id == task.id -> 220.dp
+        task.type == "QuickTask" -> 50.dp
+        task.type == "MainTask" -> 110.dp
+        else -> 110.dp // Default height, in case there are other task types
+    }
+
     val border = when {
         isTaskNow -> BorderStroke(
             width = 3.dp,
@@ -193,13 +200,6 @@ fun SingleTaskCard(
             }
 
             // Main Task Card With Details
-            val taskHeight: Dp = when {
-                taskBeingEdited != null && taskBeingEdited.id == task.id -> 220.dp
-                task.type == "QuickTask" -> 50.dp
-                task.type == "MainTask" -> 110.dp
-                else -> 110.dp // Default height, in case there are other task types
-            }
-
             Card(
                 modifier = modifier
                     .height(taskHeight)
@@ -277,7 +277,6 @@ fun SingleTaskCard(
                                 }
                             }
                         }
-
 
                         TextField(
                             value = editedTaskName,

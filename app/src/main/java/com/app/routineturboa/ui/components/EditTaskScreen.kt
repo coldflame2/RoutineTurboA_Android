@@ -4,26 +4,31 @@ import android.os.Build
 import android.util.Log
 import android.widget.Toast
 import androidx.annotation.RequiresApi
-import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddTask
-import androidx.compose.material.icons.filled.Task
+import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.LinkOff
+import androidx.compose.material.icons.sharp.AddAlert
+import androidx.compose.material.icons.sharp.Start
+import androidx.compose.material.icons.sharp.Timer
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -31,14 +36,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.app.routineturboa.R
 import com.app.routineturboa.data.model.TaskEntity
 import com.app.routineturboa.reminders.ReminderManager
+import com.app.routineturboa.utils.CustomTextField
 import com.app.routineturboa.utils.TimeUtils.dateTimeToString
 import com.app.routineturboa.utils.TimeUtils.strToDateTime
 import kotlinx.coroutines.launch
@@ -73,6 +81,7 @@ fun EditTaskScreen(
     var positionFormatted by remember {mutableStateOf(position.toString())}
 
     val coroutineScope = rememberCoroutineScope()
+    var isReminderLinked by remember { mutableStateOf(true) }
 
     Dialog(
         onDismissRequest = {onCancel()},
@@ -81,79 +90,120 @@ fun EditTaskScreen(
         Surface(
             modifier = Modifier
                 .fillMaxWidth(0.9f),
-            color = MaterialTheme.colorScheme.background,
-            contentColor = MaterialTheme.colorScheme.onBackground
+            color = MaterialTheme.colorScheme.secondaryContainer,
+            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
         ) {
             Column(
-                modifier = Modifier.padding(16.dp).fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(15.dp)
+                modifier = Modifier
+                    .padding(8.dp)
+                    .fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
+                Text("Edit Task", style = MaterialTheme.typography.titleLarge)
 
-                TextField(
+                CustomTextField(
                     value = taskName,
                     onValueChange = { taskName = it },
-                    label = { Text("Task Name") },
-                    placeholder = { Text("Enter task name") },
-                    modifier = Modifier.fillMaxWidth(),
-                    leadingIcon = { Icon(imageVector = Icons.Default.AddTask, contentDescription = "Add New Task") },
-                    trailingIcon = { Icon(imageVector = Icons.Default.Task, contentDescription = "Add New Task") },
+                    label = "Task Name",
+                    placeholder = "Enter task name",
+                    leadingIcon = Icons.Default.AddTask,
+                    modifier = Modifier.fillMaxWidth()
                 )
 
-                TextField(
+                // Start Time and Reminder Side by Side with Link/Link-off button
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    CustomTextField(
+                        value = startTimeFormatted,
+                        onValueChange = { startTimeFormatted = it },
+                        label = "Start Time",
+                        placeholder = "Enter start time",
+                        leadingIcon = Icons.Sharp.Start,
+                        modifier = Modifier.weight(1f),
+                    )
+
+                    Icon (
+                        imageVector = if (isReminderLinked) Icons.Default.Link
+                        else Icons.Default.LinkOff,
+                        contentDescription = "Link Reminder",
+                        modifier = Modifier
+                            .clickable {
+                                isReminderLinked = !isReminderLinked
+                                if (isReminderLinked) {
+                                    reminderFormatted = startTimeFormatted
+                                }
+                            }
+                            .align(Alignment.CenterVertically)
+                            .size(25.dp)
+                    )
+
+                    CustomTextField(
+                        value = reminderFormatted,
+                        onValueChange = { reminderFormatted = it },
+                        label = "Reminder",
+                        placeholder = "Enter reminder time",
+                        leadingIcon = Icons.Sharp.AddAlert,
+                        enabled = !isReminderLinked,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                // Duration and End Time Side by Side
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    CustomTextField(
+                        value = durationFormatted,
+                        onValueChange = { durationFormatted = it },
+                        label = "Duration",
+                        placeholder = "Enter duration",
+                        leadingIcon = Icons.Sharp.Timer,
+                        keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f),
+                    )
+
+                    CustomTextField(
+                        value = endTimeFormatted,
+                        onValueChange = { endTimeFormatted = it },
+                        label = "End Time",
+                        placeholder = "Enter End Time",
+                        leadingIconResId = R.drawable.arrowrighttoleft,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+
+                CustomTextField(
                     value = notes,
-                    minLines = 3,
                     onValueChange = { notes = it },
-                    label = { Text("Notes") },
-                    modifier = Modifier.fillMaxWidth().verticalScroll(ScrollState(1))
+                    label = "Notes",
+                    placeholder = "Add Notes",
+                    leadingIcon = Icons.Default.Link,
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    singleLine = false
                 )
 
-                Spacer(modifier = Modifier.padding(1.dp))
+                TaskTypeDropdown()
 
-                TextField(
-                    value = startTimeFormatted,
-                    onValueChange = {startTimeFormatted = it},
-                    label = { Text("Start Time") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.padding(1.dp))
-
-                TextField(
-                    value = endTimeFormatted,
-                    onValueChange = {endTimeFormatted = it},
-                    label = { Text("End Time") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.padding(1.dp))
-
-                TextField(
-                    value = durationFormatted,
-                    onValueChange = {durationFormatted = it},
-                    label = { Text("Duration (minutes)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.padding(1.dp))
-
-                TextField(
-                    value = reminderFormatted,
-                    onValueChange = {reminderFormatted = it},
-                    label = { Text("Reminder Time") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.padding(1.dp))
-
-                TextField(
+                CustomTextField(
                     value = idFormatted,
-                    onValueChange = {idFormatted = it},
-                    label = { Text("Task ID") },
+                    onValueChange = { },
+                    label = "ID (Only for dev)",
+                    placeholder = "Internal purposes",
+                    enabled = false,
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = false
                 )
 
-                TextField(
+                CustomTextField(
                     value = positionFormatted,
                     onValueChange = {positionFormatted = it},
-                    label = { Text("Task Position") },
+                    label = "Position (Don't Change) (Only for dev)",
+                    placeholder = "Internal purposes. Don't change.",
                     modifier = Modifier.fillMaxWidth(),
                     enabled = true
                 )
@@ -164,16 +214,25 @@ fun EditTaskScreen(
                 ) {
                     // Cancel Button
                     Button(
-                        modifier = Modifier.padding(10.dp),
+                        modifier = Modifier
+                            .padding(5.dp)
+                            .size(120.dp, 50.dp),
                         shape = RoundedCornerShape(25.dp),
-                        onClick = { onCancel() }) {
+
+                        onClick = { onCancel() },
+                        colors = ButtonDefaults.buttonColors(
+                            MaterialTheme.colorScheme.surfaceContainerLow,
+                        )
+
+                    ) {
                         Text("Cancel")
                     }
 
                     // Save Button
-                    Button(
-                        modifier = Modifier.padding(10.dp),
-                        shape = RoundedCornerShape(25.dp),
+                    FloatingActionButton(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(5.dp).size(120.dp, 50.dp),
+                        elevation = FloatingActionButtonDefaults.elevation(10.dp),
                         onClick = {
                             Log.d("EditTaskScreen", "Save Button clicked...")
                             coroutineScope.launch {
@@ -189,6 +248,7 @@ fun EditTaskScreen(
                                     Log.e("EditTaskScreen", "Error: $e")
                                     Toast.makeText(context, "Error saving task: ${e.message}", Toast.LENGTH_LONG).show()
                                 }
+
                                 val updatedTask = task.copy(
                                     taskName = taskName,
                                     position = position,

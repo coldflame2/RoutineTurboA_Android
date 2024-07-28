@@ -5,9 +5,14 @@ import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -16,6 +21,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
@@ -25,6 +31,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -39,6 +46,7 @@ import kotlinx.coroutines.launch
 @RequiresApi(Build.VERSION_CODES.S)
 @Composable
 fun MainScreen(
+    modifier: Modifier = Modifier,
     hasNotificationPermission: Boolean,
     onRequestPermission: () -> Unit,
     reminderManager: ReminderManager
@@ -56,9 +64,13 @@ fun MainScreen(
 
     val configuration = LocalConfiguration.current
     val screenWidth = configuration.screenWidthDp.dp
+    val insets = WindowInsets.statusBars
+    val navInsets = WindowInsets.navigationBars
+    val insetsPadding = insets.asPaddingValues()
 
     ModalNavigationDrawer(
         drawerState = drawerState,
+        modifier = Modifier.consumeWindowInsets(navInsets),
         drawerContent = {
             ModalDrawerSheet(
                 drawerContainerColor = MaterialTheme.colorScheme.surface,
@@ -78,11 +90,14 @@ fun MainScreen(
                 })
             }
         },
+        scrimColor = Color.Blue
     ) {
         Scaffold(
             topBar = { TopBar(drawerState) },
+            contentWindowInsets = ScaffoldDefaults.contentWindowInsets,
         ) { paddingValues ->
-            Row(modifier = Modifier.padding(paddingValues)) {
+            Row(modifier = Modifier.consumeWindowInsets(paddingValues).padding(paddingValues),
+            ) {
                 TasksScreen(context, tasksViewModel, reminderManager)
             }
         }

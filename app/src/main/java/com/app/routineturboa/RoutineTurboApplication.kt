@@ -9,15 +9,14 @@ import com.app.routineturboa.services.MsalAuthManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
-class MyApplication : Application() {
+class RoutineTurboApplication : Application() {
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     lateinit var msalAuthManager: MsalAuthManager
 
     companion object {
-        lateinit var instance: MyApplication
+        lateinit var instance: RoutineTurboApplication
             private set
     }
 
@@ -36,11 +35,6 @@ class MyApplication : Application() {
         }
 
         createNotificationChannel()
-    }
-
-    override fun onTerminate() {
-        applicationScope.cancel()
-        super.onTerminate()
     }
 
     private fun createNotificationChannel() {

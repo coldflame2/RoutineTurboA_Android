@@ -1,5 +1,6 @@
 package com.app.routineturboa.ui.theme
 
+import android.app.Activity
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
@@ -7,8 +8,12 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
 
 
 @Composable
@@ -53,8 +58,6 @@ fun RoutineTurboATheme(
             surfaceContainerHighest = Color(0xFF121212), // Dark Gray
             surfaceContainerLow = Color(0xFF333333), // Darker Gray
             surfaceContainerLowest = Color(0xFF444444) // Dark Gray
-
-
         )
 
     } else {
@@ -66,7 +69,7 @@ fun RoutineTurboATheme(
             inversePrimary = Color(0xFF03DAC6), // Teal
             secondary = Color(0xFF005E14), // Teal
             onSecondary = Color(0xFFFFFFFF), // White
-            secondaryContainer = Color(0xFF018786), // Dark Teal
+            secondaryContainer = Color(0xF7A1DADA), // Dark Teal
             onSecondaryContainer = Color(0xFF000000), // Black
             tertiary = Color(0xFF03DAC6), // Teal
             onTertiary = Color(0xFFFFFFFF), // White
@@ -87,15 +90,25 @@ fun RoutineTurboATheme(
             onErrorContainer = Color(0xFF000000), // Black
             outline = Color(0xFF000000), // Black
             outlineVariant = Color(0xFFDDDDDD), // Light Gray
-            scrim = Color(0xFF0D1492), // Semi-transparent Black
+            scrim = Color(0xFF0D1492),
             surfaceBright = Color(0xFFF5F5F5), // Off-White
             surfaceContainer = Color(0xFFF5F5F5), // Off-White
             surfaceContainerHigh = Color(0xFFEEEEEE), // Very Light Gray
             surfaceContainerHighest = Color(0xFFFAFAFA), // Almost White
             surfaceContainerLow = Color(0xFFC5C5C5), // Light Gray
-            surfaceContainerLowest = Color(0xFFBDBDBD) // Gray
+            surfaceContainerLowest = Color(0xFFBDBDBD),
+            surfaceDim = Color(0xFFD9F3DF)// Gray
 
         )
+    }
+
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            val window = (view.context as Activity).window
+            window.statusBarColor = Color.Transparent.toArgb()
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+        }
     }
 
     MaterialTheme(

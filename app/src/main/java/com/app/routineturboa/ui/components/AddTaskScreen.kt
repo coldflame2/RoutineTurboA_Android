@@ -2,6 +2,7 @@ package com.app.routineturboa.ui.components
 
 import android.util.Log
 import android.widget.Toast
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -10,7 +11,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddTask
 import androidx.compose.material.icons.filled.Link
@@ -42,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.app.routineturboa.data.model.TaskEntity
+import com.app.routineturboa.utils.CustomTextField
 import com.app.routineturboa.utils.TimeUtils.dateTimeToString
 import com.app.routineturboa.utils.TimeUtils.possibleFormats
 import com.app.routineturboa.utils.TimeUtils.strToDateTime
@@ -154,7 +158,6 @@ fun AddTaskScreen(
     }
 
 
-
     // Update reminder time if linked
     LaunchedEffect(startTimeFormatted) {
         if (isReminderLinked) {
@@ -174,21 +177,22 @@ fun AddTaskScreen(
         ) {
             Column(
                 modifier = Modifier
-                    .padding(16.dp)
+                    .padding(8.dp)
                     .fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(15.dp)
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Text("Add New Task", style = MaterialTheme.typography.titleLarge)
 
-                TextField(
+                CustomTextField(
                     value = taskName,
                     onValueChange = { taskName = it },
-                    label = { Text("Task Name") },
-                    placeholder = { Text("Enter task name") },
-                    modifier = Modifier.fillMaxWidth(),
-                    leadingIcon = { Icon(imageVector = Icons.Default.AddTask, contentDescription = "Add New Task")},
+                    label = "Task Name",
+                    placeholder = "Enter task name",
+                    leadingIcon = Icons.Default.AddTask,
+                    modifier = Modifier.fillMaxWidth()
                 )
 
+                // Start Time and Reminder Side by Side with Link/Link-off button
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -224,6 +228,7 @@ fun AddTaskScreen(
                     )
                 }
 
+                // Duration and End Time Side by Side
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -249,8 +254,10 @@ fun AddTaskScreen(
                     value = taskNotes,
                     onValueChange = { taskNotes = it },
                     label = { Text("Task Notes") },
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = {Text ("Add task notes")}
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(ScrollState(1)),
+                    placeholder = {Text ("Add task notes")},
                 )
 
                 TaskTypeDropdown()
@@ -267,18 +274,27 @@ fun AddTaskScreen(
                     value = taskPositionFormatted,
                     onValueChange = { },
                     label = { Text("Task Position") },
-                    enabled = false,
                     modifier = Modifier.fillMaxWidth(),
+                    enabled = false,
                 )
 
                 Row(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Button(onClick = { onCancel() }) {
+                    // Cancel Button
+                    Button(
+                        modifier = Modifier.padding(5.dp),
+                        shape = RoundedCornerShape(25.dp),
+                        onClick = { onCancel() }) {
                         Text("Cancel")
                     }
-                    Button(onClick = {
+
+                    // Save Button
+                    Button(
+                        modifier = Modifier.padding(5.dp),
+                        shape = RoundedCornerShape(25.dp),
+                        onClick = {
                         if (taskName.isNotBlank() && duration > 0) {
                             startTime = strToDateTime(startTimeFormatted)
                             endTime = strToDateTime(endTimeFormatted)

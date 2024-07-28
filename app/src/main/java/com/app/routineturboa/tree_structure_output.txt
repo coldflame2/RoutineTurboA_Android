@@ -1,0 +1,48 @@
+|-- routineturboa/
+|   |-- list_files_in_tree_structure.py
+|   |-- MainActivity.kt
+|   |-- MyApplication.kt
+|   |-- data/
+|   |   |-- local/
+|   |   |   |-- RoutineDatabase.kt
+|   |   |   |-- RoutineRepository.kt
+|   |   |   |-- TaskDao.kt
+|   |   |-- model/
+|   |   |   |-- TaskEntity.kt
+|   |-- reminders/
+|   |   |-- ReminderManager.kt
+|   |   |-- ReminderReceiver.kt
+|   |   |-- ScheduleReminders.kt
+|   |-- services/
+|   |   |-- downloadFromOneDrive.kt
+|   |   |-- MsalAuthManager.kt
+|   |   |-- OneDriveManager.kt
+|   |-- ui/
+|   |   |-- MainScreen.kt
+|   |   |-- TasksScreen.kt
+|   |   |-- components/
+|   |   |   |-- AddTaskScreen.kt
+|   |   |   |-- ContentForDrawer.kt
+|   |   |   |-- EditTaskScreen.kt
+|   |   |   |-- HourColumn.kt
+|   |   |   |-- SignInItem.kt
+|   |   |   |-- SingleTaskCard.kt
+|   |   |   |-- TaskCardPlaceholder.kt
+|   |   |   |-- TaskDropdownMenu.kt
+|   |   |   |-- testingComposable.kt
+|   |   |   |-- TopBar.kt
+|   |   |-- theme/
+|   |   |   |-- Color.kt
+|   |   |   |-- Theme.kt
+|   |   |   |-- Type.kt
+|   |-- utils/
+|   |   |-- Converters.kt
+|   |   |-- DottedLine.kt
+|   |   |-- permissions.kt
+|   |   |-- routineTemplates.kt
+|   |   |-- showToast.kt
+|   |   |-- themeAwareColor.kt
+|   |   |-- TimeUtils.kt
+|   |-- viewmodel/
+|   |   |-- TasksViewModel.kt
+|   |   |-- TaskViewModelFactory.kt
