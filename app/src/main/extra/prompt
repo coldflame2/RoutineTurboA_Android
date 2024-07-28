@@ -1,51 +1,57 @@
-I am building an app, compatible with API 34 for use in Android 14.0, using Kotlin, Room Library, MSAL for OneDrive integration, Jetpack compose, and KSP plugin. The app is called RoutineTurboA. It's functionality is like a to-do app, but it covers the entire 24 hours in a day. It starts from 00:00 and ends on 23:59. Each task starts from the previous task's end time.
+
+
+I am building an app, compatible with API 34 for use in Android 14.0, using Kotlin, Room Library, MSAL for OneDrive integration, Jetpack compose, and KSP plugin. The app is called RoutineTurboA. It's functionality is like a to-do app, but it covers the entire 24 hours in a day. It starts from 00:01 and ends on 23:59. Each task starts from the previous task's end time.
+
+ I am beginner and I built most of this using help from AI tools, including yourself. So the app is not perfect. I need your help in building and refining this app. I am interesting in learning as well as building this application. And the most important thing:  I am interested in latest API, methods, approach, as applicable in year 2024. So do not tell me about anything that's deprecated or no longer valid. Get the most latest accurate information.
 
 Here's the structure of my app:
-
-|   |
 |-- routineturboa/
+|   |-- list_files_in_tree_structure.py
 |   |-- MainActivity.kt
 |   |-- MyApplication.kt
-|   |
 |   |-- data/
-|   |
 |   |   |-- local/
-|   |   |   |-- DatabaseHelper.kt
+|   |   |   |-- RoutineDatabase.kt
 |   |   |   |-- RoutineRepository.kt
-|   |
+|   |   |   |-- TaskDao.kt
 |   |   |-- model/
-|   |   |   |-- Task.kt
-|   |
+|   |   |   |-- TaskEntity.kt
+|   |-- reminders/
+|   |   |-- ReminderManager.kt
+|   |   |-- ReminderReceiver.kt
+|   |   |-- ScheduleReminders.kt
 |   |-- services/
 |   |   |-- downloadFromOneDrive.kt
-|   |   |-- MSALAuthManager.kt
+|   |   |-- MsalAuthManager.kt
 |   |   |-- OneDriveManager.kt
-|   |
 |   |-- ui/
 |   |   |-- MainScreen.kt
-|   |
+|   |   |-- TasksScreen.kt
 |   |   |-- components/
 |   |   |   |-- AddTaskScreen.kt
+|   |   |   |-- ContentForDrawer.kt
 |   |   |   |-- EditTaskScreen.kt
-|   |   |   |-- RoutineDrawerContent.kt
-|   |   |   |-- SignInButton.kt
-|   |   |   |-- TaskItem.kt
-|   |
+|   |   |   |-- HourColumn.kt
+|   |   |   |-- SignInItem.kt
+|   |   |   |-- SingleTaskCard.kt
+|   |   |   |-- TaskCardPlaceholder.kt
+|   |   |   |-- TaskDropdownMenu.kt
+|   |   |   |-- testingComposable.kt
+|   |   |   |-- TopBar.kt
 |   |   |-- theme/
 |   |   |   |-- Color.kt
 |   |   |   |-- Theme.kt
 |   |   |   |-- Type.kt
-|   |
 |   |-- utils/
-|   |   |-- TimeUtils.kt
-|   |   |-- showToast.kt
+|   |   |-- Converters.kt
+|   |   |-- DottedLine.kt
 |   |   |-- permissions.kt
-|   |
+|   |   |-- routineTemplates.kt
+|   |   |-- showToast.kt
+|   |   |-- themeAwareColor.kt
+|   |   |-- TimeUtils.kt
 |   |-- viewmodel/
-|   |   |-- TaskViewModel.kt
+|   |   |-- TasksViewModel.kt
 |   |   |-- TaskViewModelFactory.kt
-|   |
-|   |-- reminders/
-|   |   |-- ReminderManager.kt
-|   |   |-- ReminderReceiver.kt
-|   |
+
+Also, note that I am interested in latest API, methods, approach, as applicable in year 2024. So do not tell me about anything that's deprecated or no longer valid. Get the most latest accurate information.
