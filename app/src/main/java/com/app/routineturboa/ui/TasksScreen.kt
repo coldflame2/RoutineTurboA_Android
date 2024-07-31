@@ -57,7 +57,6 @@ fun TasksScreen(
 
     val tasks by tasksViewModel.tasks.collectAsStateWithLifecycle()
     var clickedTask by remember { mutableStateOf<TaskEntity?>(null) }
-    val taskBeingEdited = remember { mutableStateOf<TaskEntity?>(null) }
     var isAddingTask by remember { mutableStateOf(false) }
     val hasScrolledToTarget = remember { mutableStateOf(false) }
 

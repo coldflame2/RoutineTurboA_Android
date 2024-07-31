@@ -79,12 +79,8 @@ fun SingleTaskCard(
     isClicked: Boolean
 ) {
     // <editor-fold desc="variables">
-    val tag = "SingleTaskCard"
-
-
     var expanded by remember { mutableStateOf(false) }
     var longPressOffset by remember { mutableStateOf(Offset.Zero) }
-    val forceRecompose = remember { mutableStateOf(false) }
 
     val density = LocalDensity.current
     var showNotesDialog by remember { mutableStateOf(false) }

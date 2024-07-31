@@ -149,7 +149,6 @@ fun QuickEditScreen(
 
         if (isFullEditing.value) {
             EditTaskScreen(
-                reminderManager = reminderManager,
                 task = task,
                 onConfirmTaskEdit = { updatedTask ->
                     isFullEditing.value = false
