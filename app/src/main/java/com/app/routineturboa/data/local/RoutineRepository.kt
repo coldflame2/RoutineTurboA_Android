@@ -63,8 +63,6 @@ class RoutineRepository(val context: Context) {
         taskDao.updateTasksWithNewPositions(tasks)
     }
 
-    suspend fun updateAllTasks(tasks: List<TaskEntity>) = taskDao.updateAllTasks(tasks)
-
     suspend fun deleteTask(task: TaskEntity) = taskDao.deleteTask(task)
 
     suspend fun getTaskById(taskId: Int): TaskEntity? = taskDao.getTaskById(taskId)

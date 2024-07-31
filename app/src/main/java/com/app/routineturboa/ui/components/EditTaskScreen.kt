@@ -56,7 +56,6 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditTaskScreen(
-    reminderManager: ReminderManager,
     task: TaskEntity,
     onConfirmTaskEdit: suspend (TaskEntity) -> Unit,
     onCancel: () -> Unit

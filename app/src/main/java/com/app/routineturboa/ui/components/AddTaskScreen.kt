@@ -85,11 +85,10 @@ fun AddTaskScreen(
     var endTime by remember { mutableStateOf(
         clickedTaskEndTime?.plusMinutes(duration) ?: LocalDateTime.now().plusMinutes(1)) }
     var reminder by remember { mutableStateOf(startTime) }
-    var taskType by remember { mutableStateOf("") }
+    val taskType by remember { mutableStateOf("") }
     var taskPosition by remember { mutableIntStateOf(clickedTaskPosition?.plus(1)?: 2) }
 
     var isReminderLinked by remember { mutableStateOf(true) }
-    var isDurationLinked by remember { mutableStateOf(true) }
 
     // Convert state variables to  string for display
     var startTimeFormatted by remember {mutableStateOf(dateTimeToString(startTime))}

@@ -22,9 +22,6 @@ interface TaskDao {
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertTask(task: TaskEntity): Long
 
-    @Query("SELECT * FROM tasks_table")
-    suspend fun getAllTasksList(): List<TaskEntity>
-
     @Update
     suspend fun updateTask(task: TaskEntity)
 
