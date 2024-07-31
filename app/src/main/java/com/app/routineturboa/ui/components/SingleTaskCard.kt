@@ -3,16 +3,13 @@ package com.app.routineturboa.ui.components
 import android.content.Context
 import android.os.Build
 import android.util.Log
-import android.widget.Toast
 import androidx.annotation.RequiresApi
-import androidx.compose.animation.core.Easing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,9 +25,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.sharp.LibraryBooks
-import androidx.compose.material.icons.filled.Alarm
+import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -39,14 +35,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -68,14 +60,10 @@ import androidx.compose.ui.unit.sp
 import com.app.routineturboa.data.model.TaskEntity
 import com.app.routineturboa.reminders.ReminderManager
 import com.app.routineturboa.utils.DottedLine
-import com.app.routineturboa.utils.TimeUtils.dateTimeToString
-import com.app.routineturboa.utils.TimeUtils.strToDateTime
+import com.app.routineturboa.utils.SineEasing
 import com.app.routineturboa.viewmodel.TasksViewModel
-import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-import kotlin.math.PI
-import kotlin.math.sin
 
 @RequiresApi(Build.VERSION_CODES.S)
 @Composable
@@ -86,43 +74,57 @@ fun SingleTaskCard(
     modifier: Modifier = Modifier,
     task: TaskEntity,
     onClick: () -> Unit,
-    onEditClick: (TaskEntity) -> Unit,
     canDelete: Boolean,
     onDelete: (TaskEntity) -> Unit,
-    isClicked: Boolean,
-    taskBeingEdited: TaskEntity?,
-    onTaskUpdate: (TaskEntity) -> Unit,
-    onCancel: () -> Unit
+    isClicked: Boolean
 ) {
+    // <editor-fold desc="variables">
     val tag = "SingleTaskCard"
+
+
     var expanded by remember { mutableStateOf(false) }
     var longPressOffset by remember { mutableStateOf(Offset.Zero) }
-    val coroutineScope = rememberCoroutineScope()
+    val forceRecompose = remember { mutableStateOf(false) }
 
     val density = LocalDensity.current
     var showNotesDialog by remember { mutableStateOf(false) }
     val taskType = task.type
+
     val formattedStartTime = task.startTime.format(DateTimeFormatter.ofPattern("hh:mm a"))
+    val startTimeHourString = formattedStartTime.substring(0, 2)
+    val startTimeMinuteString = formattedStartTime.substring(3, 5)
+    val startTimeAinAm = formattedStartTime.substring(6, 7)
+    val startTimeMinAm = formattedStartTime.substring(7, 8)
+
     val currentTime = LocalDateTime.now()
     val isTaskNow = currentTime.isAfter(task.startTime) && currentTime.isBefore(task.endTime)
     val infiniteTransition = rememberInfiniteTransition(label = "BorderAnimation")
 
-    var isFullEditing by remember { mutableStateOf(false) }
+    val isEditing = remember { mutableStateOf(false) }
+    val isFullEditing = remember { mutableStateOf(false) }
+    val taskBeingEdited = remember { mutableStateOf<TaskEntity?>(null) }
+
+    val taskHeight: Dp = when {
+        isEditing.value && taskBeingEdited.value != null -> 220.dp // if in-edit mode
+        task.type == "QuickTask" -> 50.dp
+        task.type == "MainTask" -> 85.dp
+        else -> 80.dp // Default height, in case there are other task types
+    }
 
     val borderAlpha by infiniteTransition.animateFloat(
+        // <editor-fold desc="borderAlpha for current Task">
         initialValue = 0.2f,
         targetValue = 0.5f,
         animationSpec = infiniteRepeatable(
             animation = tween(500, easing = SineEasing),
             repeatMode = RepeatMode.Reverse
         ), label = "BorderAlpha"
+        // </editor-fold>
     )
 
-    val taskHeight: Dp = when {
-        taskBeingEdited != null && taskBeingEdited.id == task.id -> 220.dp
-        task.type == "QuickTask" -> 50.dp
-        task.type == "MainTask" -> 110.dp
-        else -> 110.dp // Default height, in case there are other task types
+    val dottedLineColor = when {
+        isClicked -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f)
+        else -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f)
     }
 
     val border = when {
@@ -137,12 +139,13 @@ fun SingleTaskCard(
         else -> null
     }
 
+    // </editor-fold>
 
-    // Main Box container that contains everything
+    // <editor-fold desc="Main Box container that contains everything except 'show notes' dialog">
     Box(
+        // <editor-fold desc="modifier.pointerInput (clicking behavior)">
         modifier = modifier
             .fillMaxWidth()
-            .alpha(1f)
             .pointerInput(Unit) {
                 detectTapGestures(
                     onLongPress = { offset ->
@@ -157,8 +160,9 @@ fun SingleTaskCard(
                     }
                 )
             }
-    ) {
-        // Dotted Line at top
+    ) // </editor-fold>
+    {
+        // <editor-fold desc="Dotted Line at top">
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -166,47 +170,81 @@ fun SingleTaskCard(
                 .align(Alignment.TopStart)
         ) {
             DottedLine(
-                color = if (isClicked)
-                    MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
-                else
-                    MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                color = dottedLineColor,
                 thickness = if (isClicked) 2.dp else 0.5.dp
             )
         }
+        // </editor-fold "dotted Line">
 
-        // Main TaskCard and Start-End times
+        // <editor-fold desc="Row - Main TaskCard and Hour-Column">
         Row {
-            // Start-End times
-            Column(
-                verticalArrangement = Arrangement.SpaceBetween,
+
+            // StartTime Hour:Minute Column
+            Row (
+            // <editor-fold desc="StartTime Hour:Minute Column">
+                verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
-                    .height(if (taskType == "QuickTask") 50.dp else 110.dp)
-                    .width(75.dp)
+                    .height(taskHeight)
+                    .width(40.dp)
                     .padding(
                         start = 10.dp,
                         end = 1.dp,
                         top = 5.dp,
                     )
+            // </editor-fold "StartTime Hour:Minute Column">
             ) {
-                Text (
-                    text = formattedStartTime,
-                    style = MaterialTheme.typography.bodyLarge.copy(
-                        fontSize = 13.sp,
-                    ),
-                )
-                Text (
-                    text = ""
-                )
+                // Hour and Minute Column
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy((-12).dp),
+                ) {
+                    Text(
+                        text = startTimeHourString,
+                        style = MaterialTheme.typography.bodyLarge.copy(fontSize = 14.sp),
+                    )
+
+                    Text(
+                        text = ".",
+                        style = MaterialTheme.typography.bodyLarge.copy(fontSize = 14.sp),
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+
+                    Text(
+                        text = startTimeMinuteString,
+                        style = MaterialTheme.typography.bodyLarge.copy(fontSize = 14.sp),
+                    )
+                }
+
+                // A/P and M Column
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy((-12).dp), // Adjust to control space between A/P and M
+                ) {
+                    Text(
+                        text = startTimeAinAm, // A or P
+                        style = MaterialTheme.typography.bodyLarge.copy(fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.secondary),
+                    )
+                    Text(
+                        text = startTimeMinAm, // M
+                        style = MaterialTheme.typography.bodyLarge.copy(fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.secondary),
+                    )
+                }
             }
 
-            // Main Task Card With Details
+            // End of Column (Hour Column on Left)
+
+            Spacer(modifier = Modifier.width(5.dp))
+
             Card(
+                // <editor-fold desc = "Card (for Main Task)"
                 modifier = modifier
                     .height(taskHeight)
                     .fillMaxWidth()
                     .padding(
                         start = if (taskType == "QuickTask") 0.dp else 4.dp,
-                        end = 15.dp, top = 5.dp, bottom = 5.dp
+                        end = 10.dp, top = 5.dp, bottom = 5.dp
                     )
                     .graphicsLayer {
                         clip = true
@@ -220,241 +258,147 @@ fun SingleTaskCard(
                 colors = CardDefaults.cardColors(),
                 shape = RoundedCornerShape(15.dp),
                 border = border
+                // </editor-fold>
             ) {
-
-                // Main content of the card
+                // Layout for Main content of the card
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(
-                            if (taskBeingEdited?.id == task.id) 2.dp else 15.dp,
-                            if (taskBeingEdited?.id == task.id) 2.dp else 10.dp,
-                            0.dp, 0.dp
+                            if (isEditing.value) 2.dp else 15.dp,
+                            if (isEditing.value) 2.dp else 4.dp,
+                            8.dp,
+                            0.dp,
                         )
+                        .height(taskHeight)
                 ) {
-                    // In-place editing of Task Name and Duration
-                    if (taskBeingEdited?.id == task.id) {
-                        val startTime by remember { mutableStateOf(task.startTime) }
-                        var editedTaskName by remember { mutableStateOf(task.taskName) }
-                        var editedDurationString by remember { mutableStateOf(task.duration.toString()) }
-                        var endTimeString by remember { mutableStateOf(dateTimeToString(task.endTime)) }
-
-                        val taskBelow by remember { mutableStateOf(tasksViewModel.getTaskBelow(task)) }
-
-                        LaunchedEffect(editedDurationString) {
-                            if (editedDurationString.isNotEmpty()) {
-                                try {
-//                                    Log.d("DurationCheck", "Entered duration: $editedDurationString minutes")
-//                                    Log.d("DurationCheck", "Task below duration: ${taskBelow?.duration} minutes")
-
-                                    if (taskBelow?.duration != null) {
-                                        val maxValidDuration = editedDurationString.toInt() + taskBelow?.duration!! - 1
-
-                                        if (editedDurationString.toInt() >= maxValidDuration) {
-//                                            val message = "Invalid duration. Must be less than $maxValidDuration minutes."
-                                            Toast.makeText(
-                                                context, "must be less than $maxValidDuration minutes.",
-                                                Toast.LENGTH_SHORT).show()
-//                                            Log.d("DurationCheck", message)
-                                        }
-
-                                        if (editedDurationString.toInt() ==0 ){
-//                                            val message = "Duration cannot be 0. Please enter a valid number."
-                                            Toast.makeText(context, "Duration cannot be 0", Toast.LENGTH_SHORT).show()
-//                                            Log.d("DurationCheck", message)
-                                        } else {
-                                            endTimeString = dateTimeToString(startTime.plusMinutes(editedDurationString.toLong()))
-//                                            Log.d("DurationCheck", "End time updated to: $endTimeString")
-                                        }
-                                    } else {
-                                        endTimeString = dateTimeToString(startTime.plusMinutes(editedDurationString.toLong()))
-//                                        Log.d("DurationCheck", "No task below. End time updated to: $endTimeString")
-                                    }
-                                } catch (e: NumberFormatException) {
-//                                    val message = "Invalid duration format. Please enter a valid number."
-                                    Toast.makeText(context, "Invalid duration format", Toast.LENGTH_SHORT).show()
-//                                    Log.d("DurationCheck", message)
-                                }
-                            }
-                        }
-
-                        TextField(
-                            value = editedTaskName,
-                            onValueChange = { editedTaskName = it },
-                            label = { Text("Task Name") }
+                    // If editing (in-place)
+                    if (isEditing.value) {
+                        QuickEditScreen(
+                            task = task,
+                            tasksViewModel = tasksViewModel,
+                            reminderManager = reminderManager,
+                            context = context,
+                            isEditing = isEditing,
+                            onCancel = { isEditing.value = false }
                         )
+                    }
 
-                        TextField(
-                            value = editedDurationString,
-                            onValueChange = { editedDurationString = it },
-                            label = { Text("Duration (minutes)") }
-                        )
+                    else {
+                        // <editor-fold desc="Main Interface (not in edit mode)"
 
-                        TextField(
-                            value = endTimeString,
-                            onValueChange = { endTimeString = it },
-                            label = { Text("End Time") }
-                        )
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            TextButton(onClick = { onCancel() }) {
-                                Text("Cancel")
-                            }
-
-                            Icon(
-                                imageVector = Icons.Default.Edit,
-                                contentDescription = "Edit Task",
-                                modifier = Modifier.clickable{
-                                    isFullEditing = true
-                                }
-                                    .align(Alignment.CenterVertically)
-                            )
-
-                            if (isFullEditing) {
-                                EditTaskScreen(
-                                    reminderManager = reminderManager,
-                                    task = taskBeingEdited,
-                                    onSave = { updatedTask ->
-                                        onCancel()
-                                        coroutineScope.launch {
-                                            tasksViewModel.updateTask(updatedTask)
-                                            reminderManager.observeAndScheduleReminders(context)
-                                        }
-                                        tasksViewModel.refreshTasks()
-                                    },
-                                    onCancel = { isFullEditing = false }
-                                )
-                            }
-
-                            Button(onClick = {
-                                    val updatedTask = task.copy(
-                                        taskName = editedTaskName,
-                                        duration = editedDurationString.toIntOrNull() ?: task.duration,
-                                        endTime = strToDateTime(endTimeString)
-                                    )
-                                    onTaskUpdate(updatedTask)
-                                }
-                            ) {
-                                Text(
-                                    text = "Save",
-                                    modifier = Modifier.padding(start = 5.dp)
-                                )
-                            }
-                        }
-
-                    } else {
-                        // Task Name, Duration, Reminder
+                        // Task Name, Show Notes and Edit Icon
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+                            // Task Name
                             Text(
-                                text = task.taskName,
-                                style = MaterialTheme.typography.titleLarge,
+                                // <editor-fold desc="Task Name "
+                                text = task.name,
+                                style = MaterialTheme.typography.titleMedium,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier
                                     .weight(1f)
+                                // </editor-fold>
                             )
 
                             // Show notes
                             IconButton(
+                                // <editor-fold desc="Show Notes"
                                 onClick = { showNotesDialog = true },
                                 modifier = Modifier
-                                    .alpha(if (taskType == "QuickTask") 0f else 0.9f)
-                                    .size(30.dp)
+                                    .alpha(if (taskType == "QuickTask") 0f else 0.5f)
+                                    .size(25.dp)
+                                    .padding(end = 10.dp)
                             ) {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Sharp.LibraryBooks,
                                     contentDescription = "Show Notes",
-                                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f)
+                                    tint = if (isClicked) MaterialTheme.colorScheme.secondary.copy(alpha = 1f)
+                                            else MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
                                 )
                             }
-                            Spacer(modifier = Modifier.width(10.dp))
+                            // </editor-fold>
 
+                            Spacer(modifier = Modifier.width(15.dp))
+
+                            // Quick-Edit Button
                             IconButton(
-                                onClick = { onEditClick(task) },
+                                // <editor-fold desc="Quick-Edit Icon "
+                                onClick = {
+                                    isEditing.value = true
+                                    taskBeingEdited.value = task
+                                },
                                 modifier = Modifier
-                                    .alpha(if (taskType == "QuickTask") 0f else 0.9f)
-                                    .size(18.dp)
+                                    .alpha(if (taskType == "QuickTask") 0f else 0.5f)
+                                    .size(16.dp)
+
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Edit,
-                                    contentDescription = "Edit Task"
+                                    contentDescription = "Edit Task",
+                                    tint = if (isClicked) MaterialTheme.colorScheme.surfaceTint.copy(alpha = 1f)
+                                    else MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
                                 )
                             }
+                            // </editor-fold>
+
+                            // </editor-fold>
                         }
 
-                        // Duration and Reminder
+                        // start, end, duration all combined
                         if (taskType != "QuickTask") {
                             Spacer(modifier = Modifier.height(8.dp))
 
-                            // Duration
+                            // Layout for start, end, duration all combined
                             Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(start = 10.dp)
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
-                                    imageVector = Icons.Filled.Timer,
-                                    contentDescription = "Duration",
+                                    imageVector = Icons.Default.AccessTime,
+                                    contentDescription = "End Time",
                                     tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
                                     modifier = Modifier.size(16.dp)
                                 )
-
                                 Text(
                                     text = buildAnnotatedString {
-                                        append("Duration: ")
+                                        append("")
+                                        withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                                            append(task.startTime.format(DateTimeFormatter.ofPattern("hh:mm a")))
+                                        }
+                                        append(" to ")
+                                        withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                                            append(task.endTime.format(DateTimeFormatter.ofPattern("hh:mm a")))
+                                        }
+                                        append(" | ")
                                         withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
                                             append(task.duration.toString())
                                         }
+                                        append(" mins ")
                                     },
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f),
-                                    modifier = Modifier.padding(start = 4.dp)
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            // Reminder
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(start = 10.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.Alarm,
-                                    contentDescription = "Reminder",
-                                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Text(
-                                    text = buildAnnotatedString {
-                                        append("Remind at: ")
-                                        withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
-                                            append(task.reminder.format(DateTimeFormatter.ofPattern("hh:mm a")))
-                                        }
-                                    },
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.6f),
                                     modifier = Modifier.padding(start = 4.dp)
                                 )
                             }
                         }
+
+                        // </editor-fold>
                     }
-
-
                 }
-            }
+            } // End of Main Task-Card Details
         }
 
+        // </editor-fold>
+
+        // <editor-fold desc="Dropdown Menu">
         if (expanded){
             TaskDropdownMenu(
                 onEditClick = {
                     expanded = false
-                    onEditClick(task)
+                    isFullEditing.value = true
                 },
                 canDelete = canDelete,
                 onDeleteClick = {
@@ -470,9 +414,12 @@ fun SingleTaskCard(
                 )
             )
         }
-    } // End of main parent Box
+        // </editor-fold>
 
-    // Dialog to show notes
+    } // End of main parent Box
+    // </editor-fold>
+
+    // <editor-fold desc="Dialog to show notes"
     if (showNotesDialog) {
         AlertDialog(
             onDismissRequest = { showNotesDialog = false },
@@ -485,10 +432,5 @@ fun SingleTaskCard(
             }
         )
     }
-}
-
-object SineEasing : Easing {
-    override fun transform(fraction: Float): Float {
-        return sin(fraction * PI.toFloat() / 2)
-    }
+    // </editor-fold>
 }

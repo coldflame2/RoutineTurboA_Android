@@ -6,7 +6,7 @@ import com.app.routineturboa.utils.TimeUtils.strToDateTime
 
 val firstTask = TaskEntity(
     position = 1,
-    taskName = "Start of Day",
+    name = "Start of Day",
     notes = "",
     duration = 359,
     startTime = strToDateTime("00:01 AM"),
@@ -17,7 +17,7 @@ val firstTask = TaskEntity(
 
 val demoTaskOne = TaskEntity(
     position = 2,
-    taskName = "Morning Exercise",
+    name = "Morning Exercise",
     notes = "30 minutes of exercise",
     duration = 30,
     startTime = strToDateTime("06:00 AM"),
@@ -28,7 +28,7 @@ val demoTaskOne = TaskEntity(
 
 val demoTaskTwo = TaskEntity(
     position = 3,
-    taskName = "Breakfast",
+    name = "Breakfast",
     notes = "Healthy breakfast",
     duration = 30,
     startTime = strToDateTime("06:30 AM"),
@@ -39,7 +39,7 @@ val demoTaskTwo = TaskEntity(
 
 val demoTaskThree = TaskEntity(
     position = 4,
-    taskName = "Work Session 1",
+    name = "Work Session 1",
     notes = "Focus on project A",
     duration = 120,
     startTime = strToDateTime("07:00 AM"),
@@ -50,7 +50,7 @@ val demoTaskThree = TaskEntity(
 
 val demoTaskFour = TaskEntity(
     position = 5,
-    taskName = "Break",
+    name = "Break",
     notes = "Short break",
     duration = 15,
     startTime = strToDateTime("09:00 AM"),
@@ -61,7 +61,7 @@ val demoTaskFour = TaskEntity(
 
 val demoTaskFive = TaskEntity(
     position = 6,
-    taskName = "Work Session 2",
+    name = "Work Session 2",
     notes = "Continue with project A",
     duration = 120,
     startTime = strToDateTime("09:15 AM"),
@@ -72,7 +72,7 @@ val demoTaskFive = TaskEntity(
 
 val demoTaskSix = TaskEntity(
     position = 7,
-    taskName = "Lunch Break",
+    name = "Lunch Break",
     notes = "Healthy lunch",
     duration = 60,
     startTime = strToDateTime("11:15 AM"),
@@ -83,7 +83,7 @@ val demoTaskSix = TaskEntity(
 
 val demoTaskSeven = TaskEntity(
     position = 8,
-    taskName = "Work Session 3",
+    name = "Work Session 3",
     notes = "Focus on project B",
     duration = 120,
     startTime = strToDateTime("12:15 PM"),
@@ -94,7 +94,7 @@ val demoTaskSeven = TaskEntity(
 
 val demoTaskEight = TaskEntity(
     position = 9,
-    taskName = "Afternoon Break",
+    name = "Afternoon Break",
     notes = "Short break",
     duration = 15,
     startTime = strToDateTime("02:15 PM"),
@@ -105,7 +105,7 @@ val demoTaskEight = TaskEntity(
 
 val lastTask = TaskEntity(
     position = Int.MAX_VALUE,
-    taskName = "End of Day",
+    name = "End of Day",
     notes = "",
     duration = 1079,
     startTime = strToDateTime("06:00 AM"),

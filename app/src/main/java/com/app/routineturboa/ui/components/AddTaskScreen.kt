@@ -2,7 +2,6 @@ package com.app.routineturboa.ui.components
 
 import android.util.Log
 import android.widget.Toast
-import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -13,11 +12,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddTask
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.LinkOff
+import androidx.compose.material.icons.sharp.AddAlert
+import androidx.compose.material.icons.sharp.Start
+import androidx.compose.material.icons.sharp.Timer
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -44,6 +45,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.app.routineturboa.R
 import com.app.routineturboa.data.model.TaskEntity
 import com.app.routineturboa.utils.CustomTextField
 import com.app.routineturboa.utils.TimeUtils.dateTimeToString
@@ -71,13 +73,13 @@ fun AddTaskScreen(
     val clickedTaskID = clickedTask?.id
     val clickedTaskPosition = clickedTask?.position
 
-    val taskBelowBeforeAdding = tasksViewModel.getTaskBelow(clickedTask!!)
+    val taskBelowBeforeAdding = tasksViewModel.fetchNextTask(clickedTask!!)
     val durationTaskBelowBeforeAdding = taskBelowBeforeAdding?.duration
 
     // Data in State variables
     val id by remember { mutableIntStateOf(clickedTaskID?.plus(1) ?: 1) }
     var taskName by remember { mutableStateOf(" ") }
-    var taskNotes by remember { mutableStateOf( " ") }
+    var notes by remember { mutableStateOf( " ") }
     var startTime by remember { mutableStateOf(clickedTaskEndTime ?: LocalDateTime.now()) }
     var duration by remember { mutableLongStateOf(1L) }
     var endTime by remember { mutableStateOf(
@@ -95,9 +97,9 @@ fun AddTaskScreen(
     var reminderFormatted by remember {mutableStateOf(dateTimeToString(reminder))}
     var durationFormatted by remember {mutableStateOf(duration.toString())}
     val idFormatted by remember {mutableStateOf(id.toString())}
-    val taskPositionFormatted by remember {mutableStateOf(taskPosition.toString())}
+    var positionFormatted by remember {mutableStateOf(taskPosition.toString())}
 
-    Log.d(tag, "clicked task name and position: ${clickedTask.taskName} ${clickedTask.position}")
+    Log.d(tag, "clicked task name and position: ${clickedTask.name} ${clickedTask.position}")
     Log.d(tag, "clicked task end time: ${clickedTask.endTime}")
     Log.d(tag, "new task start time: $startTimeFormatted")
 
@@ -198,10 +200,12 @@ fun AddTaskScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    TextField(
+                    CustomTextField(
                         value = startTimeFormatted,
                         onValueChange = { startTimeFormatted = it },
-                        label = { Text("Start Time") },
+                        label = "Start Time",
+                        placeholder = "Enter start time",
+                        leadingIcon = Icons.Sharp.Start,
                         modifier = Modifier.weight(1f),
                     )
 
@@ -219,10 +223,12 @@ fun AddTaskScreen(
                             .size(30.dp)
                     )
 
-                    TextField(
+                    CustomTextField(
                         value = reminderFormatted,
                         onValueChange = { reminderFormatted = it },
-                        label = { Text("Reminder") },
+                        label = "Reminder",
+                        placeholder = "Enter reminder time",
+                        leadingIcon = Icons.Sharp.AddAlert,
                         enabled = !isReminderLinked,
                         modifier = Modifier.weight(1f)
                     )
@@ -234,30 +240,35 @@ fun AddTaskScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    TextField(
+                    CustomTextField(
                         value = durationFormatted,
                         onValueChange = { durationFormatted = it },
-                        label = { Text("Duration (minutes)") },
+                        label = "Duration",
+                        placeholder = "Enter duration",
+                        leadingIcon = Icons.Sharp.Timer,
                         keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
                         modifier = Modifier.weight(1f),
                     )
 
-                    TextField(
+                    CustomTextField(
                         value = endTimeFormatted,
                         onValueChange = { endTimeFormatted = it },
-                        label = { Text("End Time") },
+                        label = "End Time",
+                        placeholder = "Enter End Time",
+                        leadingIconResId = R.drawable.arrowrighttoleft,
                         modifier = Modifier.weight(1f),
                     )
                 }
 
-                TextField(
-                    value = taskNotes,
-                    onValueChange = { taskNotes = it },
-                    label = { Text("Task Notes") },
+                CustomTextField(
+                    value = notes,
+                    onValueChange = { notes = it },
+                    label = "Notes",
+                    placeholder = "Add Notes",
+                    leadingIcon = Icons.Default.Link,
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .verticalScroll(ScrollState(1)),
-                    placeholder = {Text ("Add task notes")},
+                        .fillMaxWidth(),
+                    singleLine = false
                 )
 
                 TaskTypeDropdown()
@@ -270,12 +281,13 @@ fun AddTaskScreen(
                     modifier = Modifier.fillMaxWidth(),
                 )
 
-                TextField(
-                    value = taskPositionFormatted,
-                    onValueChange = { },
-                    label = { Text("Task Position") },
+                CustomTextField(
+                    value = positionFormatted,
+                    onValueChange = {positionFormatted = it},
+                    label = "Position (Don't Change) (Only for dev)",
+                    placeholder = "Internal purposes. Don't change.",
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = false,
+                    enabled = true
                 )
 
                 Row(
@@ -300,12 +312,12 @@ fun AddTaskScreen(
                             endTime = strToDateTime(endTimeFormatted)
                             reminder = strToDateTime(reminderFormatted)
                             duration = durationFormatted.toLong()
-                            taskPosition = taskPositionFormatted.toInt()
+                            taskPosition = positionFormatted.toInt()
 
                             val newTask = TaskEntity(
                                 position = taskPosition,
-                                taskName = taskName,
-                                notes = taskNotes,
+                                name = taskName,
+                                notes = notes,
                                 startTime = startTime,
                                 endTime = endTime,
                                 duration = duration.toInt(),
@@ -318,7 +330,7 @@ fun AddTaskScreen(
                             Toast.makeText(context, "Please fill all fields correctly", Toast.LENGTH_SHORT).show()
                         }
                     }) {
-                        Text("Save")
+                        Text("Add")
                     }
                 }
             }

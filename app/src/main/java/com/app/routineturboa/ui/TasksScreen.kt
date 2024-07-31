@@ -8,32 +8,27 @@ import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FabPosition
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -48,24 +43,26 @@ import com.app.routineturboa.ui.components.SingleTaskCard
 import com.app.routineturboa.viewmodel.TasksViewModel
 import com.microsoft.identity.client.IAuthenticationResult
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @RequiresApi(Build.VERSION_CODES.S)
 @Composable
-fun TasksScreen(context: Context, tasksViewModel: TasksViewModel, reminderManager: ReminderManager) {
+fun TasksScreen(
+    context: Context,
+    tasksViewModel: TasksViewModel,
+    reminderManager: ReminderManager
+) {
+    // <editor-fold desc="variables">
     val tag = "TasksScreen"
 
     val tasks by tasksViewModel.tasks.collectAsStateWithLifecycle()
     var clickedTask by remember { mutableStateOf<TaskEntity?>(null) }
-    var taskBeingEdited by remember { mutableStateOf<TaskEntity?>(null) }
+    val taskBeingEdited = remember { mutableStateOf<TaskEntity?>(null) }
     var isAddingTask by remember { mutableStateOf(false) }
+    val hasScrolledToTarget = remember { mutableStateOf(false) }
 
     val authenticationResult by remember { mutableStateOf<IAuthenticationResult?>(null) }
-    val coroutineScope = rememberCoroutineScope()
     var isLoading by remember { mutableStateOf(true) }
-
-    val isRefreshing by tasksViewModel.isRefreshing.collectAsState()
 
     val listState = rememberLazyListState()
     val currentDateTime = remember { java.time.LocalDateTime.now() }
@@ -76,23 +73,20 @@ fun TasksScreen(context: Context, tasksViewModel: TasksViewModel, reminderManage
         val endTime = task.endTime
         currentDateTime.isAfter(startTime) && currentDateTime.isBefore(endTime)
     }
+    // </editor-fold>
 
-    val statusInsets = WindowInsets.statusBars
-    val statusInsetsPadding = statusInsets.asPaddingValues()
-
-    // Use LaunchedEffect to perform scrolling when the targetIndex changes
-    LaunchedEffect(targetIndex) {
-        if (targetIndex != -1) {
+    // Use LaunchedEffect to perform scrolling only once after the tasks are loaded
+    LaunchedEffect(tasks) {
+        if (tasks.isNotEmpty() && targetIndex != -1 && !hasScrolledToTarget.value) {
             listState.animateScrollToItem(targetIndex)
+            hasScrolledToTarget.value = true // Set the flag to true after scrolling
         }
     }
 
     LaunchedEffect(authenticationResult, key2 = true) {
         Log.d(tag, "TasksScreen LaunchedEffect called")
-        authenticationResult?.let { authResult ->
-            coroutineScope.launch {
-                Log.d(tag, "Downloading from OneDrive")
-            }
+        authenticationResult?.let {
+            Log.d(tag, "Downloading from OneDrive")
         }
     }
 
@@ -102,13 +96,11 @@ fun TasksScreen(context: Context, tasksViewModel: TasksViewModel, reminderManage
         isLoading = false
     }
 
-
     Scaffold(
-        topBar = { },
-
-        // Plus/Add Floating Button
+        //  <editor-fold desc="plus button to Add New Task">
         floatingActionButton = {
-            FloatingActionButton(
+            IconButton(
+                // <editor-fold desc="onClick, modifier, colors, enabled">
                 onClick = {
                     if (clickedTask != null) {
                         isAddingTask = true
@@ -117,92 +109,70 @@ fun TasksScreen(context: Context, tasksViewModel: TasksViewModel, reminderManage
                     }
                 },
                 modifier = Modifier
-                    .padding(end = 55.dp, bottom = 40.dp)
+                    .padding(end = 55.dp, bottom = 4.dp)
                     .size(60.dp, 60.dp),
-                containerColor = Color.Blue.copy(alpha = 0.9f),
-                contentColor = Color.White,
-                shape = RoundedCornerShape(28.dp)
-            ) {
+                colors = IconButtonDefaults.iconButtonColors(MaterialTheme.colorScheme.primary),
+            ) // </editor-fold>
+            {
                 Icon(
                     Icons.Filled.Add,
-                    contentDescription = "Add New Task"
+                    contentDescription = "Add New Task",
+                    modifier = Modifier.background(MaterialTheme.colorScheme.primary)
                 )
             }
         },
+        // </editor-fold>
 
-        floatingActionButtonPosition = FabPosition.EndOverlay
+        floatingActionButtonPosition = FabPosition.End,
 
     ) { paddingValues ->
         Column {
-            // Tasks list
+            // <editor-fold desc="Lazy Column-SingleTaskCard">
             LazyColumn(
                 state = listState,
                 modifier = Modifier
                     .padding(paddingValues),
+                contentPadding = PaddingValues(top = 8.dp, bottom = 50.dp)  // Adjust the padding values as needed
             ) {
-                if (isLoading) {
+                // Loading state or no tasks
+                if (isLoading || tasks.isEmpty()) {
                     items(2) {
                         EmptyTaskCardPlaceholder()
                     }
-                } else {
-                    if (tasks.isEmpty()) {
-                        items(2) {
-                            EmptyTaskCardPlaceholder()
-                        }
-                    } else {
-                        items(tasks, key = { task ->
+                }
+
+                else {
+                    items(
+                        tasks, key = { task ->
                             task.id
-                        }) { task ->
-                            SingleTaskCard(
-                                context = context,
-                                tasksViewModel = tasksViewModel,
-                                reminderManager = reminderManager,
-                                task = task,
-                                onClick = { clickedTask = task },
-                                onEditClick = {
-                                    taskBeingEdited = it
-                                    clickedTask = task
-                                },
-                                canDelete = !tasksViewModel.isTaskFirst(task) && !tasksViewModel.isTaskLast(task),
-                                onDelete = { tasksViewModel.deleteTask(it) },
-                                isClicked = task == clickedTask,
-                                taskBeingEdited = taskBeingEdited,
-                                onTaskUpdate = { updatedTask ->
-                                    taskBeingEdited = null
-                                    Toast.makeText(context, "Task Edited.", Toast.LENGTH_SHORT).show()
-                                    coroutineScope.launch {
-                                        tasksViewModel.updateTask(updatedTask)
-                                        reminderManager.observeAndScheduleReminders(context)
-                                    }
-                                    tasksViewModel.refreshTasks()
-                                },
-                                onCancel = { taskBeingEdited = null }
-                            )
                         }
-                        item{
-                            Spacer(modifier = Modifier.height(10.dp))
-                        }
-                        item{
-                            Spacer(modifier = Modifier.height(50.dp))
-                        }
+                    ) { task ->
+                        SingleTaskCard(
+                            // <editor-fold desc="SingleTaskCard Parameters"
+                            context = context,
+                            tasksViewModel = tasksViewModel,
+                            reminderManager = reminderManager,
+                            task = task,
+                            onClick = { clickedTask = task },
+                            canDelete = !tasksViewModel.isTaskFirst(task) && !tasksViewModel.isTaskLast(task),
+                            onDelete = { tasksViewModel.deleteTask(it) },
+                            isClicked = task == clickedTask
+                            // </editor-fold>
+                        )
                     }
                 }
-            }
+            }  // end of lazy column
+            // </editor-fold>
 
             Text(
-                text = "${clickedTask?.taskName}",
-                textAlign = TextAlign.Center, // Center text alignment
-                modifier = Modifier.padding(start = 100.dp) // Align the Text composable in the center of the Box
+                text = "${clickedTask?.name}",
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(PaddingValues())
             )
-
-            Spacer(modifier = Modifier.height(150.dp))
-
-        }
+        } // End of Column that contains LazyColumn
 
 
-
-
-        // Show the add task screen
+        // AddTaskScreen (Inside the parent Box)
         if (isAddingTask && clickedTask != null) {
             Box(
                 modifier = Modifier
@@ -220,30 +190,5 @@ fun TasksScreen(context: Context, tasksViewModel: TasksViewModel, reminderManage
             }
         }
 
-//        // Show the edit task screen as a dialog overlay
-//        if (taskBeingEdited != null) {
-//            Log.d(tag, "Show Edit Task Screen")
-//            Box(
-//                modifier = Modifier
-//                    .fillMaxSize()
-//                    .background(Color.Black.copy(alpha = 0.3f))
-//            ) {
-
-//                EditTaskScreen(
-//                    reminderManager = reminderManager,
-//                    task = taskBeingEdited!!,
-//                    onSave = { updatedTask ->
-//                        taskBeingEdited = null
-//                        Toast.makeText(context, "Task Edited.", Toast.LENGTH_SHORT).show()
-//                        coroutineScope.launch {
-//                            tasksViewModel.updateTask(updatedTask)
-//                            reminderManager.observeAndScheduleReminders(context)
-//                        }
-//                        tasksViewModel.refreshTasks()
-//                    },
-//                    onCancel = { taskBeingEdited = null }
-//                )
-//            }
-//        }
-    }
+    } // End of Scaffold
 }

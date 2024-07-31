@@ -31,7 +31,7 @@ interface TaskDao {
     @Transaction
     suspend fun updateTasksWithNewPositions(tasks: List<TaskEntity>) {
         tasks.forEach { task ->
-            Log.d(tag, "Updating task '${task.taskName}'. task ID: ${task.id}, position: ${task.position}" )
+            Log.d(tag, "Updating task '${task.name}'. task ID: ${task.id}, position: ${task.position}" )
             updateTaskPosition(task.id, task.position)
         }
     }
@@ -39,7 +39,7 @@ interface TaskDao {
     @Transaction
     suspend fun updateTasksWithNewIds(tasks: List<TaskEntity>) {
         tasks.forEach { task ->
-            Log.d(tag, "Updating task '${task.taskName}'. task ID: ${task.id}" )
+            Log.d(tag, "Updating task '${task.name}'. task ID: ${task.id}" )
             updateTaskId(task.id)
         }
     }

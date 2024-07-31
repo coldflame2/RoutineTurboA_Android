@@ -46,6 +46,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.app.routineturboa.R
 import com.app.routineturboa.data.model.TaskEntity
 import com.app.routineturboa.reminders.ReminderManager
+import com.app.routineturboa.ui.theme.LocalCustomColorsPalette
 import com.app.routineturboa.utils.CustomTextField
 import com.app.routineturboa.utils.TimeUtils.dateTimeToString
 import com.app.routineturboa.utils.TimeUtils.strToDateTime
@@ -57,14 +58,14 @@ import kotlinx.coroutines.launch
 fun EditTaskScreen(
     reminderManager: ReminderManager,
     task: TaskEntity,
-    onSave: suspend (TaskEntity) -> Unit,
+    onConfirmTaskEdit: suspend (TaskEntity) -> Unit,
     onCancel: () -> Unit
 ) {
     val context = LocalContext.current
 
     // Actual data in State variables from 'task'
     var id by remember { mutableIntStateOf(task.id) }
-    var taskName by remember { mutableStateOf(task.taskName) }
+    var taskName by remember { mutableStateOf(task.name) }
     var notes by remember { mutableStateOf(task.notes) }
     var startTime by remember { mutableStateOf(task.startTime) }
     var endTime by remember { mutableStateOf(task.endTime) }
@@ -73,12 +74,12 @@ fun EditTaskScreen(
     var position by remember { mutableIntStateOf(task.position) }
 
     // Convert state variables to  string for display
-    var startTimeFormatted by remember {mutableStateOf(dateTimeToString(startTime))}
-    var endTimeFormatted by remember {mutableStateOf(dateTimeToString(endTime))}
-    var reminderFormatted by remember {mutableStateOf(dateTimeToString(reminder))}
-    var durationFormatted by remember {mutableStateOf(duration.toString())}
-    var idFormatted by remember {mutableStateOf(id.toString())}
-    var positionFormatted by remember {mutableStateOf(position.toString())}
+    var startTimeString by remember {mutableStateOf(dateTimeToString(startTime))}
+    var endTimeString by remember {mutableStateOf(dateTimeToString(endTime))}
+    var reminderString by remember {mutableStateOf(dateTimeToString(reminder))}
+    var durationString by remember {mutableStateOf(duration.toString())}
+    val idFormatted by remember {mutableStateOf(id.toString())}
+    var positionString by remember {mutableStateOf(position.toString())}
 
     val coroutineScope = rememberCoroutineScope()
     var isReminderLinked by remember { mutableStateOf(true) }
@@ -117,8 +118,8 @@ fun EditTaskScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     CustomTextField(
-                        value = startTimeFormatted,
-                        onValueChange = { startTimeFormatted = it },
+                        value = startTimeString,
+                        onValueChange = { startTimeString = it },
                         label = "Start Time",
                         placeholder = "Enter start time",
                         leadingIcon = Icons.Sharp.Start,
@@ -133,7 +134,7 @@ fun EditTaskScreen(
                             .clickable {
                                 isReminderLinked = !isReminderLinked
                                 if (isReminderLinked) {
-                                    reminderFormatted = startTimeFormatted
+                                    reminderString = startTimeString
                                 }
                             }
                             .align(Alignment.CenterVertically)
@@ -141,8 +142,8 @@ fun EditTaskScreen(
                     )
 
                     CustomTextField(
-                        value = reminderFormatted,
-                        onValueChange = { reminderFormatted = it },
+                        value = reminderString,
+                        onValueChange = { reminderString = it },
                         label = "Reminder",
                         placeholder = "Enter reminder time",
                         leadingIcon = Icons.Sharp.AddAlert,
@@ -158,8 +159,8 @@ fun EditTaskScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     CustomTextField(
-                        value = durationFormatted,
-                        onValueChange = { durationFormatted = it },
+                        value = durationString,
+                        onValueChange = { durationString = it },
                         label = "Duration",
                         placeholder = "Enter duration",
                         leadingIcon = Icons.Sharp.Timer,
@@ -168,8 +169,8 @@ fun EditTaskScreen(
                     )
 
                     CustomTextField(
-                        value = endTimeFormatted,
-                        onValueChange = { endTimeFormatted = it },
+                        value = endTimeString,
+                        onValueChange = { endTimeString = it },
                         label = "End Time",
                         placeholder = "Enter End Time",
                         leadingIconResId = R.drawable.arrowrighttoleft,
@@ -200,8 +201,8 @@ fun EditTaskScreen(
                 )
 
                 CustomTextField(
-                    value = positionFormatted,
-                    onValueChange = {positionFormatted = it},
+                    value = positionString,
+                    onValueChange = {positionString = it},
                     label = "Position (Don't Change) (Only for dev)",
                     placeholder = "Internal purposes. Don't change.",
                     modifier = Modifier.fillMaxWidth(),
@@ -221,7 +222,7 @@ fun EditTaskScreen(
 
                         onClick = { onCancel() },
                         colors = ButtonDefaults.buttonColors(
-                            MaterialTheme.colorScheme.surfaceContainerLow,
+                            LocalCustomColorsPalette.current.gray200,
                         )
 
                     ) {
@@ -237,12 +238,12 @@ fun EditTaskScreen(
                             Log.d("EditTaskScreen", "Save Button clicked...")
                             coroutineScope.launch {
                                 try {
-                                    startTime = strToDateTime(startTimeFormatted)
-                                    endTime = strToDateTime(endTimeFormatted)
-                                    reminder = strToDateTime(reminderFormatted)
-                                    duration = durationFormatted.toInt()
+                                    startTime = strToDateTime(startTimeString)
+                                    endTime = strToDateTime(endTimeString)
+                                    reminder = strToDateTime(reminderString)
+                                    duration = durationString.toInt()
                                     id = idFormatted.toInt()
-                                    position = positionFormatted.toInt()
+                                    position = positionString.toInt()
 
                                 } catch (e: Exception) {
                                     Log.e("EditTaskScreen", "Error: $e")
@@ -250,7 +251,7 @@ fun EditTaskScreen(
                                 }
 
                                 val updatedTask = task.copy(
-                                    taskName = taskName,
+                                    name = taskName,
                                     position = position,
                                     notes = notes,
                                     startTime = startTime,
@@ -258,9 +259,8 @@ fun EditTaskScreen(
                                     reminder = reminder,
                                     duration = duration
                                 )
-                                onSave(updatedTask)
-                                reminderManager.observeAndScheduleReminders(context)
-                            }
+                                onConfirmTaskEdit(updatedTask)
+                            } // End of Coroutine
                         }
                     ) {
                         Text("Save")

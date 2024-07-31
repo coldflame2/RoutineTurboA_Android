@@ -25,40 +25,8 @@ class RoutineRepository(val context: Context) {
 
     fun getAllTasks(): Flow<List<TaskEntity>> = taskDao.getAllTasks()
 
-    suspend fun <T> runAsTransaction(block: suspend () -> T): T {
-        return withContext(Dispatchers.IO) {
-            routineDatabase.withTransaction {
-                block()
-            }
-        }
-    }
-
-    private suspend fun insertDefaultTasks(defaultTask: TaskEntity): Long {
-        Log.d(tag,"Inserting default task.")
-        return taskDao.insertTask(defaultTask)
-    }
-
-    suspend fun refreshTasks() {
-        Log.d(tag, "Refreshing tasks")
-        try {
-            // In a real-world scenario, you might fetch data from a remote source here
-            // For now, we'll just re-fetch all tasks from the local database
-            val tasks = taskDao.getAllTasksList()
-            Log.d(tag, "Refreshed ${tasks.size} tasks")
-
-            // Optionally, you could perform some processing on the tasks here
-            // For example, updating task statuses based on the current time
-
-            // If you made any changes, you would update the database:
-            // updateAllTasks(tasks)
-        } catch (e: Exception) {
-            Log.e(tag, "Error refreshing tasks", e)
-            throw e // Re-throw the exception to be handled by the ViewModel
-        }
-    }
-
     suspend fun insertTask(task: TaskEntity): Long {
-        Log.d(tag, "Inserting task with ID: ${task.id}. Task Name: ${task.taskName}")
+        Log.d(tag, "Inserting task with ID: ${task.id}. Task Name: ${task.name}")
 
         // Ensure the first and last tasks are correctly identified
         val firstTask = taskDao.getFirstTask()
@@ -73,7 +41,23 @@ class RoutineRepository(val context: Context) {
         return taskDao.insertTask(task)
     }
 
-    suspend fun updateTask(task: TaskEntity) = taskDao.updateTask(task)
+    suspend fun updateTask(task: TaskEntity) {
+        Log.d(tag, "Updating task: ${task.name} and id:${task.id}")
+        taskDao.updateTask(task)
+    }
+
+    suspend fun <T> runAsTransaction(block: suspend () -> T): T {
+        return withContext(Dispatchers.IO) {
+            routineDatabase.withTransaction {
+                block()
+            }
+        }
+    }
+
+    private suspend fun insertDefaultTasks(defaultTask: TaskEntity): Long {
+        Log.d(tag,"Inserting default task.")
+        return taskDao.insertTask(defaultTask)
+    }
 
     suspend fun updateTasksWithNewPositions(tasks: List<TaskEntity>) {
         taskDao.updateTasksWithNewPositions(tasks)
@@ -101,7 +85,7 @@ class RoutineRepository(val context: Context) {
             val firstTask = TaskEntity(
                 id = -1,
                 position = 1,
-                taskName = "Start of Day",
+                name = "Start of Day",
                 notes = "",
                 duration = 359,
                 startTime = strToDateTime("00:01 AM"),
@@ -115,7 +99,7 @@ class RoutineRepository(val context: Context) {
             val lastTask = TaskEntity(
                 id = -2,
                 position = Int.MAX_VALUE,
-                taskName = "End of Day",
+                name = "End of Day",
                 notes = "",
                 duration = 1079,
                 startTime = strToDateTime("06:00 AM"),

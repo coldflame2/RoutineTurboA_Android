@@ -17,7 +17,7 @@ class ReminderReceiver : BroadcastReceiver() {
                 val reminderManager = ReminderManager(context)
                 val task = dbRepository.getTaskById(taskId)
                 task?.let {
-                    reminderManager.showNotification(it.id, it.type, it.taskName)
+                    reminderManager.showNotification(it.id, it.type, it.name)
                 }
             }
         }
