@@ -104,7 +104,7 @@ fun SingleTaskCard(
         isEditing.value && taskBeingEdited.value != null -> 220.dp // if in-edit mode
         task.type == "QuickTask" -> 50.dp
         task.type == "MainTask" -> 85.dp
-        else -> 80.dp // Default height, in case there are other task types
+        else -> 60.dp // Default height, in case there are other task types
     }
 
     val borderAlpha by infiniteTransition.animateFloat(
@@ -234,7 +234,7 @@ fun SingleTaskCard(
                     .fillMaxWidth()
                     .padding(
                         start = if (taskType == "QuickTask") 0.dp else 4.dp,
-                        end = 10.dp, top = 5.dp, bottom = 5.dp
+                        end = 10.dp, top = 1.dp, bottom = 0.dp
                     )
                     .graphicsLayer {
                         clip = true
@@ -369,7 +369,7 @@ fun SingleTaskCard(
                                         append(" mins ")
                                     },
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.6f),
+                                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.3f),
                                     modifier = Modifier.padding(start = 4.dp)
                                 )
                             }

@@ -6,6 +6,7 @@ import android.util.Log
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -66,15 +67,16 @@ fun TasksScreen(
     var isLoading by remember { mutableStateOf(true) }
 
     val listState = rememberLazyListState()
-    val currentDateTime = remember { java.time.LocalDateTime.now() }
 
     // Find the index of the task whose time range includes the current time
     val targetIndex = tasks.indexOfFirst { task ->
+        val currentDateTime = remember { java.time.LocalDateTime.now() }
         val startTime = task.startTime
         val endTime = task.endTime
         currentDateTime.isAfter(startTime) && currentDateTime.isBefore(endTime)
     }
-    // </editor-fold>
+
+    // </editor-fold variables>
 
     // Use LaunchedEffect to perform scrolling only once after the tasks are loaded
     LaunchedEffect(tasks) {
@@ -101,9 +103,9 @@ fun TasksScreen(
         // <editor-fold desc="Lazy Column-SingleTaskCard">
         LazyColumn(
             state = listState,
-            modifier = Modifier
-                .padding(paddingValues),
-            contentPadding = PaddingValues(top = 8.dp, bottom = 50.dp)  // Adjust the padding values as needed
+            modifier = Modifier.padding(paddingValues),
+            contentPadding = PaddingValues(bottom = 50.dp),  // Adjust the padding values as needed
+            verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             // Loading state or no tasks
             if (isLoading || tasks.isEmpty()) {
