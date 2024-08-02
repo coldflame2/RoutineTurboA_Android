@@ -5,7 +5,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.util.Log
-import com.app.routineturboa.services.MsalAuthManager
+import com.app.routineturboa.onedrive.MsalAuthManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob

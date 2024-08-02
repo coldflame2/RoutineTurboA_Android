@@ -5,14 +5,14 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 
 // <editor-fold desc="Light Theme Colors">
-val LightPrimary = Color(0xFF6200EE)
-val LightOnPrimary = Color(0xFFFFFFFF)
+val LightPrimary = Color(0xFFCCB9FF)
+val LightOnPrimary = Color(0xFF1A0553)
 val LightPrimaryContainer = Color(0xFFBB86FC)
 val LightOnPrimaryContainer = Color(0xFF332727)
 val LightInversePrimary = Color(0xFF03DAC6)
 val LightSecondary = Color(0xFF005E14)
 val LightOnSecondary = Color(0xFFFFFFFF)
-val LightSecondaryContainer = Color(0xF7A1DADA)
+val LightSecondaryContainer = Color(0xF7E9F8F8)
 val LightOnSecondaryContainer = Color(0xFF000000)
 val LightTertiary = Color(0xFF03DAC6)
 val LightOnTertiary = Color(0xFFFFFFFF)
@@ -83,6 +83,7 @@ val DarkSurfaceContainerLowest = Color(0xFF444444)
 // </editor-fold>
 
 val LightColorScheme = lightColorScheme(
+    // <editor-fold desc="Light Theme Scheme">
     primary = LightPrimary,
     onPrimary = LightOnPrimary,
     primaryContainer = LightPrimaryContainer,
@@ -119,9 +120,11 @@ val LightColorScheme = lightColorScheme(
     surfaceContainerHighest = LightSurfaceContainerHighest,
     surfaceContainerLow = LightSurfaceContainerLow,
     surfaceContainerLowest = LightSurfaceContainerLowest
+    // </editor-fold>
 )
 
 val DarkColorScheme = darkColorScheme(
+    // <editor-fold desc="Dark Theme Scheme">
     primary = DarkPrimary,
     onPrimary = DarkOnPrimary,
     primaryContainer = DarkPrimaryContainer,
@@ -158,5 +161,6 @@ val DarkColorScheme = darkColorScheme(
     surfaceContainerHighest = DarkSurfaceContainerHighest,
     surfaceContainerLow = DarkSurfaceContainerLow,
     surfaceContainerLowest = DarkSurfaceContainerLowest
+    // </editor-fold>
 )
 

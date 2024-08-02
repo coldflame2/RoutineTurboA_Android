@@ -10,7 +10,6 @@ data class CustomColorsPalette(
     val gray200: Color = Color.Unspecified,
     val gray300: Color = Color.Unspecified,
     val gray400: Color = Color.Unspecified
-
 )
 
 val LightGray100 = Color(color = 0xFFCECECE)

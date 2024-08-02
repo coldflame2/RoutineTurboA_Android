@@ -26,6 +26,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -48,6 +49,8 @@ import kotlinx.coroutines.delay
 @RequiresApi(Build.VERSION_CODES.S)
 @Composable
 fun TasksScreen(
+    paddingValues: PaddingValues,
+    isAddingTask: MutableState<Boolean>,
     context: Context,
     tasksViewModel: TasksViewModel,
     reminderManager: ReminderManager
@@ -57,7 +60,6 @@ fun TasksScreen(
 
     val tasks by tasksViewModel.tasks.collectAsStateWithLifecycle()
     var clickedTask by remember { mutableStateOf<TaskEntity?>(null) }
-    var isAddingTask by remember { mutableStateOf(false) }
     val hasScrolledToTarget = remember { mutableStateOf(false) }
 
     val authenticationResult by remember { mutableStateOf<IAuthenticationResult?>(null) }
@@ -95,99 +97,68 @@ fun TasksScreen(
         isLoading = false
     }
 
-    Scaffold(
-        //  <editor-fold desc="plus button to Add New Task">
-        floatingActionButton = {
-            IconButton(
-                // <editor-fold desc="onClick, modifier, colors, enabled">
-                onClick = {
-                    if (clickedTask != null) {
-                        isAddingTask = true
-                    } else {
-                        Toast.makeText(context, "Please select a task.", Toast.LENGTH_SHORT).show()
-                    }
-                },
-                modifier = Modifier
-                    .padding(end = 55.dp, bottom = 4.dp)
-                    .size(60.dp, 60.dp),
-                colors = IconButtonDefaults.iconButtonColors(MaterialTheme.colorScheme.primary),
-            ) // </editor-fold>
-            {
-                Icon(
-                    Icons.Filled.Add,
-                    contentDescription = "Add New Task",
-                    modifier = Modifier.background(MaterialTheme.colorScheme.primary)
-                )
+    Column {
+        // <editor-fold desc="Lazy Column-SingleTaskCard">
+        LazyColumn(
+            state = listState,
+            modifier = Modifier
+                .padding(paddingValues),
+            contentPadding = PaddingValues(top = 8.dp, bottom = 50.dp)  // Adjust the padding values as needed
+        ) {
+            // Loading state or no tasks
+            if (isLoading || tasks.isEmpty()) {
+                items(2) {
+                    EmptyTaskCardPlaceholder()
+                }
             }
-        },
+
+            else {
+                items(
+                    tasks, key = { task ->
+                        task.id
+                    }
+                ) { task ->
+                    SingleTaskCard(
+                        // <editor-fold desc="SingleTaskCard Parameters"
+                        context = context,
+                        tasksViewModel = tasksViewModel,
+                        reminderManager = reminderManager,
+                        task = task,
+                        onClick = { clickedTask = task },
+                        canDelete = !tasksViewModel.isTaskFirst(task) && !tasksViewModel.isTaskLast(task),
+                        onDelete = { tasksViewModel.deleteTask(it) },
+                        isClicked = task == clickedTask
+                        // </editor-fold>
+                    )
+                }
+            }
+        }  // end of lazy column
         // </editor-fold>
 
-        floatingActionButtonPosition = FabPosition.End,
+        Text(
+            text = "${clickedTask?.name}",
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(PaddingValues())
+        )
+    } // End of Column that contains LazyColumn
 
-    ) { paddingValues ->
-        Column {
-            // <editor-fold desc="Lazy Column-SingleTaskCard">
-            LazyColumn(
-                state = listState,
-                modifier = Modifier
-                    .padding(paddingValues),
-                contentPadding = PaddingValues(top = 8.dp, bottom = 50.dp)  // Adjust the padding values as needed
-            ) {
-                // Loading state or no tasks
-                if (isLoading || tasks.isEmpty()) {
-                    items(2) {
-                        EmptyTaskCardPlaceholder()
-                    }
-                }
 
-                else {
-                    items(
-                        tasks, key = { task ->
-                            task.id
-                        }
-                    ) { task ->
-                        SingleTaskCard(
-                            // <editor-fold desc="SingleTaskCard Parameters"
-                            context = context,
-                            tasksViewModel = tasksViewModel,
-                            reminderManager = reminderManager,
-                            task = task,
-                            onClick = { clickedTask = task },
-                            canDelete = !tasksViewModel.isTaskFirst(task) && !tasksViewModel.isTaskLast(task),
-                            onDelete = { tasksViewModel.deleteTask(it) },
-                            isClicked = task == clickedTask
-                            // </editor-fold>
-                        )
-                    }
-                }
-            }  // end of lazy column
-            // </editor-fold>
-
-            Text(
-                text = "${clickedTask?.name}",
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(PaddingValues())
+    // AddTaskScreen (Inside the parent Box)
+    if (isAddingTask.value && clickedTask != null) {
+        Box(
+            modifier = Modifier
+                .background(Color.Black.copy(alpha = 0.3f))
+        ) {
+            AddTaskScreen(
+                tasksViewModel = tasksViewModel,
+                clickedTask = clickedTask,
+                onAddClick = { newTask ->
+                    tasksViewModel.beginNewTaskOperations(clickedTask!!, newTask)
+                    isAddingTask.value = false
+                },
+                onCancel = { isAddingTask.value = false }
             )
-        } // End of Column that contains LazyColumn
-
-
-        // AddTaskScreen (Inside the parent Box)
-        if (isAddingTask && clickedTask != null) {
-            Box(
-                modifier = Modifier
-                    .background(Color.Black.copy(alpha = 0.3f))
-            ) {
-                AddTaskScreen(
-                    tasksViewModel = tasksViewModel,
-                    clickedTask = clickedTask,
-                    onAddClick = { newTask ->
-                        tasksViewModel.beginNewTaskOperations(clickedTask!!, newTask)
-                        isAddingTask = false
-                    },
-                    onCancel = { isAddingTask = false }
-                )
-            }
         }
+    }
 
-    } // End of Scaffold
 }

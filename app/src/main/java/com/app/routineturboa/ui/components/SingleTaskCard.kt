@@ -192,17 +192,11 @@ fun SingleTaskCard(
                 // Hour and Minute Column
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy((-12).dp),
+                    verticalArrangement = Arrangement.spacedBy((-8).dp),
                 ) {
                     Text(
                         text = startTimeHourString,
                         style = MaterialTheme.typography.bodyLarge.copy(fontSize = 14.sp),
-                    )
-
-                    Text(
-                        text = ".",
-                        style = MaterialTheme.typography.bodyLarge.copy(fontSize = 14.sp),
-                        modifier = Modifier.padding(bottom = 8.dp)
                     )
 
                     Text(
@@ -214,7 +208,7 @@ fun SingleTaskCard(
                 // A/P and M Column
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy((-12).dp), // Adjust to control space between A/P and M
+                    verticalArrangement = Arrangement.spacedBy((-10).dp), // Adjust to control space between A/P and M
                 ) {
                     Text(
                         text = startTimeAinAm, // A or P

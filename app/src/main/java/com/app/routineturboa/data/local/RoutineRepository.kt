@@ -5,13 +5,7 @@ import android.util.Log
 import androidx.room.withTransaction
 import com.app.routineturboa.data.model.TaskEntity
 import com.app.routineturboa.utils.TimeUtils.strToDateTime
-import com.app.routineturboa.utils.demoTaskFive
-import com.app.routineturboa.utils.demoTaskFour
-import com.app.routineturboa.utils.demoTaskOne
-import com.app.routineturboa.utils.demoTaskSeven
-import com.app.routineturboa.utils.demoTaskSix
-import com.app.routineturboa.utils.demoTaskThree
-import com.app.routineturboa.utils.demoTaskTwo
+import com.app.routineturboa.utils.demoTasks.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -114,13 +108,27 @@ class RoutineRepository(val context: Context) {
         val tasks = taskDao.getAllTasks().first()
 
         if (tasks.isNotEmpty()) {
-            insertTask(demoTaskOne)
             insertTask(demoTaskTwo)
             insertTask(demoTaskThree)
             insertTask(demoTaskFour)
             insertTask(demoTaskFive)
             insertTask(demoTaskSix)
             insertTask(demoTaskSeven)
+            insertTask(demoTaskEight)
+            insertTask(demoTaskNine)
+            insertTask(demoTaskTen)
+            insertTask(demoTaskEleven)
+            insertTask(demoTaskTwelve)
+            insertTask(demoTaskThirteen)
+            insertTask(demoTaskFourteen)
+            insertTask(demoTaskFifteen)
+            insertTask(demoTaskSixteen)
+            insertTask(demoTaskSeventeen)
+            insertTask(demoTaskEighteen)
+            insertTask(demoTaskNineteen)
+            insertTask(demoTaskTwenty)
+            insertTask(demoTaskTwentyOne)
+            insertTask(demoTaskTwentyTwo)
         }
     }
 }

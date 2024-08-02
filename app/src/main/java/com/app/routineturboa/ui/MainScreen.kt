@@ -1,20 +1,30 @@
 package com.app.routineturboa.ui
 
 import TaskViewModelFactory
+import android.graphics.BlurMaskFilter
 import android.os.Build
 import android.util.Log
+import android.widget.Toast
 import androidx.annotation.RequiresApi
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.offset
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.DrawerDefaults
 import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.FabPosition
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
@@ -22,90 +32,58 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.BlurEffect
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TileMode
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.app.routineturboa.data.local.RoutineRepository
 import com.app.routineturboa.reminders.ReminderManager
-import com.app.routineturboa.ui.components.ContentForDrawer
-import com.app.routineturboa.ui.components.TopBar
+import com.app.routineturboa.ui.components.ItemsInsideDrawer
+import com.app.routineturboa.ui.components.MainBarAboveTasks
+import com.app.routineturboa.ui.components.TasksNavBar
 import com.app.routineturboa.viewmodel.TasksViewModel
-import kotlinx.coroutines.launch
 
 @RequiresApi(Build.VERSION_CODES.S)
 @Composable
-fun MainScreen(
-    hasNotificationPermission: Boolean,
-    onRequestPermission: () -> Unit,
-    reminderManager: ReminderManager
-) {
+fun MainScreen(reminderManager: ReminderManager) {
     Log.d("MainScreen", "MainScreen starts...")
 
     val context = LocalContext.current
-
     val taskViewModelFactory = remember { TaskViewModelFactory(RoutineRepository(context)) }
     val tasksViewModel: TasksViewModel = viewModel(factory = taskViewModelFactory)
-
     val drawerState = rememberDrawerState(DrawerValue.Closed)
-    val coroutineScope = rememberCoroutineScope()
-    var showPermissionDialog by remember { mutableStateOf(!hasNotificationPermission) }
 
-    val configuration = LocalConfiguration.current
-    val screenWidth = configuration.screenWidthDp.dp
+    val isAddingTask = remember { mutableStateOf(false) }
 
     ModalNavigationDrawer(
+        scrimColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f), // Rest of the UI color
         drawerState = drawerState,
-        drawerContent = {
-            ModalDrawerSheet(
-                drawerContainerColor = MaterialTheme.colorScheme.surface,
-                drawerTonalElevation = 9.dp,
-                modifier = Modifier
-                    .width(screenWidth * 0.7f)
-                    .fillMaxHeight()
-                    .padding(top = 10.dp)
-                    .offset(x = if (drawerState.isClosed) -screenWidth else 0.dp)
-            ) {
-                ContentForDrawer(tasksViewModel, reminderManager, onCloseDrawer = {
-                    coroutineScope.launch {
-                        drawerState.close()
-                    }
-                }, onItemClicked = {
-                    Log.d("MainScreen", "An item in the drawer was clicked")
-                })
-            }
-        },
+        drawerContent = { ItemsInsideDrawer(drawerState, tasksViewModel, reminderManager) },
     ) {
         Scaffold(
-            topBar = { TopBar(drawerState) },
-        ) { paddingValues ->
-            Row(modifier = Modifier.padding(paddingValues)) {
-                TasksScreen(context, tasksViewModel, reminderManager)
-            }
-        }
+            //  <editor-fold desc="Main Scaffold">
+            topBar = { MainBarAboveTasks(drawerState) },
+            bottomBar = { TasksNavBar() },
+            floatingActionButton = {
+                FloatingActionButton (
+                    onClick = { isAddingTask.value = true },
+                    elevation = FloatingActionButtonDefaults.elevation(6.dp),
+                    modifier = Modifier.padding(end = 30.dp)
+                ) { Text(text = "New") }
+            },
+            floatingActionButtonPosition = FabPosition.End,
 
-        if (showPermissionDialog) {
-            AlertDialog(
-                onDismissRequest = { showPermissionDialog = false },
-                title = { Text("Notification Permission") },
-                text = { Text("This app needs notification permission to send you reminders. Would you like to grant this permission?") },
-                confirmButton = {
-                    Button(onClick = {
-                        showPermissionDialog = false
-                        onRequestPermission()
-                    }) {
-                        Text("Grant Permission")
-                    }
-                },
-                dismissButton = {
-                    Button(onClick = { showPermissionDialog = false }) {
-                        Text("Not Now")
-                    }
-                }
-            )
+            // </editor-fold>
+        ) { paddingValues ->
+            TasksScreen(paddingValues, isAddingTask, context, tasksViewModel, reminderManager)
         }
     }
 }

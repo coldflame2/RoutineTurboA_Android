@@ -1,76 +1,79 @@
 package com.app.routineturboa
 
-import android.Manifest
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.result.ActivityResultLauncher
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.areSystemBarsVisible
-import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
-import androidx.compose.ui.graphics.Color
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.toArgb
 import androidx.core.view.WindowCompat
 import com.app.routineturboa.reminders.ReminderManager
 import com.app.routineturboa.ui.MainScreen
 import com.app.routineturboa.ui.theme.RoutineTurboATheme
-import com.app.routineturboa.utils.PermissionUtils
+import com.app.routineturboa.utils.NotificationPermissionHandler
 
 
 class MainActivity : ComponentActivity() {
     private val tag = "MainActivity"
-    
-    private lateinit var requestPermissionLauncher: ActivityResultLauncher<String>
+    private lateinit var isNotificationPermissionGiven: MutableState<Boolean>
+    private lateinit var showPermissionDialog: MutableState<Boolean>
     private lateinit var reminderManager: ReminderManager
 
-
-    @OptIn(ExperimentalMaterial3WindowSizeClassApi::class, ExperimentalLayoutApi::class)
     @RequiresApi(Build.VERSION_CODES.S)
     override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
         Log.d(tag, "onCreate for MainActivity")
 
-        WindowCompat.setDecorFitsSystemWindows(window, true) // Set to true to make system windows visible
-        window.statusBarColor = Color.Blue.toArgb()
-
-        super.onCreate(savedInstanceState)
-
+        // Set to true to make system windows visible
+        WindowCompat.setDecorFitsSystemWindows(window, true)
         reminderManager = ReminderManager(this)
-        requestPermissionLauncher = registerForActivityResult(
-            ActivityResultContracts.RequestPermission()
-        ) { isGranted: Boolean ->
-            if (isGranted) {
-                Log.d(tag, "Notification permission granted")
-                //
-            } else {
-                Log.d(tag, "Notification permission denied")
-            }
-        }
+        // Initialize the state variables
+        isNotificationPermissionGiven = mutableStateOf(NotificationPermissionHandler.isNotificationPermissionGiven(this))
+        showPermissionDialog = mutableStateOf(!isNotificationPermissionGiven.value)
+
+        // Register the ActivityResultLauncher
+        NotificationPermissionHandler.initialize(this, isNotificationPermissionGiven)
 
         setContent {
-            val areSystem = WindowInsets.Companion.areSystemBarsVisible
-            Log.d(tag, "areSystemBarsVisible: $areSystem")
-
             RoutineTurboATheme {
-                MainScreen(
-                    hasNotificationPermission = PermissionUtils.hasNotificationPermission(this),
-                    onRequestPermission = { requestNotificationPermission()},
-                    reminderManager = reminderManager
-                )
-            }
-        }
-    }
+                window.statusBarColor = MaterialTheme.colorScheme.primary.toArgb()
+                window.navigationBarColor = MaterialTheme.colorScheme.primary.toArgb()
 
-    @RequiresApi(Build.VERSION_CODES.S)
-    private fun requestNotificationPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-        } else {
-            Log.d(tag, "Android version < 33, no notification permission request needed.")
+                MainScreen(reminderManager = reminderManager)
+
+                if (showPermissionDialog.value) {
+                    AlertDialog(
+                        title = { Text("Notification Permission") },
+                        text = {
+                            Text (text = "This app needs notification permission to send you reminders." +
+                                    "Would you like to grant this permission?")
+                        },
+                        onDismissRequest = { showPermissionDialog.value = false },
+                        dismissButton = {
+                            Button(onClick = { showPermissionDialog.value = false }) {
+                                Text("Not Now")
+                            }
+                        },
+                        confirmButton = {
+                            Button(onClick = {
+                                showPermissionDialog.value = false
+                                NotificationPermissionHandler.requestNotificationPermission()
+                            }) {
+                                Text("Grant Permission")
+                            }
+                        },
+                    )
+                }
+
+            }
         }
     }
 }
