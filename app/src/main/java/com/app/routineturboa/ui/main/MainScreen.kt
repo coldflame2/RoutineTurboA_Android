@@ -1,4 +1,4 @@
-package com.app.routineturboa.ui
+package com.app.routineturboa.ui.main
 
 import TaskViewModelFactory
 import android.os.Build
@@ -23,9 +23,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.app.routineturboa.data.local.RoutineRepository
 import com.app.routineturboa.reminders.ReminderManager
-import com.app.routineturboa.ui.components.ItemsInsideDrawer
-import com.app.routineturboa.ui.components.TopBarAboveTasks
-import com.app.routineturboa.ui.components.TasksNavBar
+import com.app.routineturboa.ui.main.scaffold.MainDrawer
+import com.app.routineturboa.ui.main.scaffold.MainBottomBar
+import com.app.routineturboa.ui.main.scaffold.MainTopBar
 import com.app.routineturboa.viewmodel.TasksViewModel
 
 @RequiresApi(Build.VERSION_CODES.S)
@@ -43,12 +43,12 @@ fun MainScreen(reminderManager: ReminderManager) {
     ModalNavigationDrawer(
         scrimColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f), // Rest of the UI color
         drawerState = drawerState,
-        drawerContent = { ItemsInsideDrawer(drawerState, tasksViewModel, reminderManager) },
+        drawerContent = { MainDrawer(drawerState, tasksViewModel, reminderManager) },
     ) {
         Scaffold(
             //  <editor-fold desc="Main Scaffold">
-            topBar = { TopBarAboveTasks(drawerState) },
-            bottomBar = { TasksNavBar() },
+            topBar = { MainTopBar(drawerState) },
+            bottomBar = { MainBottomBar() },
             floatingActionButton = {
                 FloatingActionButton (
                     onClick = { isAddingTask.value = true },

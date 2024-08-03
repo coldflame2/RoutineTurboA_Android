@@ -1,4 +1,4 @@
-package com.app.routineturboa.ui.components
+package com.app.routineturboa.ui.task.dialogs
 
 import android.os.Build
 import android.util.Log
@@ -44,10 +44,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.app.routineturboa.R
-import com.app.routineturboa.data.model.TaskEntity
-import com.app.routineturboa.reminders.ReminderManager
+import com.app.routineturboa.data.local.TaskEntity
+import com.app.routineturboa.ui.components.CustomTextField
 import com.app.routineturboa.ui.theme.LocalCustomColorsPalette
-import com.app.routineturboa.utils.CustomTextField
 import com.app.routineturboa.utils.TimeUtils.dateTimeToString
 import com.app.routineturboa.utils.TimeUtils.strToDateTime
 import kotlinx.coroutines.launch

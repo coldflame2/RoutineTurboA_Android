@@ -1,4 +1,4 @@
-package com.app.routineturboa.ui.components
+package com.app.routineturboa.ui.task
 
 import android.content.Context
 import android.os.Build
@@ -57,9 +57,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.app.routineturboa.data.model.TaskEntity
+import com.app.routineturboa.data.local.TaskEntity
 import com.app.routineturboa.reminders.ReminderManager
-import com.app.routineturboa.utils.DottedLine
+import com.app.routineturboa.ui.components.DottedLine
 import com.app.routineturboa.utils.SineEasing
 import com.app.routineturboa.viewmodel.TasksViewModel
 import java.time.LocalDateTime

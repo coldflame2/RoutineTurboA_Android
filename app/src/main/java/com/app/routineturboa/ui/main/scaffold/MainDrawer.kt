@@ -1,4 +1,4 @@
-package com.app.routineturboa.ui.components
+package com.app.routineturboa.ui.main.scaffold
 
 import android.os.Build
 import androidx.annotation.RequiresApi
@@ -43,12 +43,13 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.app.routineturboa.R
 import com.app.routineturboa.reminders.ReminderManager
+import com.app.routineturboa.ui.components.SignInItem
 import com.app.routineturboa.viewmodel.TasksViewModel
 import kotlinx.coroutines.launch
 
 @RequiresApi(Build.VERSION_CODES.S)
 @Composable
-fun ItemsInsideDrawer(
+fun MainDrawer(
     drawerState: DrawerState,
     tasksViewModel: TasksViewModel,
     reminderManager: ReminderManager

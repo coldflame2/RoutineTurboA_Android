@@ -8,7 +8,6 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
-import com.app.routineturboa.data.model.TaskEntity
 import kotlinx.coroutines.flow.Flow
 
 const val tag = "TaskDao"

@@ -12,11 +12,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.toArgb
 import androidx.core.view.WindowCompat
 import com.app.routineturboa.reminders.ReminderManager
-import com.app.routineturboa.ui.MainScreen
+import com.app.routineturboa.ui.main.MainScreen
 import com.app.routineturboa.ui.theme.RoutineTurboATheme
 import com.app.routineturboa.utils.NotificationPermissionHandler
 

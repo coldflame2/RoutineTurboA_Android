@@ -1,4 +1,4 @@
-package com.app.routineturboa.utils
+package com.app.routineturboa.ui.components
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.shape.RoundedCornerShape

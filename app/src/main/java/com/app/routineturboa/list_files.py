@@ -58,7 +58,7 @@ if __name__ == "__main__":
     relative_path = os.path.join('app', 'src', 'main', 'java', 'com', 'app', 'routineturboa')
     abs_path = os.path.abspath('')
         
-    output_path = os.path.join(abs_path, 'tree_structure_output.txt')
+    output_path = os.path.join(abs_path, 'list_files_output.txt')
 
 
     # Print the tree structure

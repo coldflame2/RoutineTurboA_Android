@@ -1,6 +1,6 @@
-package com.app.routineturboa.utils.demoTasks
+package com.app.routineturboa.utils
 
-import com.app.routineturboa.data.model.TaskEntity
+import com.app.routineturboa.data.local.TaskEntity
 import com.app.routineturboa.utils.TimeUtils.strToDateTime
 
 val demoTaskTwo = TaskEntity(

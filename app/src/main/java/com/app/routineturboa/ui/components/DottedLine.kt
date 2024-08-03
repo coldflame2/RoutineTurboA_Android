@@ -1,4 +1,4 @@
-package com.app.routineturboa.utils
+package com.app.routineturboa.ui.components
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxWidth

@@ -5,18 +5,18 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.util.Log
-import com.app.routineturboa.onedrive.MsalAuthManager
+import com.app.routineturboa.data.onedrive.MsalAuthManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
-class RoutineTurboApplication : Application() {
+class RoutineTurboApp : Application() {
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     lateinit var msalAuthManager: MsalAuthManager
 
     companion object {
-        lateinit var instance: RoutineTurboApplication
+        lateinit var instance: RoutineTurboApp
             private set
     }
 

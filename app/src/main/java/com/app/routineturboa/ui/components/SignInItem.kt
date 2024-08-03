@@ -38,14 +38,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.app.routineturboa.MainActivity
-import com.app.routineturboa.RoutineTurboApplication
+import com.app.routineturboa.RoutineTurboApp
 import kotlinx.coroutines.launch
 
 @Composable
 fun SignInItem() {
     val tag = "SignInItem"
     val context = LocalContext.current
-    val msalAuthManager = remember { RoutineTurboApplication.instance.msalAuthManager }
+    val msalAuthManager = remember { RoutineTurboApp.instance.msalAuthManager }
     var isSignedIn by remember { mutableStateOf(false) }
     var username by remember { mutableStateOf("") }
     var isExpanded by remember { mutableStateOf(false) }

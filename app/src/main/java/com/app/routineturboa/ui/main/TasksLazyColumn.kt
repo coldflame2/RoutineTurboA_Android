@@ -1,30 +1,21 @@
-package com.app.routineturboa.ui
+package com.app.routineturboa.ui.main
 
 import android.content.Context
 import android.os.Build
 import android.util.Log
-import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FabPosition
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults.exitUntilCollapsedScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -34,14 +25,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.app.routineturboa.data.model.TaskEntity
+import com.app.routineturboa.data.local.TaskEntity
 import com.app.routineturboa.reminders.ReminderManager
-import com.app.routineturboa.ui.components.AddTaskScreen
+import com.app.routineturboa.ui.task.dialogs.AddTaskScreen
 import com.app.routineturboa.ui.components.EmptyTaskCardPlaceholder
-import com.app.routineturboa.ui.components.SingleTaskCard
+import com.app.routineturboa.ui.task.SingleTaskCard
 import com.app.routineturboa.viewmodel.TasksViewModel
 import com.microsoft.identity.client.IAuthenticationResult
 import kotlinx.coroutines.delay
@@ -67,6 +59,7 @@ fun TasksScreen(
     var isLoading by remember { mutableStateOf(true) }
 
     val listState = rememberLazyListState()
+
 
     // Find the index of the task whose time range includes the current time
     val targetIndex = tasks.indexOfFirst { task ->
@@ -99,50 +92,49 @@ fun TasksScreen(
         isLoading = false
     }
 
-    Column {
-        // <editor-fold desc="Lazy Column-SingleTaskCard">
-        LazyColumn(
-            state = listState,
-            modifier = Modifier.padding(paddingValues),
-            contentPadding = PaddingValues(bottom = 50.dp),  // Adjust the padding values as needed
-            verticalArrangement = Arrangement.spacedBy(2.dp)
-        ) {
-            // Loading state or no tasks
-            if (isLoading || tasks.isEmpty()) {
-                items(2) {
-                    EmptyTaskCardPlaceholder()
-                }
+    // <editor-fold desc="Lazy Column-SingleTaskCard">
+    LazyColumn(
+        state = listState,
+        modifier = Modifier
+            .padding(paddingValues),
+        contentPadding = PaddingValues(bottom = 50.dp),  // Adjust the padding values as needed
+        verticalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        // Loading state or no tasks
+        if (isLoading || tasks.isEmpty()) {
+            items(2) {
+                EmptyTaskCardPlaceholder()
             }
+        }
 
-            else {
-                items(
-                    tasks, key = { task ->
-                        task.id
-                    }
-                ) { task ->
-                    SingleTaskCard(
-                        // <editor-fold desc="SingleTaskCard Parameters"
-                        context = context,
-                        tasksViewModel = tasksViewModel,
-                        reminderManager = reminderManager,
-                        task = task,
-                        onClick = { clickedTask = task },
-                        canDelete = !tasksViewModel.isTaskFirst(task) && !tasksViewModel.isTaskLast(task),
-                        onDelete = { tasksViewModel.deleteTask(it) },
-                        isClicked = task == clickedTask
-                        // </editor-fold>
-                    )
+        else {
+            items(
+                tasks, key = { task ->
+                    task.id
                 }
+            ) { task ->
+                SingleTaskCard(
+                    // <editor-fold desc="SingleTaskCard Parameters"
+                    context = context,
+                    tasksViewModel = tasksViewModel,
+                    reminderManager = reminderManager,
+                    task = task,
+                    onClick = { clickedTask = task },
+                    canDelete = !tasksViewModel.isTaskFirst(task) && !tasksViewModel.isTaskLast(task),
+                    onDelete = { tasksViewModel.deleteTask(it) },
+                    isClicked = task == clickedTask
+                    // </editor-fold>
+                )
             }
-        }  // end of lazy column
-        // </editor-fold>
+        }
+    }  // end of lazy column
+    // </editor-fold>
 
-        Text(
-            text = "${clickedTask?.name}",
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(PaddingValues())
-        )
-    } // End of Column that contains LazyColumn
+    Text(
+        text = "${clickedTask?.name}",
+        textAlign = TextAlign.Center,
+        modifier = Modifier.padding(PaddingValues())
+    )
 
 
     // AddTaskScreen (Inside the parent Box)
