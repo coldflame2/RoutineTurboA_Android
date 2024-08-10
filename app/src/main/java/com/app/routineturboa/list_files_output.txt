@@ -1,5 +1,6 @@
 |-- routineturboa/
 |   |-- list_files.py
+|   |-- list_files_output.txt
 |   |-- MainActivity.kt
 |   |-- RoutineTurboApp.kt
 |   |-- data/
@@ -36,9 +37,10 @@
 |   |   |   |-- dialogs/
 |   |   |   |   |-- AddTaskDialog.kt
 |   |   |   |   |-- FullEditDialog.kt
+|   |   |   |   |-- TaskDetailsDialog.kt
 |   |   |-- theme/
 |   |   |   |-- Color.kt
-|   |   |   |-- CusomColorsPallete.kt
+|   |   |   |-- CustomColorsPallete.kt
 |   |   |   |-- Theme.kt
 |   |   |   |-- Type.kt
 |   |-- utils/

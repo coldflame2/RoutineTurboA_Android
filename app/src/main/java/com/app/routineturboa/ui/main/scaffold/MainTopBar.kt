@@ -47,7 +47,7 @@ fun MainTopBar(drawerState: DrawerState) {
         },
         actions = {
             IconButton(
-                onClick = { /*TODO*/ }
+                onClick = { /*TODO: Main Top Bar button action.*/ }
             ) {
                 Icon(
                     Icons.Outlined.ViewDay,

@@ -32,6 +32,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
@@ -49,13 +50,9 @@ import com.app.routineturboa.R
 import com.app.routineturboa.data.local.TaskEntity
 import com.app.routineturboa.ui.components.CustomTextField
 import com.app.routineturboa.utils.TimeUtils.dateTimeToString
-import com.app.routineturboa.utils.TimeUtils.possibleFormats
 import com.app.routineturboa.utils.TimeUtils.strToDateTime
 import com.app.routineturboa.viewmodel.TasksViewModel
-import java.time.LocalDate
 import java.time.LocalDateTime
-import java.time.LocalTime
-import java.time.format.DateTimeParseException
 
 
 @Composable
@@ -66,29 +63,35 @@ fun AddTaskDialog(
     onCancel: () -> Unit
 ) {
     val tag = "AddTaskDialog"
-    Log.d(tag, "AddTaskDialog: clickedTask: $clickedTask")
 
+    if (clickedTask == null) {
+        Log.e(tag, "clickedTask is null")
+        Toast.makeText(LocalContext.current, "Click a task first.", Toast.LENGTH_SHORT).show()
+        return
+    }
+
+    Log.d(tag, "clickedTask: $clickedTask")
+
+    // Context and Initial Task Data
     val context = LocalContext.current
-    val clickedTaskEndTime = clickedTask?.endTime
-    val clickedTaskID = clickedTask?.id
-    val clickedTaskPosition = clickedTask?.position
+    val clickedTaskEndTime = clickedTask.endTime
+    val clickedTaskID = clickedTask.id
+    val clickedTaskPosition = clickedTask.position
 
-    val taskBelowBeforeAdding = tasksViewModel.fetchNextTask(clickedTask!!)
-    val durationTaskBelowBeforeAdding = taskBelowBeforeAdding?.duration
+    // Fetch tasks of type "MainTask"
+    val mainTasks = tasksViewModel.getMainTasks().collectAsState(initial = emptyList())
 
     // Data in State variables
-    val id by remember { mutableIntStateOf(clickedTaskID?.plus(1) ?: 1) }
+    val id by remember { mutableIntStateOf(clickedTaskID + 1) }
+    var startTime by remember { mutableStateOf(clickedTaskEndTime) }
+    val defaultDuration = 1L
+    var endTime by remember { mutableStateOf(startTime.plusMinutes(defaultDuration)) }
     var taskName by remember { mutableStateOf(" ") }
     var notes by remember { mutableStateOf( " ") }
-    var startTime by remember { mutableStateOf(clickedTaskEndTime ?: LocalDateTime.now()) }
-    var duration by remember { mutableLongStateOf(1L) }
-    var endTime by remember { mutableStateOf(
-        clickedTaskEndTime?.plusMinutes(duration) ?: LocalDateTime.now().plusMinutes(1)) }
+    var duration by remember { mutableLongStateOf(defaultDuration) }
     var reminder by remember { mutableStateOf(startTime) }
-    val taskType by remember { mutableStateOf("") }
-    var taskPosition by remember { mutableIntStateOf(clickedTaskPosition?.plus(1)?: 2) }
-
-    var isReminderLinked by remember { mutableStateOf(true) }
+    var taskType by remember { mutableStateOf("") }
+    var taskPosition by remember { mutableIntStateOf(clickedTaskPosition.plus(1)) }
 
     // Convert state variables to  string for display
     var startTimeFormatted by remember {mutableStateOf(dateTimeToString(startTime))}
@@ -98,9 +101,18 @@ fun AddTaskDialog(
     val idFormatted by remember {mutableStateOf(id.toString())}
     var positionFormatted by remember {mutableStateOf(taskPosition.toString())}
 
+    // Get duration fo task below to check limits of duration for new task
+    val taskBelowBeforeAdding = tasksViewModel.fetchNextTask(clickedTask!!)
+    val durationTaskBelowBeforeAdding = taskBelowBeforeAdding?.duration
+
+    var isReminderLinked by remember { mutableStateOf(true) }
+
     Log.d(tag, "clicked task name and position: ${clickedTask.name} ${clickedTask.position}")
     Log.d(tag, "clicked task end time: ${clickedTask.endTime}")
     Log.d(tag, "new task start time: $startTimeFormatted")
+
+    // State to hold selected main task ID
+    var linkedMainTaskIdIfHelper by remember { mutableStateOf<Int?>(null) }
 
     // Calculate endTime based on duration input
     LaunchedEffect(durationFormatted) {
@@ -120,36 +132,22 @@ fun AddTaskDialog(
         }
     }
 
-    fun endTimeStringToLDT(timeString: String): LocalDateTime? {
-        val trimmedTimeString = timeString.trim().uppercase()
-        for (formatter in possibleFormats) {
-            try {
-                val localTime = LocalTime.parse(trimmedTimeString, formatter)
-                return LocalDateTime.of(LocalDate.now(), localTime)
-            } catch (e: DateTimeParseException) {
-                Log.e("TimeUtils", "Error parsing time string: $timeString")
-            }
-        }
-
-        return null
-    }
-
     // Calculate Duration based on End Time
     LaunchedEffect(endTimeFormatted) {
         if (endTimeFormatted.isNotEmpty()) {
             try {
                 // Attempt to parse the end time string
-                val endTimeParsed = endTimeStringToLDT(endTimeFormatted)
+                val endTimeParsed = strToDateTime(endTimeFormatted)
 
-                if (endTimeParsed != null && endTimeParsed.isAfter(startTime)) {
+                if (endTimeParsed.isAfter(startTime)) {
                     // Calculate the duration in minutes
                     val durationInMinutes = java.time.Duration.between(startTime, endTimeParsed).toMinutes()
 
                     // Update the durationFormatted state variable
                     durationFormatted = durationInMinutes.toString()
                 } else {
-                    // End time is not valid or is not after start time, do nothing or reset durationFormatted
-                    Toast.makeText(context, "End time must be after start time and valid.", Toast.LENGTH_SHORT).show()
+                    // End time is not valid or is not after start time
+                    Toast.makeText(context, ".", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
                 // Handle any unexpected exceptions
@@ -158,11 +156,18 @@ fun AddTaskDialog(
         }
     }
 
-
     // Update reminder time if linked
     LaunchedEffect(startTimeFormatted) {
         if (isReminderLinked) {
             reminderFormatted = startTimeFormatted
+        }
+    }
+
+    // Listen for changes in the task type dropdown
+    LaunchedEffect(taskType) {
+        if (taskType == "HelperTask") {
+            // Reset selectedMainTaskId when task type is changed to HelperTask
+            linkedMainTaskIdIfHelper = null
         }
     }
 
@@ -270,7 +275,22 @@ fun AddTaskDialog(
                     singleLine = false
                 )
 
-                TaskTypeDropdown()
+                // Task type dropdown
+                TaskTypeDropdown(
+                    selectedTaskType = taskType,
+                    onTaskTypeSelected = { newType ->
+                        taskType = newType
+                    }
+                )
+
+                // Show the main task dropdown only if task type is "HelperTask"
+                if (taskType == "HelperTask") {
+                    MainTaskDropdown(
+                        mainTasks = mainTasks.value,
+                        selectedMainTaskId = linkedMainTaskIdIfHelper,
+                        onTaskSelected = { taskId -> linkedMainTaskIdIfHelper = taskId }
+                    )
+                }
 
                 TextField(
                     value = idFormatted,
@@ -321,6 +341,7 @@ fun AddTaskDialog(
                                     duration = duration.toInt(),
                                     reminder = reminder,
                                     type = taskType,
+                                    mainTaskId = linkedMainTaskIdIfHelper // Link to the selected main task
                                 )
                                 onAddClick(newTask)
 
@@ -339,48 +360,94 @@ fun AddTaskDialog(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TaskTypeDropdown() {
-    val taskTypes = listOf("MainTask", "QuickTask")
+fun TaskTypeDropdown(
+    selectedTaskType: String,
+    onTaskTypeSelected: (String) -> Unit
+) {
+    val taskTypes = listOf("MainTask", "QuickTask", "HelperTask")
     val expanded = remember { mutableStateOf(false) }
-    val selectedTaskType = remember { mutableStateOf(taskTypes[0]) }
 
     ExposedDropdownMenuBox(
         expanded = expanded.value,
         onExpandedChange = { expanded.value = it },
         modifier = Modifier.fillMaxWidth(),
-
     ) {
         TextField(
             readOnly = true,
-            value = selectedTaskType.value,
+            value = selectedTaskType,
             onValueChange = {},
             label = { Text("Task Type") },
             trailingIcon = {
-                ExposedDropdownMenuDefaults.TrailingIcon(
-                    expanded = expanded.value
-                )
+                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded.value)
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .menuAnchor() // Ensures the dropdown menu aligns correctly with the TextField
+                .menuAnchor()
         )
         ExposedDropdownMenu(
             expanded = expanded.value,
             onDismissRequest = { expanded.value = false },
-            modifier = Modifier.fillMaxWidth() // Ensure the dropdown menu fills the width of the TextField
+            modifier = Modifier.fillMaxWidth()
         ) {
             taskTypes.forEach { taskType ->
                 DropdownMenuItem(
                     onClick = {
-                        selectedTaskType.value = taskType
+                        onTaskTypeSelected(taskType) // Notify parent of the selection
                         expanded.value = false
                     },
                     text = { Text(taskType) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.surfaceContainerHigh), // Ensure each item fills the width of the TextField
+                    modifier = Modifier.fillMaxWidth()
                 )
-                HorizontalDivider(thickness = 4.dp)
+            }
+        }
+    }
+}
+
+
+// Add a new composable to show the MainTask dropdown
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MainTaskDropdown(
+    mainTasks: List<TaskEntity>,
+    selectedMainTaskId: Int?,
+    onTaskSelected: (Int?) -> Unit
+) {
+    val expanded = remember { mutableStateOf(false) }
+    val selectedTaskName = remember(selectedMainTaskId) {
+        mainTasks.find { it.id == selectedMainTaskId }?.name ?: "Select a task"
+    }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded.value,
+        onExpandedChange = { expanded.value = it },
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        TextField(
+            readOnly = true,
+            value = selectedTaskName,
+            onValueChange = {},
+            label = { Text("Link to Main Task") },
+            trailingIcon = {
+                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded.value)
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor()
+        )
+
+        ExposedDropdownMenu(
+            expanded = expanded.value,
+            onDismissRequest = { expanded.value = false },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            mainTasks.forEach { task ->
+                DropdownMenuItem(
+                    onClick = {
+                        onTaskSelected(task.id)
+                        expanded.value = false
+                    },
+                    text = { Text(task.name) }
+                )
             }
         }
     }

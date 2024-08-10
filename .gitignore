@@ -14,3 +14,5 @@
 .cxx
 local.properties
 /.idea/other.xml
+
+/app/extras/

@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.routineturboa.data.local.RoutineRepository
 import com.app.routineturboa.data.local.TaskEntity
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -19,6 +20,11 @@ class TasksViewModel(private val repository: RoutineRepository) : ViewModel() {
 
     val tasks: StateFlow<List<TaskEntity>> = repository.getAllTasks()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Function to fetch MainTasks from the repository
+    fun getMainTasks(): Flow<List<TaskEntity>> {
+        return repository.getTasksByType("MainTask")
+    }
 
     fun updateTaskAndAdjustNext(initialEditedTask: TaskEntity) {
         Log.d(TAG, "Updating '${initialEditedTask.name}' task and its next task.")

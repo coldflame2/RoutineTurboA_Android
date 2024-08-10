@@ -38,6 +38,11 @@ class RoutineRepository(val context: Context) {
 
     fun getAllTasks(): Flow<List<TaskEntity>> = taskDao.getAllTasks()
 
+    // Function to get tasks by type
+    fun getTasksByType(type: String): Flow<List<TaskEntity>> {
+        return taskDao.getTasksByType(type)
+    }
+
     suspend fun insertTask(task: TaskEntity): Long {
         Log.d(tag, "Inserting task with ID: ${task.id}. Task Name: ${task.name}")
 

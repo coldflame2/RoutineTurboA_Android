@@ -71,6 +71,7 @@ fun FullEditDialog(
     var duration by remember { mutableIntStateOf(task.duration) }
     var reminder by remember { mutableStateOf(task.reminder) }
     var position by remember { mutableIntStateOf(task.position) }
+    var taskType by remember { mutableStateOf(task.type) }
 
     // Convert state variables to  string for display
     var startTimeString by remember {mutableStateOf(dateTimeToString(startTime))}
@@ -199,7 +200,7 @@ fun FullEditDialog(
                     singleLine = false
                 )
 
-                TaskTypeDropdown()
+                TaskTypeDropdown(taskType, onTaskTypeSelected = { newType -> taskType = newType })
 
                 CustomTextField(
                     value = idFormatted,
@@ -247,7 +248,6 @@ fun FullEditDialog(
                             .size(120.dp, 50.dp),
                         elevation = FloatingActionButtonDefaults.elevation(10.dp),
                         onClick = {
-                            // TODO: Use <include> and <exclude> to control what is backed up.
                             Log.d("EditTaskScreen", "Save Button clicked...")
                             coroutineScope.launch {
                                 try {
@@ -270,9 +270,12 @@ fun FullEditDialog(
                                     startTime = startTime,
                                     endTime = endTime,
                                     reminder = reminder,
-                                    duration = duration
+                                    duration = duration,
+                                    type = taskType
                                 )
+
                                 onConfirmTaskEdit(updatedTask)
+
                             } // End of Coroutine
                         }
                     ) {

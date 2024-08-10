@@ -13,7 +13,6 @@ import java.util.Locale
 
 object TimeUtils {
 
-    private val timeFormatter = DateTimeFormatter.ofPattern("hh:mm a", Locale.ROOT)
     val possibleFormats = listOf(
         DateTimeFormatter.ofPattern("h:mm a", Locale.US),
         DateTimeFormatter.ofPattern("hh:mm a", Locale.US),

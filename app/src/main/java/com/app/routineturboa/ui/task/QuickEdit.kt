@@ -19,7 +19,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -39,11 +38,10 @@ import com.app.routineturboa.viewmodel.TasksViewModel
 @Composable
 fun QuickEdit(
     task: TaskEntity,
-    isQuickEditing: MutableState<Boolean>,
+    onEndEditing: () -> Unit,
     tasksViewModel: TasksViewModel,
     reminderManager: ReminderManager,
-    context: Context,
-    onCancel: () -> Unit
+    context: Context
 ) {
     val tag = "QuickEditScreen"
     val isFullEditing = remember { mutableStateOf(false) }
@@ -97,7 +95,7 @@ fun QuickEdit(
     horizontalArrangement = Arrangement.SpaceBetween
     ) {
         // Cancel Button
-        TextButton(onClick = { onCancel() }) {
+        TextButton(onClick = { onEndEditing() }) {
             Text("Cancel")
         }
 
@@ -108,9 +106,8 @@ fun QuickEdit(
 
             // On Save Button in Quick-Edit Clicked
             onClick = {
+                Toast.makeText(context, "Saving....", Toast.LENGTH_SHORT).show()
                 Log.d(tag, "Save Button in Quick-Edit Screen clicked...")
-                isQuickEditing.value = false
-
                 try{
                     duration = durationString.toInt()
                     endTime = strToDateTime(endTimeString)
@@ -127,11 +124,12 @@ fun QuickEdit(
                     duration = duration,
                     endTime = endTime
                 )
-
                 tasksViewModel.updateTaskAndAdjustNext(taskWithUpdatedData)
+                onEndEditing()
             }
         // </editor-fold>
         )
+
         {
             Text(
                 text = "Save",
@@ -153,10 +151,12 @@ fun QuickEdit(
                 task = task,
                 onConfirmTaskEdit = { updatedTask ->
                     isFullEditing.value = false
-                    beginTaskUpdateOperations(updatedTask)
-                    isQuickEditing.value = false
+                    tasksViewModel.updateTaskAndAdjustNext(updatedTask)
+                    onEndEditing()
                 },
-                onCancel = { isFullEditing.value = false }
+                onCancel = {
+                    isFullEditing.value = false
+                }
             )
         }
     }

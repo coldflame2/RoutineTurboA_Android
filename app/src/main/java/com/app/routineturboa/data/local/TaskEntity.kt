@@ -17,5 +17,6 @@ data class TaskEntity(
     val endTime: LocalDateTime,
     val reminder: LocalDateTime,
     val type: String,
-    val position: Int
+    val position: Int,
+    val mainTaskId: Int? = null // This is the foreign key to link to another task
 )

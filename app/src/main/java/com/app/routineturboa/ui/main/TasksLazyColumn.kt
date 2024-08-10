@@ -26,11 +26,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.app.routineturboa.data.local.TaskEntity
 import com.app.routineturboa.reminders.ReminderManager
 import com.app.routineturboa.ui.task.dialogs.AddTaskDialog
 import com.app.routineturboa.ui.components.EmptyTaskCardPlaceholder
-import com.app.routineturboa.ui.task.SingleTaskCard
+import com.app.routineturboa.ui.task.TaskCard
 import com.app.routineturboa.viewmodel.TasksViewModel
 import com.microsoft.identity.client.IAuthenticationResult
 import kotlinx.coroutines.delay
@@ -38,7 +37,7 @@ import kotlinx.coroutines.delay
 @OptIn(ExperimentalMaterial3Api::class)
 @RequiresApi(Build.VERSION_CODES.S)
 @Composable
-fun TasksScreen(
+fun TasksLazyColumn(
     paddingValues: PaddingValues,
     isAddingTask: MutableState<Boolean>,
     context: Context,
@@ -46,10 +45,15 @@ fun TasksScreen(
     reminderManager: ReminderManager
 ) {
     // <editor-fold desc="variables">
-    val tag = "TasksScreen"
+    val tag = "TasksLazyColumn"
 
     val tasks by tasksViewModel.tasks.collectAsStateWithLifecycle()
-    var clickedTask by remember { mutableStateOf<TaskEntity?>(null) }
+    val clickedTaskId = remember { mutableStateOf<Int?>(null) }
+    val editingTaskId = remember { mutableStateOf<Int?>(null) }
+    val isQuickEditing = remember { mutableStateOf(false) }
+    val isFullEditing = remember { mutableStateOf(false) }
+    var isAnotherTaskEditing = remember { mutableStateOf(false) }
+
     val hasScrolledToTarget = remember { mutableStateOf(false) }
 
     val authenticationResult by remember { mutableStateOf<IAuthenticationResult?>(null) }
@@ -110,17 +114,42 @@ fun TasksScreen(
                     task.id
                 }
             ) { task ->
-                SingleTaskCard(
+                // Determine if another task is being edited
+                isAnotherTaskEditing.value = (isQuickEditing.value || isFullEditing.value) && editingTaskId.value != task.id
+
+                TaskCard(
                     // <editor-fold desc="SingleTaskCard Parameters"
                     context = context,
                     tasksViewModel = tasksViewModel,
                     reminderManager = reminderManager,
                     task = task,
-                    onClick = { clickedTask = task },
+                    onClick = { clickedTaskId.value = task.id },
                     canDelete = !tasksViewModel.isTaskFirst(task) && !tasksViewModel.isTaskLast(task),
                     onDelete = { tasksViewModel.deleteTask(it) },
-                    isClicked = task == clickedTask
-                    // </editor-fold>
+
+                    isClicked = task.id == clickedTaskId.value,
+                    isAnotherTaskEditing = isAnotherTaskEditing.value,
+
+                    isQuickEditing = isQuickEditing.value && editingTaskId.value == task.id,
+                    isFullEditing = isFullEditing.value && editingTaskId.value == task.id,
+
+                    onStartQuickEdit = {
+                        editingTaskId.value = task.id
+                        isQuickEditing.value = true
+                        isFullEditing.value = false
+                    },
+                    onStartFullEdit = {
+                        editingTaskId.value = task.id
+                        isQuickEditing.value = false
+                        isFullEditing.value = true
+                    },
+                    onEndEditing = {
+                        editingTaskId.value = null
+                        isQuickEditing.value = false
+                        isFullEditing.value = false
+                    }
+
+
                 )
             }
         }
@@ -128,18 +157,17 @@ fun TasksScreen(
     // </editor-fold>
 
     Text(
-        text = "${clickedTask?.name}",
+        text = tasks.find { it.id == clickedTaskId.value }?.name ?: "",
         textAlign = TextAlign.Center,
         modifier = Modifier.padding(PaddingValues())
     )
 
+    // AddTaskDialog (Inside the parent Box)
+    if (isAddingTask.value && clickedTaskId.value != null) {
+        val clickedTask = tasks.find { it.id == clickedTaskId.value }
+        val boxColor = Color.Black.copy(alpha = 0.3f)
 
-    // AddTaskScreen (Inside the parent Box)
-    if (isAddingTask.value && clickedTask != null) {
-        Box(
-            modifier = Modifier
-                .background(Color.Black.copy(alpha = 0.3f))
-        ) {
+        Box(modifier = Modifier.background(boxColor)) {
             AddTaskDialog(
                 tasksViewModel = tasksViewModel,
                 clickedTask = clickedTask,
@@ -151,5 +179,4 @@ fun TasksScreen(
             )
         }
     }
-
 }

@@ -41,7 +41,7 @@ fun MainScreen(reminderManager: ReminderManager) {
     val isAddingTask = remember { mutableStateOf(false) }
 
     ModalNavigationDrawer(
-        scrimColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f), // Rest of the UI color
+        scrimColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f), // Rest of the UI color on drawer open
         drawerState = drawerState,
         drawerContent = { MainDrawer(drawerState, tasksViewModel, reminderManager) },
     ) {
@@ -60,7 +60,7 @@ fun MainScreen(reminderManager: ReminderManager) {
 
             // </editor-fold>
         ) { paddingValues ->
-            TasksScreen(paddingValues, isAddingTask, context, tasksViewModel, reminderManager)
+            TasksLazyColumn(paddingValues, isAddingTask, context, tasksViewModel, reminderManager)
         }
     }
 }

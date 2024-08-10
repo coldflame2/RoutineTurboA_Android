@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 fun TaskDropdownMenu(
     modifier: Modifier = Modifier,
     onEditClick: () -> Unit,
+    onViewClick: () -> Unit,
     canDelete: Boolean,
     onDeleteClick: () -> Unit,
     onDismissRequest: () -> Unit,
@@ -40,6 +41,26 @@ fun TaskDropdownMenu(
 
         HorizontalDivider(
             thickness = 2.dp
+        )
+
+        DropdownMenuItem(
+            text = {
+                Text(
+                    text = "View Details",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = if (canDelete) {
+                        MaterialTheme.colorScheme.onPrimaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                    modifier = Modifier
+                        .alpha(if (canDelete) 1f else 0.3f)
+                )
+            },
+            onClick = onViewClick,
+            colors = MenuDefaults.itemColors(
+                disabledTextColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.9f)
+            )
         )
 
         DropdownMenuItem(

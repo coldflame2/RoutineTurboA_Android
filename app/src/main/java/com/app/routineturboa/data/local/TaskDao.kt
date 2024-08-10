@@ -18,6 +18,10 @@ interface TaskDao {
     @Query("SELECT * FROM tasks_table ORDER BY position ASC")
     fun getAllTasks(): Flow<List<TaskEntity>>
 
+    // Query to get tasks by type
+    @Query("SELECT * FROM tasks_table WHERE type = :type")
+    fun getTasksByType(type: String): Flow<List<TaskEntity>>
+
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertTask(task: TaskEntity): Long
 
