@@ -56,5 +56,6 @@ fun MainTopBar(drawerState: DrawerState) {
             }
         },
         scrollBehavior = scrollBehavior,
+        //</editor-fold>
     )
 }

@@ -30,6 +30,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -54,7 +55,7 @@ import kotlinx.coroutines.launch
 @RequiresApi(Build.VERSION_CODES.S)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EditTaskScreen(
+fun FullEditDialog(
     task: TaskEntity,
     onConfirmTaskEdit: suspend (TaskEntity) -> Unit,
     onCancel: () -> Unit
@@ -156,6 +157,17 @@ fun EditTaskScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
+                    LaunchedEffect (durationString){
+                        if (durationString.isNotEmpty()) {
+                            try {
+                                endTimeString = dateTimeToString(startTime.plusMinutes(durationString.toLong()))
+                            } catch (e: NumberFormatException) {
+                                Toast.makeText(context, "Invalid duration format", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+
+                    }
+
                     CustomTextField(
                         value = durationString,
                         onValueChange = { durationString = it },
@@ -230,9 +242,12 @@ fun EditTaskScreen(
                     // Save Button
                     FloatingActionButton(
                         containerColor = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(5.dp).size(120.dp, 50.dp),
+                        modifier = Modifier
+                            .padding(5.dp)
+                            .size(120.dp, 50.dp),
                         elevation = FloatingActionButtonDefaults.elevation(10.dp),
                         onClick = {
+                            // TODO: Use <include> and <exclude> to control what is backed up.
                             Log.d("EditTaskScreen", "Save Button clicked...")
                             coroutineScope.launch {
                                 try {

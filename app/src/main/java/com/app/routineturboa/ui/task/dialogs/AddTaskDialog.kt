@@ -59,14 +59,14 @@ import java.time.format.DateTimeParseException
 
 
 @Composable
-fun AddTaskScreen(
+fun AddTaskDialog(
     tasksViewModel: TasksViewModel,
     clickedTask: TaskEntity?,
     onAddClick: (TaskEntity) -> Unit,
     onCancel: () -> Unit
 ) {
-    val tag = "AddTaskScreen"
-    Log.d(tag, "AddTaskScreen: clickedTask: $clickedTask")
+    val tag = "AddTaskDialog"
+    Log.d(tag, "AddTaskDialog: clickedTask: $clickedTask")
 
     val context = LocalContext.current
     val clickedTaskEndTime = clickedTask?.endTime
@@ -297,41 +297,40 @@ fun AddTaskScreen(
                     Button(
                         modifier = Modifier.padding(5.dp),
                         shape = RoundedCornerShape(25.dp),
-                        onClick = { onCancel() }) {
-                        Text("Cancel")
-                    }
+                        onClick = { onCancel() }
+                    ) { Text("Cancel") }
 
-                    // Save Button
+                    // Add Button
                     Button(
                         modifier = Modifier.padding(5.dp),
                         shape = RoundedCornerShape(25.dp),
                         onClick = {
-                        if (taskName.isNotBlank() && duration > 0) {
-                            startTime = strToDateTime(startTimeFormatted)
-                            endTime = strToDateTime(endTimeFormatted)
-                            reminder = strToDateTime(reminderFormatted)
-                            duration = durationFormatted.toLong()
-                            taskPosition = positionFormatted.toInt()
+                            if (taskName.isNotBlank() && duration > 0) {
+                                startTime = strToDateTime(startTimeFormatted)
+                                endTime = strToDateTime(endTimeFormatted)
+                                reminder = strToDateTime(reminderFormatted)
+                                duration = durationFormatted.toLong()
+                                taskPosition = positionFormatted.toInt()
 
-                            val newTask = TaskEntity(
-                                position = taskPosition,
-                                name = taskName,
-                                notes = notes,
-                                startTime = startTime,
-                                endTime = endTime,
-                                duration = duration.toInt(),
-                                reminder = reminder,
-                                type = taskType,
-                            )
-                            onAddClick(newTask)
+                                val newTask = TaskEntity(
+                                    position = taskPosition,
+                                    name = taskName,
+                                    notes = notes,
+                                    startTime = startTime,
+                                    endTime = endTime,
+                                    duration = duration.toInt(),
+                                    reminder = reminder,
+                                    type = taskType,
+                                )
+                                onAddClick(newTask)
 
-                        } else {
-                            Toast.makeText(context, "Please fill all fields correctly", Toast.LENGTH_SHORT).show()
+                            } else {
+                                Toast.makeText(context,
+                                    "Please fill all fields correctly", Toast.LENGTH_SHORT).show()
+                            }
                         }
-                    }) {
-                        Text("Add")
-                    }
-                }
+                    ) { Text("Add")}  // END Add Button
+                }  // Buttons Row
             }
         }
     }

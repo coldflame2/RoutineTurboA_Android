@@ -30,19 +30,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.app.routineturboa.data.local.TaskEntity
 import com.app.routineturboa.reminders.ReminderManager
-import com.app.routineturboa.ui.task.dialogs.EditTaskScreen
+import com.app.routineturboa.ui.task.dialogs.FullEditDialog
 import com.app.routineturboa.utils.TimeUtils.dateTimeToString
 import com.app.routineturboa.utils.TimeUtils.strToDateTime
 import com.app.routineturboa.viewmodel.TasksViewModel
 
 @RequiresApi(Build.VERSION_CODES.S)
 @Composable
-fun QuickEditScreen(
+fun QuickEdit(
     task: TaskEntity,
+    isQuickEditing: MutableState<Boolean>,
     tasksViewModel: TasksViewModel,
     reminderManager: ReminderManager,
     context: Context,
-    isEditing: MutableState<Boolean>,
     onCancel: () -> Unit
 ) {
     val tag = "QuickEditScreen"
@@ -109,7 +109,7 @@ fun QuickEditScreen(
             // On Save Button in Quick-Edit Clicked
             onClick = {
                 Log.d(tag, "Save Button in Quick-Edit Screen clicked...")
-                isEditing.value = false
+                isQuickEditing.value = false
 
                 try{
                     duration = durationString.toInt()
@@ -149,15 +149,15 @@ fun QuickEditScreen(
         )
 
         if (isFullEditing.value) {
-            EditTaskScreen(
+            FullEditDialog(
                 task = task,
                 onConfirmTaskEdit = { updatedTask ->
                     isFullEditing.value = false
                     beginTaskUpdateOperations(updatedTask)
+                    isQuickEditing.value = false
                 },
                 onCancel = { isFullEditing.value = false }
             )
         }
     }
-
 }

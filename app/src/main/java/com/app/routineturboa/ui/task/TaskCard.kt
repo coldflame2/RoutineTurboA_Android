@@ -96,12 +96,12 @@ fun SingleTaskCard(
     val isTaskNow = currentTime.isAfter(task.startTime) && currentTime.isBefore(task.endTime)
     val infiniteTransition = rememberInfiniteTransition(label = "BorderAnimation")
 
-    val isEditing = remember { mutableStateOf(false) }
+    val isQuickEditing = remember { mutableStateOf(false) }
     val isFullEditing = remember { mutableStateOf(false) }
     val taskBeingEdited = remember { mutableStateOf<TaskEntity?>(null) }
 
     val taskHeight: Dp = when {
-        isEditing.value && taskBeingEdited.value != null -> 220.dp // if in-edit mode
+        isQuickEditing.value && taskBeingEdited.value != null -> 220.dp // if in-edit mode
         task.type == "QuickTask" -> 50.dp
         task.type == "MainTask" -> 85.dp
         else -> 60.dp // Default height, in case there are other task types
@@ -255,22 +255,22 @@ fun SingleTaskCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(
-                            if (isEditing.value) 2.dp else 15.dp,
-                            if (isEditing.value) 2.dp else 4.dp,
+                            if (isQuickEditing.value) 2.dp else 15.dp,
+                            if (isQuickEditing.value) 2.dp else 4.dp,
                             8.dp,
                             0.dp,
                         )
                         .height(taskHeight)
                 ) {
                     // If editing (in-place)
-                    if (isEditing.value) {
-                        QuickEditScreen(
+                    if (isQuickEditing.value) {
+                        QuickEdit(
                             task = task,
                             tasksViewModel = tasksViewModel,
                             reminderManager = reminderManager,
                             context = context,
-                            isEditing = isEditing,
-                            onCancel = { isEditing.value = false }
+                            isQuickEditing = isQuickEditing,
+                            onCancel = { isQuickEditing.value = false }
                         )
                     }
 
@@ -318,7 +318,7 @@ fun SingleTaskCard(
                             IconButton(
                                 // <editor-fold desc="Quick-Edit Icon "
                                 onClick = {
-                                    isEditing.value = true
+                                    isQuickEditing.value = true
                                     taskBeingEdited.value = task
                                 },
                                 modifier = Modifier

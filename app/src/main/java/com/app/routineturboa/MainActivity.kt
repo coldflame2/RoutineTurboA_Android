@@ -68,10 +68,9 @@ class MainActivity : ComponentActivity() {
                             }) {
                                 Text("Grant Permission")
                             }
-                        },
+                        }
                     )
                 }
-
             }
         }
     }
