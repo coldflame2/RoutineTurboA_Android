@@ -47,6 +47,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.app.routineturboa.R
 import com.app.routineturboa.data.local.TaskEntity
 import com.app.routineturboa.ui.components.CustomTextField
+import com.app.routineturboa.ui.components.SelectTaskTypeDropdown
 import com.app.routineturboa.ui.theme.LocalCustomColorsPalette
 import com.app.routineturboa.utils.TimeUtils.dateTimeToString
 import com.app.routineturboa.utils.TimeUtils.strToDateTime
@@ -200,7 +201,7 @@ fun FullEditDialog(
                     singleLine = false
                 )
 
-                TaskTypeDropdown(taskType, onTaskTypeSelected = { newType -> taskType = newType })
+                SelectTaskTypeDropdown(taskType, onTaskTypeSelected = { newType -> taskType = newType })
 
                 CustomTextField(
                     value = idFormatted,

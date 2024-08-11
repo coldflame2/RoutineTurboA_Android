@@ -2,7 +2,6 @@ package com.app.routineturboa.ui.task.dialogs
 
 import android.util.Log
 import android.widget.Toast
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -20,11 +19,6 @@ import androidx.compose.material.icons.sharp.AddAlert
 import androidx.compose.material.icons.sharp.Start
 import androidx.compose.material.icons.sharp.Timer
 import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -49,10 +43,11 @@ import androidx.compose.ui.window.DialogProperties
 import com.app.routineturboa.R
 import com.app.routineturboa.data.local.TaskEntity
 import com.app.routineturboa.ui.components.CustomTextField
+import com.app.routineturboa.ui.components.SelectTaskTypeDropdown
+import com.app.routineturboa.ui.components.ShowMainTasksDropdown
 import com.app.routineturboa.utils.TimeUtils.dateTimeToString
 import com.app.routineturboa.utils.TimeUtils.strToDateTime
 import com.app.routineturboa.viewmodel.TasksViewModel
-import java.time.LocalDateTime
 
 
 @Composable
@@ -276,7 +271,7 @@ fun AddTaskDialog(
                 )
 
                 // Task type dropdown
-                TaskTypeDropdown(
+                SelectTaskTypeDropdown(
                     selectedTaskType = taskType,
                     onTaskTypeSelected = { newType ->
                         taskType = newType
@@ -285,7 +280,7 @@ fun AddTaskDialog(
 
                 // Show the main task dropdown only if task type is "HelperTask"
                 if (taskType == "HelperTask") {
-                    MainTaskDropdown(
+                    ShowMainTasksDropdown(
                         mainTasks = mainTasks.value,
                         selectedMainTaskId = linkedMainTaskIdIfHelper,
                         onTaskSelected = { taskId -> linkedMainTaskIdIfHelper = taskId }
@@ -352,102 +347,6 @@ fun AddTaskDialog(
                         }
                     ) { Text("Add")}  // END Add Button
                 }  // Buttons Row
-            }
-        }
-    }
-}
-
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun TaskTypeDropdown(
-    selectedTaskType: String,
-    onTaskTypeSelected: (String) -> Unit
-) {
-    val taskTypes = listOf("MainTask", "QuickTask", "HelperTask")
-    val expanded = remember { mutableStateOf(false) }
-
-    ExposedDropdownMenuBox(
-        expanded = expanded.value,
-        onExpandedChange = { expanded.value = it },
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        TextField(
-            readOnly = true,
-            value = selectedTaskType,
-            onValueChange = {},
-            label = { Text("Task Type") },
-            trailingIcon = {
-                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded.value)
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .menuAnchor()
-        )
-        ExposedDropdownMenu(
-            expanded = expanded.value,
-            onDismissRequest = { expanded.value = false },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            taskTypes.forEach { taskType ->
-                DropdownMenuItem(
-                    onClick = {
-                        onTaskTypeSelected(taskType) // Notify parent of the selection
-                        expanded.value = false
-                    },
-                    text = { Text(taskType) },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        }
-    }
-}
-
-
-// Add a new composable to show the MainTask dropdown
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun MainTaskDropdown(
-    mainTasks: List<TaskEntity>,
-    selectedMainTaskId: Int?,
-    onTaskSelected: (Int?) -> Unit
-) {
-    val expanded = remember { mutableStateOf(false) }
-    val selectedTaskName = remember(selectedMainTaskId) {
-        mainTasks.find { it.id == selectedMainTaskId }?.name ?: "Select a task"
-    }
-
-    ExposedDropdownMenuBox(
-        expanded = expanded.value,
-        onExpandedChange = { expanded.value = it },
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        TextField(
-            readOnly = true,
-            value = selectedTaskName,
-            onValueChange = {},
-            label = { Text("Link to Main Task") },
-            trailingIcon = {
-                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded.value)
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .menuAnchor()
-        )
-
-        ExposedDropdownMenu(
-            expanded = expanded.value,
-            onDismissRequest = { expanded.value = false },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            mainTasks.forEach { task ->
-                DropdownMenuItem(
-                    onClick = {
-                        onTaskSelected(task.id)
-                        expanded.value = false
-                    },
-                    text = { Text(task.name) }
-                )
             }
         }
     }

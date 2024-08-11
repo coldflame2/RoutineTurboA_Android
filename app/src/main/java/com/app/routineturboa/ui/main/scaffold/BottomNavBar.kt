@@ -3,6 +3,7 @@ package com.app.routineturboa.ui.main.scaffold
 import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
@@ -10,6 +11,7 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -18,9 +20,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun MainBottomBar() {
+fun MainBottomBar(
+    isAddingTask: MutableState<Boolean>
+) {
     var selectedItem by remember { mutableIntStateOf(0) }
-    val items = listOf("Home", "Tasks", "Settings")
+    val items = listOf("Home", "Tasks")
     val icons = listOf(Icons.Filled.Home, Icons.AutoMirrored.Filled.List, Icons.Filled.Settings)
 
     NavigationBar (
@@ -33,6 +37,19 @@ fun MainBottomBar() {
                 selected = selectedItem == index,
                 onClick = { selectedItem = index }
             )
+
         }
+
+        NavigationBarItem(
+            icon = {
+                Icon (
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "Add"
+                )
+            },
+            label = { Text("Add") },
+            selected = true,
+            onClick = { isAddingTask.value = true}
+        )
     }
 }

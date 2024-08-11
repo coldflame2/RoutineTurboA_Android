@@ -1,6 +1,5 @@
 package com.app.routineturboa.ui.task
 
-import android.content.Context
 import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
@@ -61,7 +60,6 @@ import com.app.routineturboa.data.local.TaskEntity
 import com.app.routineturboa.reminders.ReminderManager
 import com.app.routineturboa.ui.components.DottedLine
 import com.app.routineturboa.ui.task.dialogs.TaskDetailsDialog
-import com.app.routineturboa.ui.theme.LocalCustomColorsPalette
 import com.app.routineturboa.utils.SineEasing
 import com.app.routineturboa.viewmodel.TasksViewModel
 import java.time.LocalDateTime
@@ -70,21 +68,23 @@ import java.time.format.DateTimeFormatter
 @RequiresApi(Build.VERSION_CODES.S)
 @Composable
 fun TaskCard(
-    context: Context,
     tasksViewModel: TasksViewModel,
     reminderManager: ReminderManager,
     modifier: Modifier = Modifier,
+
     task: TaskEntity,
-    onClick: () -> Unit,
-    canDelete: Boolean,
-    onDelete: (TaskEntity) -> Unit,
-    isClicked: Boolean,
+    onTaskClick: () -> Unit,
+    isThisTaskClicked: Boolean,
+    isThisTaskQuickEditing: Boolean,
+    isThisTaskFullEditing: Boolean,
     isAnotherTaskEditing: Boolean,
-    isQuickEditing: Boolean,
-    isFullEditing: Boolean,
+
     onStartQuickEdit: () -> Unit,
     onStartFullEdit: () -> Unit,
-    onEndEditing: () -> Unit
+    onEndEditing: () -> Unit,
+
+    canDelete: Boolean,
+    onDelete: (TaskEntity) -> Unit,
 ) {
     // <editor-fold desc="variables">
     var expanded by remember { mutableStateOf(false) }
@@ -102,17 +102,18 @@ fun TaskCard(
 
     val currentTime = LocalDateTime.now()
     val isTaskNow = currentTime.isAfter(task.startTime) && currentTime.isBefore(task.endTime)
-    val infiniteTransition = rememberInfiniteTransition(label = "BorderAnimation")
 
     var isShowTaskDetails by remember { mutableStateOf(false) }
 
     val taskHeight: Dp = when {
-        isQuickEditing -> 220.dp // if in-edit mode
+        isThisTaskQuickEditing -> 80.dp // if in-edit mode
         task.type == "QuickTask" -> 45.dp
-        task.type == "MainTask" -> 75.dp
-        else -> 75.dp // Default height, in case there are other task types
+        task.type == "MainTask" -> 40.dp
+        task.type == "HelperTask" -> 40.dp
+        else -> 40.dp // Default height, in case there are other task types
     }
 
+    val infiniteTransition = rememberInfiniteTransition(label = "BorderAnimation")
     val borderAlpha by infiniteTransition.animateFloat(
         // <editor-fold desc="borderAlpha for current Task">
         initialValue = 0.2f,
@@ -125,14 +126,19 @@ fun TaskCard(
     )
 
     val backgroundColor = if (isAnotherTaskEditing) {
-        LocalCustomColorsPalette.current.gray200.copy(alpha=0.8f) // Grey when another task is being edited
+        MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha=0.3f)
     } else {
-        MaterialTheme.colorScheme.surface.copy(alpha=0.8f) // Grey when another task is being edited
+        MaterialTheme.colorScheme.surface.copy(alpha=1f)
     }
 
     val dottedLineColor = when {
-        isClicked -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f)
+        isThisTaskClicked -> MaterialTheme.colorScheme.primary.copy(alpha = 1f)
         else -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f)
+    }
+
+    val dottedLineThickness = when {
+        isThisTaskClicked -> 2.dp
+        else -> 1.dp
     }
 
     val cardBorder = when {
@@ -140,10 +146,14 @@ fun TaskCard(
             width = 3.dp,
             color = MaterialTheme.colorScheme.primary.copy(alpha = borderAlpha)
         )
-        isClicked -> BorderStroke(
+
+        isThisTaskQuickEditing -> null
+
+        isThisTaskClicked -> BorderStroke(
             width = 1.dp,
             color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f)
         )
+
         else -> null
     }
 
@@ -151,7 +161,7 @@ fun TaskCard(
 
     // <editor-fold desc="Main Box container that contains everything except 'show notes' dialog">
     Box(
-        // <editor-fold desc="modifier.pointerInput (clicking behavior)">
+        // <editor-fold desc="Main Box Modifier for clicking behavior">
         modifier = modifier
             .alpha(if (isAnotherTaskEditing) 0.5f else 1f)
             .fillMaxWidth()
@@ -160,16 +170,16 @@ fun TaskCard(
                     onLongPress = { offset ->
                         longPressOffset = offset
                         expanded = true
-                        onClick()
+                        onTaskClick()
                         Log.d("SingleTaskCard", "Long Press Offset: $longPressOffset")
-
                     },
                     onTap = {
-                        onClick()
+                        onTaskClick()
                     }
                 )
             }
-    ) // </editor-fold>
+        // </editor-fold>
+    )
     {
         // <editor-fold desc="Dotted Line at top">
         Box(
@@ -178,10 +188,14 @@ fun TaskCard(
                 .offset(x = 0.dp, y = 2.dp)
                 .align(Alignment.TopStart)
         ) {
-            DottedLine(
-                color = dottedLineColor,
-                thickness = if (isClicked) 2.dp else 0.5.dp
-            )
+            if (!isThisTaskQuickEditing) {
+                DottedLine(
+                    color = dottedLineColor,
+                    thickness = dottedLineThickness,
+                    dotLength = 3.dp,
+                    dotSpacing = 1.dp
+                )
+            }
         }
         // </editor-fold "dotted Line">
 
@@ -240,6 +254,7 @@ fun TaskCard(
             Card(
                 // <editor-fold desc = "Card (for Main Task)"
                 modifier = modifier
+                    .alpha(if (isAnotherTaskEditing) 0.8f else 1f)
                     .height(taskHeight)
                     .fillMaxWidth()
                     .padding(
@@ -248,7 +263,7 @@ fun TaskCard(
                     )
                     .graphicsLayer {
                         clip = true
-                        shadowElevation = if (isClicked) 0f else 0f // Increased shadow elevation
+                        shadowElevation = if (isThisTaskClicked) 0f else 0f // Increased shadow elevation
                         shape = RoundedCornerShape(0.dp)
                         spotShadowColor =
                             Color.Blue // Changed shadow color to black for more prominence
@@ -267,28 +282,21 @@ fun TaskCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(
-                            if (isQuickEditing) 2.dp else 15.dp,
-                            if (isQuickEditing) 2.dp else 4.dp,
+                            if (isThisTaskQuickEditing) 2.dp else 15.dp,
+                            if (isThisTaskQuickEditing) 2.dp else 4.dp,
                             8.dp,
                             0.dp,
                         )
                         .height(taskHeight)
                 ) {
                     // If editing (in-place)
-                    if (isQuickEditing) {
+                    if (isThisTaskQuickEditing) {
                         QuickEdit(
                             task = task,
                             onEndEditing = { onEndEditing() },
                             tasksViewModel = tasksViewModel,
                             reminderManager = reminderManager,
-                            context = context
                         )
-                    }
-
-                    // if to show Task Details
-                    if (isShowTaskDetails) {
-                        TaskDetailsDialog(task = task,
-                            onDismiss = { isShowTaskDetails = false })
                     }
 
                     else {
@@ -323,7 +331,7 @@ fun TaskCard(
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Sharp.LibraryBooks,
                                     contentDescription = "Show Notes",
-                                    tint = if (isClicked) MaterialTheme.colorScheme.secondary.copy(alpha = 1f)
+                                    tint = if (isThisTaskClicked) MaterialTheme.colorScheme.secondary.copy(alpha = 1f)
                                             else MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
                                 )
                             }
@@ -344,7 +352,7 @@ fun TaskCard(
                                 Icon(
                                     imageVector = Icons.Default.Edit,
                                     contentDescription = "Edit Task",
-                                    tint = if (isClicked) MaterialTheme.colorScheme.surfaceTint.copy(alpha = 1f)
+                                    tint = if (isThisTaskClicked) MaterialTheme.colorScheme.surfaceTint.copy(alpha = 1f)
                                     else MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
                                 )
                             }
@@ -387,6 +395,12 @@ fun TaskCard(
                                     color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.3f),
                                     modifier = Modifier.padding(start = 4.dp)
                                 )
+                            }
+
+                            // if to show Task Details
+                            if (isShowTaskDetails) {
+                                TaskDetailsDialog(task = task,
+                                    onDismiss = { isShowTaskDetails = false })
                             }
                         }
 

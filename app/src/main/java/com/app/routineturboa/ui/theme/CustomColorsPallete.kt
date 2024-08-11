@@ -4,12 +4,20 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
+/**
+ * How to use:
+ * LocalCustomColorsPalette.current.gray200.copy(alpha=0.8f)
+ *
+ */
+
 @Immutable
 data class CustomColorsPalette(
     val gray100: Color = Color.Unspecified,
     val gray200: Color = Color.Unspecified,
     val gray300: Color = Color.Unspecified,
-    val gray400: Color = Color.Unspecified
+    val gray400: Color = Color.Unspecified,
+
+    val myPrimary: Color = Color(color = 0xFF000000),
 )
 
 val LightGray100 = Color(color = 0xFFCECECE)
@@ -33,7 +41,8 @@ val DarkCustomColorsPalette = CustomColorsPalette(
     gray100 = DarkGray100,
     gray200 = DarkGray200,
     gray300 = DarkGray300,
-    gray400 = DarkGray400
+    gray400 = DarkGray400,
+    myPrimary = Color(color = 0xFF000000)
 )
 
 val LocalCustomColorsPalette = staticCompositionLocalOf { CustomColorsPalette() }

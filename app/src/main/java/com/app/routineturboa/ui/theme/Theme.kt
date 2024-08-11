@@ -17,14 +17,12 @@ fun RoutineTurboATheme(
 //            if (isDarkTheme) dynamicDarkColorScheme(context = LocalContext.current)
 //            else dynamicLightColorScheme(context = LocalContext.current)
 //        }
-
         isDarkTheme -> DarkColorScheme
         else -> LightColorScheme
     }
 
     // logic for which custom palette to use
-    val customColorsPalette =
-        if (isDarkTheme) DarkCustomColorsPalette
+    val customColorsPalette = if (isDarkTheme) DarkCustomColorsPalette
         else LightCustomColorsPalette
 
     // here is the important point, where you will expose custom objects

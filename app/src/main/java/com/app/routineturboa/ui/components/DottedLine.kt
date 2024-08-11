@@ -15,9 +15,9 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun DottedLine(
     color: Color,
-    thickness: Dp = 0.2.dp,
-    dotLength: Dp = 8.dp,
-    dotSpacing: Dp = 3.dp
+    thickness: Dp = 0.dp,
+    dotLength: Dp = 0.dp,
+    dotSpacing: Dp = 0.dp
 ) {
     val density = LocalDensity.current
 

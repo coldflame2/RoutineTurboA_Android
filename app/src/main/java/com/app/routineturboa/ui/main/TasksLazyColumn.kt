@@ -1,6 +1,5 @@
 package com.app.routineturboa.ui.main
 
-import android.content.Context
 import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
@@ -39,27 +38,24 @@ import kotlinx.coroutines.delay
 @Composable
 fun TasksLazyColumn(
     paddingValues: PaddingValues,
-    isAddingTask: MutableState<Boolean>,
-    context: Context,
     tasksViewModel: TasksViewModel,
-    reminderManager: ReminderManager
+    reminderManager: ReminderManager,
+
+    clickedTaskId: MutableState<Int?>,
+    isAddingTask: MutableState<Boolean>,
+    editingTaskId: MutableState<Int?>,
+    isQuickEditing: MutableState<Boolean>,
+    isFullEditing: MutableState<Boolean>,
+    isAnotherTaskEditing: MutableState<Boolean>,
 ) {
     // <editor-fold desc="variables">
     val tag = "TasksLazyColumn"
 
     val tasks by tasksViewModel.tasks.collectAsStateWithLifecycle()
-    val clickedTaskId = remember { mutableStateOf<Int?>(null) }
-    val editingTaskId = remember { mutableStateOf<Int?>(null) }
-    val isQuickEditing = remember { mutableStateOf(false) }
-    val isFullEditing = remember { mutableStateOf(false) }
-    var isAnotherTaskEditing = remember { mutableStateOf(false) }
-
-    val hasScrolledToTarget = remember { mutableStateOf(false) }
-
-    val authenticationResult by remember { mutableStateOf<IAuthenticationResult?>(null) }
-    var isLoading by remember { mutableStateOf(true) }
-
+    var areTasksLoading by remember { mutableStateOf(true) }
+    val oneDriveAuthResult by remember { mutableStateOf<IAuthenticationResult?>(null) }
     val listState = rememberLazyListState()
+    val hasScrolledToTarget = remember { mutableStateOf(false) }
 
 
     // Find the index of the task whose time range includes the current time
@@ -80,9 +76,9 @@ fun TasksLazyColumn(
         }
     }
 
-    LaunchedEffect(authenticationResult, key2 = true) {
+    LaunchedEffect(oneDriveAuthResult, key2 = true) {
         Log.d(tag, "TasksScreen LaunchedEffect called")
-        authenticationResult?.let {
+        oneDriveAuthResult?.let {
             Log.d(tag, "Downloading from OneDrive")
         }
     }
@@ -90,66 +86,72 @@ fun TasksLazyColumn(
     // Start a coroutine to delay the loading state change
     LaunchedEffect(tasks) {
         delay(50)
-        isLoading = false
+        areTasksLoading = false
     }
 
-    // <editor-fold desc="Lazy Column-SingleTaskCard">
+    // <editor-fold desc="Lazy Column-TaskCard">
     LazyColumn(
         state = listState,
-        modifier = Modifier
-            .padding(paddingValues),
-        contentPadding = PaddingValues(bottom = 50.dp),  // Adjust the padding values as needed
+        modifier = Modifier.padding(paddingValues),
+        contentPadding = PaddingValues(bottom = 50.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
         // Loading state or no tasks
-        if (isLoading || tasks.isEmpty()) {
+        if (areTasksLoading || tasks.isEmpty()) {
             items(2) {
                 EmptyTaskCardPlaceholder()
             }
         }
-
         else {
-            items(
-                tasks, key = { task ->
-                    task.id
-                }
-            ) { task ->
+            items( tasks, key = { task -> task.id }) { task ->
                 // Determine if another task is being edited
-                isAnotherTaskEditing.value = (isQuickEditing.value || isFullEditing.value) && editingTaskId.value != task.id
+                isAnotherTaskEditing.value = (isQuickEditing.value || isFullEditing.value) &&
+                        editingTaskId.value != task.id
 
                 TaskCard(
                     // <editor-fold desc="SingleTaskCard Parameters"
-                    context = context,
                     tasksViewModel = tasksViewModel,
                     reminderManager = reminderManager,
+
                     task = task,
-                    onClick = { clickedTaskId.value = task.id },
+                    onTaskClick = {
+                        clickedTaskId.value = task.id
+
+                        // Cancel editing if another task is clicked while a different task is being edited
+                        if (isAnotherTaskEditing.value && editingTaskId.value != task.id) {
+                            editingTaskId.value = null
+                            isQuickEditing.value = false
+                            isFullEditing.value = false                        }
+                    },
+
+                    isThisTaskClicked = task.id == clickedTaskId.value,
+                    isThisTaskQuickEditing = isQuickEditing.value && editingTaskId.value == task.id,
+                    isThisTaskFullEditing = isFullEditing.value && editingTaskId.value == task.id,
+                    isAnotherTaskEditing = isAnotherTaskEditing.value,
+
                     canDelete = !tasksViewModel.isTaskFirst(task) && !tasksViewModel.isTaskLast(task),
                     onDelete = { tasksViewModel.deleteTask(it) },
 
-                    isClicked = task.id == clickedTaskId.value,
-                    isAnotherTaskEditing = isAnotherTaskEditing.value,
-
-                    isQuickEditing = isQuickEditing.value && editingTaskId.value == task.id,
-                    isFullEditing = isFullEditing.value && editingTaskId.value == task.id,
-
                     onStartQuickEdit = {
                         editingTaskId.value = task.id
+                        clickedTaskId.value = task.id
                         isQuickEditing.value = true
                         isFullEditing.value = false
                     },
+
                     onStartFullEdit = {
                         editingTaskId.value = task.id
                         isQuickEditing.value = false
                         isFullEditing.value = true
                     },
+
                     onEndEditing = {
                         editingTaskId.value = null
                         isQuickEditing.value = false
                         isFullEditing.value = false
                     }
 
-
+                // </editor-fold>
                 )
             }
         }
