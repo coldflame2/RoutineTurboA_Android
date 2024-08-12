@@ -2,11 +2,6 @@ package com.app.routineturboa.ui.task
 
 import android.os.Build
 import androidx.annotation.RequiresApi
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,20 +27,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
+import com.app.routineturboa.R
 import com.app.routineturboa.data.local.TaskEntity
 import com.app.routineturboa.reminders.ReminderManager
-import com.app.routineturboa.ui.task.child_elements.HourColumn
-import com.app.routineturboa.ui.task.dialogs.TaskDetailsDialog
 import com.app.routineturboa.ui.task.child_elements.ExtraTaskDetails
+import com.app.routineturboa.ui.task.child_elements.HourColumn
 import com.app.routineturboa.ui.task.child_elements.MainTaskDisplay
 import com.app.routineturboa.ui.task.child_elements.QuickEdit
 import com.app.routineturboa.ui.task.child_elements.TaskDropdownMenu
-import com.app.routineturboa.utils.AnimatedAlphaUtils
-import com.app.routineturboa.utils.SineEasing
+import com.app.routineturboa.ui.task.dialogs.TaskDetailsDialog
+import com.app.routineturboa.ui.theme.LocalCustomColorsPalette
 import com.app.routineturboa.viewmodel.TasksViewModel
 import java.time.LocalDateTime
 
@@ -71,6 +67,7 @@ fun ParentTaskItem(
     onDelete: (TaskEntity) -> Unit,
 ) {
     val density = LocalDensity.current
+    val context = LocalContext.current
 
     var isDropDownExpanded by remember { mutableStateOf(false) }
     var longPressOffset by remember { mutableStateOf(Offset.Zero) }
@@ -83,24 +80,18 @@ fun ParentTaskItem(
     var isShowTaskDetails by remember { mutableStateOf(false) }
 
     val cardHeight: Dp = when {
-        isThisTaskQuickEditing -> 80.dp // if in-edit mode
-        task.type == "QuickTask" -> 45.dp
-        task.type == "MainTask" -> (1.dp * task.duration).coerceAtLeast(45.dp)
-        task.type == "HelperTask" -> 40.dp
+        isThisTaskQuickEditing -> 120.dp // if in-edit mode
+        task.type == context.getString(R.string.task_type_quick) -> 45.dp
+        task.type == context.getString(R.string.task_type_main) -> (1.dp * task.duration).coerceAtLeast(45.dp)
+        task.type == context.getString(R.string.task_type_helper) -> 40.dp
         else -> 40.dp
     }
 
-    val infiniteTransition = rememberInfiniteTransition(label = "BorderAnimation")
-    val animatedAlpha = AnimatedAlphaUtils.animatedAlpha(
-        transition = infiniteTransition,
-        initialValue = 0.2f,
-        targetValue = 0.3f,
-        duration = 500,
-    )
-
-    val cardBgColor = when {
-        isThisTaskClicked -> MaterialTheme.colorScheme.primary.copy(alpha=0.5f)
-        isTaskNow -> MaterialTheme.colorScheme.secondary.copy(alpha=animatedAlpha)
+    val cardBgColor = when (task.type) {
+        context.getString(R.string.task_type_main)
+        -> LocalCustomColorsPalette.current.mainTaskColor.copy(alpha=0.3f)
+        context.getString(R.string.task_type_basics)
+        -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.4f)
         else -> MaterialTheme.colorScheme.surface.copy(alpha=1f)
     }
 
@@ -110,7 +101,6 @@ fun ParentTaskItem(
         isThisTaskClicked -> null
         else -> null
     }
-
 
     Box(
         modifier = modifier
@@ -132,6 +122,7 @@ fun ParentTaskItem(
         Row {
             HourColumn(
                 isThisTaskClicked = isThisTaskClicked,
+                isThisTaskNow = isTaskNow,
                 cardHeight = cardHeight,
                 startTime = task.startTime
             )

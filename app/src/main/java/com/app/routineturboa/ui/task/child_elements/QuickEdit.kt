@@ -29,7 +29,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.app.routineturboa.data.local.TaskEntity
@@ -69,13 +68,13 @@ fun QuickEdit(
         }
     }
 
-    Column(modifier = Modifier.padding(2.dp)) {
+    Column(modifier = Modifier.padding(5.dp)) {
         // Task Name and Duration Row
         Row(
             modifier = Modifier
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(5.dp)
+            horizontalArrangement = Arrangement.spacedBy(15.dp)
         ) {
             Box (
                 modifier = Modifier
@@ -146,31 +145,32 @@ fun QuickEdit(
             }
         }
 
-        Spacer(modifier = Modifier.height(1.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
         // Save and Cancel Buttons Row
         Row(
             modifier = Modifier.fillMaxWidth()
-                .height(30.dp), // Set the height for the entire row
+                .height(43.dp), // Set the height for the entire row
 
-            horizontalArrangement = Arrangement.spacedBy(1.dp)
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
             // Edit Button
             Button(
                 onClick = { isFullEditing.value = true },
-                modifier = Modifier.weight(1f).fillMaxHeight(),
+                modifier = Modifier.fillMaxHeight(),
                 shape = RoundedCornerShape(15.dp),
-                contentPadding = PaddingValues(0.dp),
+                contentPadding = PaddingValues(10.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f),
+                    containerColor = MaterialTheme.colorScheme.inversePrimary.copy(alpha =0.2f),
                     contentColor = MaterialTheme.colorScheme.onPrimary
                 )
             ) {
                 Text("Full-screen Editing",
-                    style = MaterialTheme.typography.labelSmall)
+                    style = MaterialTheme.typography.labelLarge)
 
             }
 
+            // Save Button
             Button(
                 onClick = {
                     try {
@@ -195,16 +195,16 @@ fun QuickEdit(
                     }
                     onEndEditing()
                 },
-                modifier = Modifier.weight(1f).fillMaxHeight(),
+                modifier = Modifier.fillMaxHeight(),
                 shape = RoundedCornerShape(15.dp),
-                contentPadding = PaddingValues(0.dp),
+                contentPadding = PaddingValues(10.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f),
+                    containerColor = MaterialTheme.colorScheme.inversePrimary.copy(alpha = 0.2f),
                     contentColor = MaterialTheme.colorScheme.onPrimary
                 )
             ) {
                 Text("Save",
-                    style = MaterialTheme.typography.labelSmall)
+                    style = MaterialTheme.typography.labelLarge)
             }
         }
 

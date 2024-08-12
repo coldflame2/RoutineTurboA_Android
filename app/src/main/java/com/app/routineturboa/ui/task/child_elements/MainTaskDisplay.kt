@@ -32,6 +32,7 @@ fun MainTaskDisplay (
     isThisTaskClicked: Boolean,
     onStartQuickEdit: () -> Unit,
 ) {
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically

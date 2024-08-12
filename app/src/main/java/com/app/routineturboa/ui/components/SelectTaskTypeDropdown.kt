@@ -11,6 +11,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import com.app.routineturboa.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -18,7 +20,13 @@ fun SelectTaskTypeDropdown(
     selectedTaskType: String,
     onTaskTypeSelected: (String) -> Unit
 ) {
-        val taskTypes = listOf("MainTask", "QuickTask", "HelperTask")
+    val context = LocalContext.current
+        val taskTypes = listOf(
+            context.getString(R.string.task_type_main),
+            context.getString(R.string.task_type_basics),
+            context.getString(R.string.task_type_helper),
+            context.getString(R.string.task_type_quick)
+        )
         val expanded = remember { mutableStateOf(false) }
 
         ExposedDropdownMenuBox(

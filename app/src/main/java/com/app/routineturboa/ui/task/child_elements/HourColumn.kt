@@ -1,5 +1,6 @@
 package com.app.routineturboa.ui.task.child_elements
 
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,12 +19,14 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.app.routineturboa.utils.AnimatedAlphaUtils
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 @Composable
 fun HourColumn(
     isThisTaskClicked: Boolean,
+    isThisTaskNow: Boolean,
     cardHeight: Dp,
     startTime: LocalDateTime
 ) {
@@ -33,11 +36,26 @@ fun HourColumn(
     val startTimeAinAm = formattedStartTime.substring(6, 7)
     val startTimeMinAm = formattedStartTime.substring(7, 8)
 
-    val hourColorBgColor = if (isThisTaskClicked) {
-        MaterialTheme.colorScheme.primary.copy(alpha = 1f)
-    } else {
-        MaterialTheme.colorScheme.tertiary.copy(alpha = 0.1f)
+    val infiniteTransition = rememberInfiniteTransition(label = "BorderAnimation")
+    val animatedAlpha = AnimatedAlphaUtils.animatedAlpha(
+        transition = infiniteTransition,
+        initialValue = 0.1f,
+        targetValue = 1f,
+        duration = 500,
+    )
+
+    val hourColorBgColor = when {
+        isThisTaskClicked -> {
+            MaterialTheme.colorScheme.primary.copy(alpha = 1f)
+        }
+        isThisTaskNow -> {
+            MaterialTheme.colorScheme.primary.copy(alpha = animatedAlpha)
+        }
+        else -> {
+            MaterialTheme.colorScheme.tertiary.copy(alpha = 0.1f)
+        }
     }
+
 
     Card (
         shape = RectangleShape,
@@ -47,9 +65,9 @@ fun HourColumn(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .height(cardHeight)
-                .width(50.dp)
+                .width(55.dp)
                 .padding(
-                    start = 13.dp,
+                    start = 15.dp,
                     end = 1.dp,
                     top = 1.dp,
                 )
