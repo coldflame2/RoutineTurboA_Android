@@ -1,4 +1,4 @@
-package com.app.routineturboa.ui.task
+package com.app.routineturboa.ui.task.child_elements
 
 import android.os.Build
 import android.util.Log
@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -111,7 +112,6 @@ fun QuickEdit(
                 )
             }
 
-
             Box(
                 modifier = Modifier
                     .weight(1f)
@@ -137,7 +137,7 @@ fun QuickEdit(
                                 .fillMaxHeight() // This makes sure the content is centered vertically
                         ) {
                             if (durationString.isEmpty()) {
-                                Text("Find")
+                                Text("Duration...")
                             }
                             innerTextField()
                         }
@@ -159,10 +159,10 @@ fun QuickEdit(
             Button(
                 onClick = { isFullEditing.value = true },
                 modifier = Modifier.weight(1f).fillMaxHeight(),
-                shape = RectangleShape,
+                shape = RoundedCornerShape(15.dp),
                 contentPadding = PaddingValues(0.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                    containerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f),
                     contentColor = MaterialTheme.colorScheme.onPrimary
                 )
             ) {
@@ -174,10 +174,11 @@ fun QuickEdit(
             Button(
                 onClick = {
                     try {
-                        val duration = durationString.toInt()
+                        endTimeString = dateTimeToString(startTime.plusMinutes(durationString.toLong()))
                         endTime = strToDateTime(endTimeString)
+
                         val taskWithUpdatedData =
-                            task.copy(name = taskName, duration = duration, endTime = endTime)
+                            task.copy(name = taskName, duration = durationString.toInt(), endTime = endTime)
                         tasksViewModel.updateTaskAndAdjustNext(taskWithUpdatedData)
                         Toast.makeText(
                             context,
@@ -195,10 +196,10 @@ fun QuickEdit(
                     onEndEditing()
                 },
                 modifier = Modifier.weight(1f).fillMaxHeight(),
-                shape = RectangleShape,
+                shape = RoundedCornerShape(15.dp),
                 contentPadding = PaddingValues(0.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
+                    containerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f),
                     contentColor = MaterialTheme.colorScheme.onPrimary
                 )
             ) {

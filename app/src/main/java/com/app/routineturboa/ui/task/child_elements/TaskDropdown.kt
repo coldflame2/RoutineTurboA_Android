@@ -1,4 +1,4 @@
-package com.app.routineturboa.ui.task
+package com.app.routineturboa.ui.task.child_elements
 
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -12,6 +12,11 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 
+    /**
+     * @name TaskDropDownMenu
+     * This has to be inside the same box for DropdownMenu to be positioned correctly.
+     * Do not move it outside the parent box.
+     */
 
 @Composable
 fun TaskDropdownMenu(

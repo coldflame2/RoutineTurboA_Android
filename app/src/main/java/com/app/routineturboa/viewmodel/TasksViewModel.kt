@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.routineturboa.data.local.RoutineRepository
 import com.app.routineturboa.data.local.TaskEntity
+import com.app.routineturboa.utils.TimeUtils.strToDateTime
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -375,9 +376,20 @@ class TasksViewModel(private val repository: RoutineRepository) : ViewModel() {
         }
     }
 
-    fun insertDemoTasks() {
+    suspend fun insertDemoTasks() {
         viewModelScope.launch {
             repository.initializeDemoTasks()
+        }
+
+        val lastTask = fetchLastTask()
+        val updatedLastTask = lastTask?.copy(
+            startTime = strToDateTime("10:30 PM"),
+            endTime = strToDateTime("11:59 PM"),
+            reminder = strToDateTime("10:30 PM"),
+            duration = 89
+            )
+        if (updatedLastTask != null) {
+            repository.updateTask(updatedLastTask)
         }
     }
 }

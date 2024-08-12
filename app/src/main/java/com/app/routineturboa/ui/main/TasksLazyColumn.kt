@@ -28,7 +28,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.app.routineturboa.reminders.ReminderManager
 import com.app.routineturboa.ui.task.dialogs.AddTaskDialog
 import com.app.routineturboa.ui.components.EmptyTaskCardPlaceholder
-import com.app.routineturboa.ui.task.TaskCard
+import com.app.routineturboa.ui.task.ParentTaskItem
 import com.app.routineturboa.viewmodel.TasksViewModel
 import com.microsoft.identity.client.IAuthenticationResult
 import kotlinx.coroutines.delay
@@ -68,13 +68,19 @@ fun TasksLazyColumn(
 
     // </editor-fold variables>
 
-    // Use LaunchedEffect to perform scrolling only once after the tasks are loaded
-    LaunchedEffect(tasks) {
-        if (tasks.isNotEmpty() && targetIndex != -1 && !hasScrolledToTarget.value) {
-            listState.animateScrollToItem(targetIndex)
-            hasScrolledToTarget.value = true // Set the flag to true after scrolling
+    LaunchedEffect(tasks, listState) {
+        Log.d(tag, "Checking conditions for scrolling")
+        if (tasks.isNotEmpty() && targetIndex != -1) {
+            Log.d(tag, "Conditions met, attempting to scroll to $targetIndex")
+            if (!hasScrolledToTarget.value) {
+                delay(2000)
+                listState.animateScrollToItem(targetIndex)
+                hasScrolledToTarget.value = true
+                Log.d(tag, "Scrolled to $targetIndex")
+            }
         }
     }
+
 
     LaunchedEffect(oneDriveAuthResult, key2 = true) {
         Log.d(tag, "TasksScreen LaunchedEffect called")
@@ -108,20 +114,21 @@ fun TasksLazyColumn(
                 isAnotherTaskEditing.value = (isQuickEditing.value || isFullEditing.value) &&
                         editingTaskId.value != task.id
 
-                TaskCard(
+                ParentTaskItem(
                     // <editor-fold desc="SingleTaskCard Parameters"
                     tasksViewModel = tasksViewModel,
                     reminderManager = reminderManager,
 
                     task = task,
                     onTaskClick = {
-                        clickedTaskId.value = task.id
-
                         // Cancel editing if another task is clicked while a different task is being edited
                         if (isAnotherTaskEditing.value && editingTaskId.value != task.id) {
                             editingTaskId.value = null
                             isQuickEditing.value = false
-                            isFullEditing.value = false                        }
+                            isFullEditing.value = false
+                        }
+
+                        clickedTaskId.value = task.id
                     },
 
                     isThisTaskClicked = task.id == clickedTaskId.value,

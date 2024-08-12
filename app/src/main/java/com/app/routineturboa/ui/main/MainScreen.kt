@@ -29,7 +29,6 @@ fun MainScreen(reminderManager: ReminderManager) {
     val context = LocalContext.current
     val taskViewModelFactory = remember { TaskViewModelFactory(RoutineRepository(context)) }
     val tasksViewModel: TasksViewModel = viewModel(factory = taskViewModelFactory)
-    val drawerState = rememberDrawerState(DrawerValue.Closed)
 
     val isAddingTask = remember { mutableStateOf(false) }
     val clickedTaskId = remember { mutableStateOf<Int?>(null) }
@@ -37,6 +36,8 @@ fun MainScreen(reminderManager: ReminderManager) {
     val isQuickEditing = remember { mutableStateOf(false) }
     val isFullEditing = remember { mutableStateOf(false) }
     val isAnotherTaskEditing = remember { mutableStateOf(false) }
+
+    val drawerState = rememberDrawerState(DrawerValue.Closed)
 
     ModalNavigationDrawer(
         // Rest of the UI color on drawer open
@@ -58,6 +59,7 @@ fun MainScreen(reminderManager: ReminderManager) {
                 paddingValues = paddingValues,
                 tasksViewModel = tasksViewModel,
                 reminderManager = reminderManager,
+
                 clickedTaskId = clickedTaskId,
                 isAddingTask = isAddingTask,
                 editingTaskId = editingTaskId,
