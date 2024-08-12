@@ -11,7 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import com.app.routineturboa.data.local.TaskEntity
+import com.app.routineturboa.data.room.TaskEntity
 
 //  composable to show the MainTask dropdown
 @OptIn(ExperimentalMaterial3Api::class)

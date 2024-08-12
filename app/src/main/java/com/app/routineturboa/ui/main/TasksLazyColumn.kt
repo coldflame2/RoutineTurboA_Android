@@ -22,7 +22,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 
-import com.app.routineturboa.data.local.TaskEntity
+import com.app.routineturboa.data.room.TaskEntity
 import com.app.routineturboa.utils.TaskTypes
 
 import com.app.routineturboa.ui.models.TaskEventsToFunctions

@@ -2,21 +2,24 @@
 |   |-- MainActivity.kt
 |   |-- RoutineTurboApp.kt
 |   |-- data/
-|   |   |-- local/
-|   |   |   |-- AppDao.kt
-|   |   |   |-- AppData.kt
-|   |   |   |-- TaskEntity.kt
 |   |   |-- onedrive/
 |   |   |   |-- downloadFromOneDrive.kt
 |   |   |   |-- MsalApp.kt
 |   |   |   |-- OneDriveManager.kt
 |   |   |-- repository/
+|   |   |   |-- AppModule.kt
 |   |   |   |-- AppRepository.kt
+|   |   |-- room/
+|   |   |   |-- AppDao.kt
+|   |   |   |-- AppData.kt
+|   |   |   |-- TaskEntity.kt
 |   |-- reminders/
+|   |   |-- NotificationHelper.kt
 |   |   |-- ReminderManager.kt
-|   |   |-- reminderManagerProvider.kt
-|   |   |-- ReminderReceiver.kt
-|   |   |-- ReminderWorker.kt
+|   |   |-- receivers/
+|   |   |   |-- ReminderReceiver.kt
+|   |   |   |-- SnoozeReceiver.kt
+|   |   |   |-- TestReceiver.kt
 |   |-- ui/
 |   |   |-- main/
 |   |   |   |-- MainScreen.kt
@@ -30,6 +33,7 @@
 |   |   |   |-- AnimatedAlpha.kt
 |   |   |   |-- CustomTextField.kt
 |   |   |   |-- DottedLine.kt
+|   |   |   |-- ExactAlarmPermissionDialog.kt
 |   |   |   |-- SignInAndSyncButtons.kt
 |   |   |   |-- TaskCardPlaceholder.kt
 |   |   |   |-- dropdowns/

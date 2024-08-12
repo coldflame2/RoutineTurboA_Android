@@ -89,7 +89,7 @@ if __name__ == "__main__":
     alt_target_src_dir = "C:\\Users\\vivid\\Documents\\C-Creative Projects\\RoutineTurboA"
 
     # Output_dir can be anything, ideally same as 'script_dir' if it is 'extra'
-    alt_output_file_path = os.path.join(alt_target_src_dir, 'files.txt')
+    output_file_path = os.path.join(script_dir, 'files.txt')
 
     # Print the tree structure
-    print_tree_structure(target_src_dir, alt_output_file_path)
+    print_tree_structure(target_src_dir, output_file_path)

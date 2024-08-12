@@ -34,12 +34,12 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
-import com.app.routineturboa.data.local.TaskEntity
+import com.app.routineturboa.data.room.TaskEntity
 import com.app.routineturboa.ui.models.TaskEventsToFunctions
 import com.app.routineturboa.ui.tasks.childItems.ExtraTaskDetails
 import com.app.routineturboa.ui.tasks.childItems.HourColumn
 import com.app.routineturboa.ui.tasks.childItems.MainTaskDetails
-import com.app.routineturboa.ui.tasks.childItems.QuickEdit
+import com.app.routineturboa.ui.tasks.childItems.InLineQuickEdit
 import com.app.routineturboa.ui.tasks.controls.OptionsMenu
 import com.app.routineturboa.ui.tasks.dialogs.TaskDetailsDialog
 import com.app.routineturboa.ui.theme.LocalCustomColorsPalette
@@ -154,12 +154,14 @@ fun ParentTaskItem(
 
                 Column {
                     if (isThisTaskQuickEditing) {
-                        QuickEdit(
+                        InLineQuickEdit(
                             mainTasks = mainTasks,
                             task = task,
                             isFullEditing = isThisTaskFullEditing,
                             onFullEditClick = {id->taskEventsToFunctions.onFullEditClick(id)},
-                            onConfirmEdit = {id->taskEventsToFunctions.onConfirmEdit(id)},
+                            onConfirmEdit = {id, editedFormData->
+                                taskEventsToFunctions.onConfirmEdit(id, editedFormData)
+                            },
                             onCancel = taskEventsToFunctions.onCancelClick
                         )
                         

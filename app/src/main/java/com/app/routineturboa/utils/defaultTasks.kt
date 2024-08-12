@@ -1,6 +1,6 @@
 package com.app.routineturboa.utils
 
-import com.app.routineturboa.data.local.TaskEntity
+import com.app.routineturboa.data.room.TaskEntity
 import com.app.routineturboa.utils.TimeUtils.strToDateTime
 
 fun defaultTasks(): List<TaskEntity> {

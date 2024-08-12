@@ -5,61 +5,47 @@ import android.util.Log
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.app.routineturboa.data.local.TaskEntity
+import com.app.routineturboa.data.room.TaskEntity
+import com.app.routineturboa.ui.models.TaskFormData
 import com.app.routineturboa.ui.tasks.dialogs.FullEditDialog
 import com.app.routineturboa.utils.TimeUtils.dateTimeToString
-import com.app.routineturboa.utils.TimeUtils.strToDateTime
 
 @RequiresApi(Build.VERSION_CODES.S)
 @Composable
-fun QuickEdit(
+fun InLineQuickEdit(
     mainTasks: List<TaskEntity>?,
     task: TaskEntity,
     isFullEditing: Boolean,
     onFullEditClick: (Int) -> Unit,
-    onConfirmEdit: (Int) -> Unit,
+    onConfirmEdit: (Int, TaskFormData) -> Unit,
     onCancel: () -> Unit,
 ) {
     val tag = "QuickEditScreen"
     val context = LocalContext.current
 
-    val startTime by remember { mutableStateOf(task.startTime) }
-    var taskName by remember { mutableStateOf(task.name) }
+    // State variables to hold the edited values
+    val startTime = task.startTime // this doesn't change
+    var editedName by remember { mutableStateOf(task.name) }
     var durationString by remember { mutableStateOf(task.duration.toString()) }
     var endTime by remember { mutableStateOf(task.endTime) }
     var endTimeString by remember { mutableStateOf(dateTimeToString(endTime)) }
 
+    // Update endTime when durationString changes
     LaunchedEffect(durationString) {
         if (durationString.isNotEmpty()) {
             try {
-                endTimeString =
-                    dateTimeToString(task.startTime.plusMinutes(durationString.toLong()))
+                val durationMinutes = durationString.toLong()
+                endTime = startTime.plusMinutes(durationMinutes)
+                endTimeString = dateTimeToString(endTime)
             } catch (e: NumberFormatException) {
                 Toast.makeText(context, "Invalid duration format", Toast.LENGTH_SHORT).show()
             }
@@ -67,25 +53,26 @@ fun QuickEdit(
     }
 
     Column(modifier = Modifier.padding(5.dp)) {
-        // Task Name and Duration Row
+        // region: name and duration input fields
         Row(
             modifier = Modifier
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(15.dp)
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Box (
+            // Task Name input
+            Box(
                 modifier = Modifier
                     .weight(2f)
-                    .height(45.dp)
+                    .height(50.dp)
                     .background(
-                        MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.6f),
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
                         MaterialTheme.shapes.small
                     ),
             ) {
                 BasicTextField(
-                    value = taskName,
-                    onValueChange = { newTaskName -> taskName = newTaskName },
+                    value = editedName,
+                    onValueChange = { newName -> editedName = newName },
                     singleLine = true,
                     textStyle = MaterialTheme.typography.titleMedium.copy(
                         color = MaterialTheme.colorScheme.onSurface
@@ -94,31 +81,32 @@ fun QuickEdit(
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
-                                .padding(start=10.dp)
-                                .fillMaxHeight() // This makes sure the content is centered vertically
+                                .padding(start = 10.dp)
+                                .fillMaxHeight()
                         ) {
-                            if (taskName.isEmpty()) {
+                            if (editedName.isEmpty()) {
                                 Text(
-                                    "task name..."
+                                    text = "Task name...",
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                             innerTextField()
                         }
-
                     }
                 )
             }
 
+            // Duration input
             Box(
                 modifier = Modifier
-                    .weight(1f)
-                    .height(45.dp)
+                    .weight(1.3f)
+                    .height(50.dp)
                     .background(
-                        MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.6f),
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
                         MaterialTheme.shapes.small
                     ),
 
-                ) {
+            ) {
                 BasicTextField(
                     value = durationString,
                     onValueChange = { newDuration -> durationString = newDuration },
@@ -130,26 +118,33 @@ fun QuickEdit(
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
-                                .padding(start=10.dp)
-                                .fillMaxHeight() // This makes sure the content is centered vertically
+                                .padding(start = 10.dp)
+                                .fillMaxHeight()
                         ) {
                             if (durationString.isEmpty()) {
-                                Text("Duration...")
+                                Text(
+                                    text = "Duration...",
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
                             innerTextField()
                         }
                     }
                 )
             }
+
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
+        // endregion
 
-        // Save and Cancel Buttons Row
+        Spacer(modifier = Modifier.height(28.dp))
+
+        // region: Save and full-edit Buttons Row
+
         Row(
-            modifier = Modifier.fillMaxWidth()
-                .height(43.dp), // Set the height for the entire row
-
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(35.dp),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             // Full-Screen Edit Button
@@ -157,27 +152,34 @@ fun QuickEdit(
                 onClick = { onFullEditClick(task.id) },
                 modifier = Modifier.fillMaxHeight(),
                 shape = RoundedCornerShape(15.dp),
-                contentPadding = PaddingValues(10.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.inversePrimary.copy(alpha =0.2f),
-                    contentColor = MaterialTheme.colorScheme.onPrimary
-                )
+                contentPadding = PaddingValues(5.dp)
             ) {
-                Text("Full-screen Editing",
-                    style = MaterialTheme.typography.labelLarge)
+                Text(
+                    text = "Advanced Edit",
+                    style = MaterialTheme.typography.labelLarge
+                )
             }
 
             // Save Button
             Button(
                 onClick = {
                     try {
-                        endTimeString = dateTimeToString(startTime.plusMinutes(durationString.toLong()))
-                        endTime = strToDateTime(endTimeString)
+                        val durationMinutes = durationString.toInt()
+                        val newEndTime = startTime.plusMinutes(durationMinutes.toLong())
 
-                        val taskWithUpdatedData =
-                            task.copy(name = taskName, duration = durationString.toInt(), endTime = endTime)
+                        val updatedTaskFormData = TaskFormData(
+                            name = editedName,
+                            startTime = startTime,
+                            endTime = newEndTime,
+                            notes = task.notes,
+                            taskType = task.type,
+                            position = task.position,
+                            duration = durationMinutes,
+                            reminder = task.reminder,
+                            mainTaskId = task.mainTaskId
+                        )
 
-                        onConfirmEdit(task.id)
+                        onConfirmEdit(task.id, updatedTaskFormData)
 
                     } catch (e: Exception) {
                         Log.e(tag, "Error: $e")
@@ -191,25 +193,26 @@ fun QuickEdit(
                 },
                 modifier = Modifier.fillMaxHeight(),
                 shape = RoundedCornerShape(15.dp),
-                contentPadding = PaddingValues(10.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.inversePrimary.copy(alpha = 0.2f),
-                    contentColor = MaterialTheme.colorScheme.onPrimary
-                )
+                contentPadding = PaddingValues(5.dp)
             ) {
-                Text("Save",
-                    style = MaterialTheme.typography.labelLarge)
+                Text(
+                    text = "Save",
+                    style = MaterialTheme.typography.labelLarge
+                )
             }
         }
 
+        // endregion
+
         if (isFullEditing) {
             FullEditDialog(
-                mainTasks = mainTasks?: emptyList(),
+                mainTasks = mainTasks ?: emptyList(),
                 task = task,
-                onConfirmEdit = { onConfirmEdit(task.id) },
+                onConfirmEdit = { taskId, updatedTaskFormData ->
+                    onConfirmEdit(taskId, updatedTaskFormData)
+                },
                 onCancel = onCancel
             )
         }
     }
 }
-

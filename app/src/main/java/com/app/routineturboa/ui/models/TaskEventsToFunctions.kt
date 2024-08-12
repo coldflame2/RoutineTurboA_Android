@@ -12,6 +12,6 @@ data class TaskEventsToFunctions(
     val onNewTaskSaveClick: (TaskFormData) -> Unit,
 
     val onCancelClick: () -> Unit,
-    val onConfirmEdit: (Int) -> Unit,
+    val onConfirmEdit: (Int, TaskFormData) -> Unit,
     val onDeleteClick: (Int) -> Unit,
 )

@@ -2,7 +2,7 @@ My App is called RoutineTurboA ('A' stands for Android) and simply RoutineTurbo 
 
 The app operates on a strict 24-hour (1440-minute) daily timeline. On the first launch, it displays two blocks spanning the entire 24 hours (00:01 - 23:59) with default task names. Users can add new tasks, input start and end times, set reminders, add notes, specify task types (like Main, Quick, Helper, etc.), link Helper tasks to Main Tasks, adjust duration, and more. The app logic ensures there are no gaps in the schedule by automatically allocating unassigned minutes to adjacent task blocks. Editing times or duration, adding or deleting tasks, and other operations adjust the timeline to maintain the continuity. Task types include Main Tasks, Default Tasks (basic everyday activities), Quick Tasks (1-2 minute tasks), and Helper Tasks (supporting Main Tasks), with more types planned for the future.
 
-The Android version targets API level 34 (Android 14.0) and has a minimum SDK of 30, ensuring compatibility with devices running Android 12 and above. It is developed in Kotlin, using Jetpack Compose for the UI, Room for database management, and the KSP plugin for code generation. OneDrive integration is managed using MSAL, and it's purpose is to sync the routine data between Windows and Android version.
+The Android version targets API level 34 (Android 14.0) and has a minimum SDK of 30, ensuring compatibility with devices running Android 12 and above. It is developed in Kotlin, using Jetpack Compose for the UI, Room for database management using KSP plugin, and hilt for dependency injection using kapt. OneDrive integration is managed using MSAL, and it's purpose is to sync the routine data between Windows and Android version.
 
 Database Design Overview: Both versions use a SQLite database to manage tasks in way that maintains consistency across both platforms for proper data synchronization.
 
@@ -36,21 +36,24 @@ Here's the organization of files and modules in Android version:
 |   |-- MainActivity.kt
 |   |-- RoutineTurboApp.kt
 |   |-- data/
-|   |   |-- local/
-|   |   |   |-- AppDao.kt
-|   |   |   |-- AppData.kt
-|   |   |   |-- TaskEntity.kt
 |   |   |-- onedrive/
 |   |   |   |-- downloadFromOneDrive.kt
 |   |   |   |-- MsalApp.kt
 |   |   |   |-- OneDriveManager.kt
 |   |   |-- repository/
+|   |   |   |-- AppModule.kt
 |   |   |   |-- AppRepository.kt
+|   |   |-- room/
+|   |   |   |-- AppDao.kt
+|   |   |   |-- AppData.kt
+|   |   |   |-- TaskEntity.kt
 |   |-- reminders/
+|   |   |-- NotificationHelper.kt
 |   |   |-- ReminderManager.kt
-|   |   |-- reminderManagerProvider.kt
-|   |   |-- ReminderReceiver.kt
-|   |   |-- ReminderWorker.kt
+|   |   |-- receivers/
+|   |   |   |-- ReminderReceiver.kt
+|   |   |   |-- SnoozeReceiver.kt
+|   |   |   |-- TestReceiver.kt
 |   |-- ui/
 |   |   |-- main/
 |   |   |   |-- MainScreen.kt
@@ -64,6 +67,7 @@ Here's the organization of files and modules in Android version:
 |   |   |   |-- AnimatedAlpha.kt
 |   |   |   |-- CustomTextField.kt
 |   |   |   |-- DottedLine.kt
+|   |   |   |-- ExactAlarmPermissionDialog.kt
 |   |   |   |-- SignInAndSyncButtons.kt
 |   |   |   |-- TaskCardPlaceholder.kt
 |   |   |   |-- dropdowns/
@@ -102,7 +106,8 @@ Here's the organization of files and modules in Android version:
 |   |   |-- TimeUtils.kt
 |   |-- viewmodel/
 |   |   |-- TasksViewModel.kt
-|   |   |-- TaskViewModelFactory.kt
+
+
 
 
 

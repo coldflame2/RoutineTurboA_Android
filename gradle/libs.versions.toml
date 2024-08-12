@@ -1,5 +1,5 @@
 [versions]
-agp = "8.5.0"
+agp = "8.5.2"
 coreKtx = "1.13.1"
 junit = "4.13.2"
 junitVersion = "1.1.5"
@@ -15,13 +15,18 @@ msalVersion = "5.3.1"
 volley = "1.2.1"
 graphVersion = "5.10.0"
 coilCompose = "2.6.0"
+
 workRuntimeKtx = "2.9.0"
 kspVersion = "2.0.0-1.0.23"
 roomRuntime = "2.6.1"
+hilt = "2.47"
 
 [libraries]
-androidx-compose-material3-window-size = { module = "androidx.compose.material3:material3-window-size-class" }
+hiltAndroid = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
+hiltCompiler = { group = "com.google.dagger", name = "hilt-android-compiler", version.ref = "hilt" }
 
+
+androidx-compose-material3-window-size = { module = "androidx.compose.material3:material3-window-size-class" }
 
 androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "roomRuntime" }
 androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "roomRuntime" }
@@ -57,3 +62,6 @@ androidApplication = { id = "com.android.application", version.ref = "agp" }
 jetbrainsKotlinAndroid = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "compose-plugin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "kspVersion" }
+daggerHiltAndroid = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
+kotlinKapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "kotlin" }
+

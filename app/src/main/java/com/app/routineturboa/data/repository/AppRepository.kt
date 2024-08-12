@@ -3,10 +3,9 @@ package com.app.routineturboa.data.repository
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.util.Log
-import com.app.routineturboa.data.local.AppData
-import com.app.routineturboa.data.local.AppDao
-import com.app.routineturboa.data.local.TaskEntity
 import com.app.routineturboa.data.onedrive.downloadFromOneDrive
+import com.app.routineturboa.data.room.AppDao
+import com.app.routineturboa.data.room.TaskEntity
 import com.app.routineturboa.utils.TaskTypes
 import com.app.routineturboa.utils.TimeUtils.isoStrToDateTime
 import com.app.routineturboa.utils.TimeUtils.strToDateTime
@@ -19,12 +18,12 @@ import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.withContext
 import java.time.Duration
+import javax.inject.Inject
 
-
-class AppRepository() {
-    private val tag = "DataRepository"
-    private var appData = AppData.getDatabase()
-    private var appDao: AppDao = appData.taskDao()
+class AppRepository @Inject constructor(
+    private val appDao: AppDao
+) {
+    private val tag = "AppRepository"
 
     val tasks: Flow<List<TaskEntity>> = appDao.getAllTasks()
 
@@ -110,17 +109,20 @@ class AppRepository() {
                 val durationTaskBelow = Duration.between(startTimeTaskBelow, taskBelow.endTime)
                 val durationTaskBelowInt = durationTaskBelow.toMinutes().toInt()
 
+
                 val taskWithUpdatesForBelow = taskBelow.copy(
                     duration = durationTaskBelowInt,
                     startTime = startTimeTaskBelow
                 )
 
+                // Now update the task along with the necessary updates for task below
                 runAsTransaction {
                     updateTask(initialEditedTask)
                     updateTask(taskWithUpdatesForBelow)
                 }
 
             } else {
+                Log.d(tag, "No task below found, updating task only")
                 runAsTransaction {
                     updateTask(initialEditedTask)
                 }
@@ -224,7 +226,7 @@ class AppRepository() {
     }
 
     private suspend fun updateTask(task: TaskEntity) {
-        Log.d(tag, "Updating task: ${task.name} and id:${task.id}")
+        Log.d(tag, "Updating task: ${task.name} (id:${task.id})")
         appDao.updateTask(task)
     }
 

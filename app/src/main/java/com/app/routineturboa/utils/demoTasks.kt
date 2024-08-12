@@ -1,8 +1,7 @@
 package com.app.routineturboa.utils
 
 import android.content.Context
-import com.app.routineturboa.R
-import com.app.routineturboa.data.local.TaskEntity
+import com.app.routineturboa.data.room.TaskEntity
 import com.app.routineturboa.utils.TimeUtils.strToDateTime
 
 fun getDemoTasks(context: Context): List<TaskEntity> {
@@ -173,7 +172,7 @@ fun getDemoTasks(context: Context): List<TaskEntity> {
             notes = "",
             duration = 30,
             startTime = strToDateTime("05:30 PM"),
-            endTime = strToDateTime("06:00 PM"),
+            endTime = strToDateTime("05:50 PM"),
             reminder = strToDateTime("05:30 PM"),
             type = TaskTypes.BASICS
         ),
@@ -182,9 +181,9 @@ fun getDemoTasks(context: Context): List<TaskEntity> {
             name = "Leisure",
             notes = "",
             duration = 60,
-            startTime = strToDateTime("06:00 PM"),
+            startTime = strToDateTime("05:50 PM"),
             endTime = strToDateTime("07:00 PM"),
-            reminder = strToDateTime("06:00 PM"),
+            reminder = strToDateTime("05:50 PM"),
             type = TaskTypes.BASICS
         ),
         TaskEntity(

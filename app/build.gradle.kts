@@ -3,24 +3,11 @@ plugins {
     alias(libs.plugins.jetbrainsKotlinAndroid)
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.daggerHiltAndroid)
+    alias(libs.plugins.kotlinKapt)
 }
 
 android {
-    signingConfigs {
-        create("release") {
-            keyAlias = System.getenv("RELEASE_KEY_ALIAS") ?: project.properties["RELEASE_KEY_ALIAS"] as String
-            keyPassword = System.getenv("RELEASE_KEY_PASSWORD") ?: project.properties["RELEASE_KEY_PASSWORD"] as String
-            storeFile = file(System.getenv("RELEASE_STORE_FILE") ?: project.properties["RELEASE_STORE_FILE"] as String)
-            storePassword = System.getenv("RELEASE_STORE_PASSWORD") ?: project.properties["RELEASE_STORE_PASSWORD"] as String
-        }
-
-        create("dev") {
-            keyAlias = System.getenv("RELEASE_KEY_ALIAS") ?: project.properties["RELEASE_KEY_ALIAS"] as String
-            keyPassword = System.getenv("RELEASE_KEY_PASSWORD") ?: project.properties["RELEASE_KEY_PASSWORD"] as String
-            storeFile = file(System.getenv("RELEASE_STORE_FILE") ?: project.properties["RELEASE_STORE_FILE"] as String)
-            storePassword = System.getenv("RELEASE_STORE_PASSWORD") ?: project.properties["RELEASE_STORE_PASSWORD"] as String
-        }
-    }
     namespace = "com.app.routineturboa"
     compileSdk = 34
 
@@ -31,8 +18,21 @@ android {
         versionCode = 4
         versionName = "4.0.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        vectorDrawables {
-            useSupportLibrary = true
+        vectorDrawables { useSupportLibrary = true }
+    }
+
+    signingConfigs {
+        create("release") {
+            keyAlias = System.getenv("RELEASE_KEY_ALIAS") ?: project.properties["RELEASE_KEY_ALIAS"] as String
+            keyPassword = System.getenv("RELEASE_KEY_PASSWORD") ?: project.properties["RELEASE_KEY_PASSWORD"] as String
+            storeFile = file(System.getenv("RELEASE_STORE_FILE") ?: project.properties["RELEASE_STORE_FILE"] as String)
+            storePassword = System.getenv("RELEASE_STORE_PASSWORD") ?: project.properties["RELEASE_STORE_PASSWORD"] as String
+        }
+        create("dev") {
+            keyAlias = System.getenv("RELEASE_KEY_ALIAS") ?: project.properties["RELEASE_KEY_ALIAS"] as String
+            keyPassword = System.getenv("RELEASE_KEY_PASSWORD") ?: project.properties["RELEASE_KEY_PASSWORD"] as String
+            storeFile = file(System.getenv("RELEASE_STORE_FILE") ?: project.properties["RELEASE_STORE_FILE"] as String)
+            storePassword = System.getenv("RELEASE_STORE_PASSWORD") ?: project.properties["RELEASE_STORE_PASSWORD"] as String
         }
     }
 
@@ -59,7 +59,6 @@ android {
         }
     }
 
-
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
@@ -73,7 +72,6 @@ android {
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.1"
     }
-
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
@@ -86,12 +84,17 @@ android {
 }
 
 dependencies {
-    implementation(libs.coil.compose)
+    // Hilt dependencies using KAPT
+    implementation(libs.hiltAndroid)
+    kapt(libs.hiltCompiler)
 
-    implementation(libs.androidx.work.runtime.ktx)
+    // Room dependencies
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
-    ksp(libs.androidx.room.compiler)  // Room
+    ksp(libs.androidx.room.compiler)
+
+    implementation(libs.coil.compose)
+    implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.msal)
     implementation(libs.volley)
     implementation(libs.graph)

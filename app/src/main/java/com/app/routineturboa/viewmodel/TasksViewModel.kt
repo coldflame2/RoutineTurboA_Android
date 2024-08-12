@@ -7,12 +7,13 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.app.routineturboa.data.local.TaskEntity
+import com.app.routineturboa.data.room.TaskEntity
 import com.app.routineturboa.data.onedrive.MsalApp
 import com.app.routineturboa.data.repository.AppRepository
 import com.app.routineturboa.ui.models.TaskFormData
 import com.app.routineturboa.ui.models.TasksUiState
 import com.app.routineturboa.utils.getDemoTasks
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -20,8 +21,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class TasksViewModel (
+@HiltViewModel
+class TasksViewModel @Inject constructor (
     private val repository: AppRepository
 ) : ViewModel() {
     private val tag = "TasksViewModel"
@@ -39,7 +42,7 @@ class TasksViewModel (
     // Expose UI state as a StateFlow to be collected by UI
     val tasksUiState: StateFlow<TasksUiState> = _tasksUiState.asStateFlow()
 
-    // Functions to update UI state
+    // region: On clicks to update UI state like show dialog boxes
 
     fun onAnyTaskClick(taskId: Int) {
         Log.d(tag, "onAnyTaskClick: $taskId")
@@ -86,8 +89,8 @@ class TasksViewModel (
         }
     }
 
-    fun onFullEditTask(taskId: Int) {
-        Log.d(tag, "onFullEditTask: $taskId")
+    fun onFullEditClick(taskId: Int) {
+        Log.d(tag, "onFullEditClick: $taskId")
         _tasksUiState.update {
             it.copy(
                 clickedTaskId = null,
@@ -110,18 +113,6 @@ class TasksViewModel (
         }
     }
 
-    fun onNewTaskSaveClick(newTaskFormData: TaskFormData) {
-
-        _tasksUiState.update {
-            it.copy(
-                isAddingNew = true,
-                taskBelowClickedTaskId = it.clickedTaskId?.plus(1)
-            )
-        }
-
-        beginNewTaskOperations(newTaskFormData)
-    }
-
     fun onCancelEdit() {
         Log.d(tag, "onCancelEdit")
         _tasksUiState.update {
@@ -135,8 +126,25 @@ class TasksViewModel (
         }
     }
 
-    fun onConfirmEdit(taskId: Int) {
-        Log.d(tag, "onConfirmEdit")
+    // endregion
+
+    // region: On clicks to update tasks database
+
+    fun onNewTaskSaveClick(newTaskFormData: TaskFormData) {
+        _tasksUiState.update {
+            it.copy(
+                isAddingNew = true,
+                taskBelowClickedTaskId = it.clickedTaskId?.plus(1)
+            )
+        }
+        beginNewTaskOperations(newTaskFormData)
+    }
+
+    fun onConfirmEdit(taskId: Int, updatedTaskFormData: TaskFormData) {
+        Log.d(tag, "onConfirmEdit clicked...")
+
+        updateTaskAndAdjustNext(taskId, updatedTaskFormData)
+
         _tasksUiState.update {
             it.copy(
                 isAddingNew = false,
@@ -146,8 +154,8 @@ class TasksViewModel (
             )
         }
 
-        updateTaskAndAdjustNext(taskId)
     }
+
 
     fun onDeleteTask(taskId: Int? = _tasksUiState.value.clickedTaskId) {
         if (taskId == null) return
@@ -157,7 +165,6 @@ class TasksViewModel (
             repository.deleteTask(task)
         }
 
-        // update the UI state
         _tasksUiState.update {
             it.copy(
                 inEditTaskId = null,
@@ -183,13 +190,13 @@ class TasksViewModel (
         }
     }
 
-    private fun updateTaskAndAdjustNext(initialEditedTaskId: Int) {
-        Log.d(tag, "Updating task (id = ${initialEditedTaskId}) and adjust the next one...")
-        val initialEditedTask = tasks.value.find { it.id == initialEditedTaskId }
-        if (initialEditedTask != null) {
-            viewModelScope.launch {
-                repository.updateTaskAndAdjustNext(initialEditedTask)
-            }
+    private fun updateTaskAndAdjustNext(taskId: Int, updatedTaskFormData: TaskFormData) {
+        Log.d(tag, "Updating task (id = $taskId) with new data...")
+        viewModelScope.launch {
+            // Create a TaskEntity from the updated form data
+            val updatedTaskEntity = createTaskEntityFromForm(updatedTaskFormData).copy(id = taskId)
+            // Call the repository to update the task
+            repository.updateTaskAndAdjustNext(updatedTaskEntity)
         }
     }
 
@@ -209,6 +216,7 @@ class TasksViewModel (
 
     private fun createTaskEntityFromForm(form: TaskFormData): TaskEntity {
         return TaskEntity(
+            id = 0, // Will be overwritten with the correct ID when updating
             position = form.position,
             name = form.name,
             notes = form.notes,
@@ -220,6 +228,7 @@ class TasksViewModel (
             mainTaskId = form.mainTaskId
         )
     }
+
 
     fun deleteAllTasks() {
         Log.d(tag, "Deleting all tasks...")

@@ -1,6 +1,8 @@
 package com.app.routineturboa.ui.scaffold
 
 import android.os.Build
+import android.util.Log
+import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
@@ -23,7 +25,6 @@ import androidx.compose.material.icons.automirrored.outlined.MenuOpen
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddTask
 import androidx.compose.material.icons.filled.Alarm
-import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.DeveloperMode
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.DrawerState
@@ -33,8 +34,7 @@ import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,7 +50,6 @@ import androidx.compose.ui.unit.dp
 import com.app.routineturboa.R
 import com.app.routineturboa.reminders.ReminderManager
 import com.app.routineturboa.ui.reusable.SignInAndSyncButtons
-import com.app.routineturboa.ui.reusable.SmoothCircularProgressIndicator
 import com.app.routineturboa.viewmodel.TasksViewModel
 import kotlinx.coroutines.launch
 
@@ -59,8 +58,10 @@ import kotlinx.coroutines.launch
 fun MainDrawer(
     drawerState: DrawerState,
     tasksViewModel: TasksViewModel,
-    reminderManager: ReminderManager
+    reminderManager: ReminderManager,
+    showExactAlarmDialog: MutableState<Boolean>
 ) {
+    val tag = "MainDrawer"
     val context = LocalContext.current
     val appName = context.getString(R.string.app_name)
     val coroutineScope = rememberCoroutineScope()
@@ -134,19 +135,29 @@ fun MainDrawer(
             DrawerItemTemplate("Test Reminder", Icons.Default.DeveloperMode, drawerState) {
                 val taskTestId = tasksViewModel.tasksUiState.value.clickedTaskId
                 coroutineScope.launch {
-                    reminderManager.triggerReminder(taskTestId?: 1)
+                    reminderManager.manuallyTriggerReminder(taskTestId?: 1, "Test" )
                 }
             }
 
             DrawerItemTemplate("Schedule Reminders", Icons.Default.Alarm, drawerState) {
                 coroutineScope.launch {
-                    reminderManager.observeAndScheduleReminders(context)
+                    val success = reminderManager.scheduleAllReminders()
+                    if (!success) {
+                        // Show the exact alarm permission dialog
+                        Log.e(tag, "Exact alarm permission not granted. Showing dialog.")
+                        showExactAlarmDialog.value = true
+                    } else {
+                        Toast.makeText(context, " Reminders scheduled...", Toast.LENGTH_SHORT).show()
+                    }
                 }
             }
+
+
 
             DrawerItemTemplate("Insert Default Tasks", Icons.Default.AddTask, drawerState) {
                 coroutineScope.launch {
                     tasksViewModel.insertDefaultTasks()
+
                 }
             }
 

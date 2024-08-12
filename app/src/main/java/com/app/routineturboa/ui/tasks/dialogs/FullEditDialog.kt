@@ -45,7 +45,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.app.routineturboa.R
-import com.app.routineturboa.data.local.TaskEntity
+import com.app.routineturboa.data.room.TaskEntity
+import com.app.routineturboa.ui.models.TaskFormData
 import com.app.routineturboa.ui.reusable.CustomTextField
 import com.app.routineturboa.ui.reusable.dropdowns.SelectTaskTypeDropdown
 import com.app.routineturboa.ui.reusable.dropdowns.ShowMainTasksDropdown
@@ -60,13 +61,15 @@ import kotlinx.coroutines.launch
 fun FullEditDialog(
     mainTasks: List<TaskEntity>,
     task: TaskEntity,
-    onConfirmEdit: () -> Unit,
+    onConfirmEdit: (Int, TaskFormData) -> Unit,
     onCancel: () -> Unit
 ) {
+    val tag = "FullEditDialog"
+
     val context = LocalContext.current
     var linkedMainTaskIdIfHelper by remember { mutableStateOf<Int?>(null) }
 
-    // Actual data in State variables from 'task'
+    // Actual data of task being edited as State variables
     var id by remember { mutableIntStateOf(task.id) }
     var taskName by remember { mutableStateOf(task.name) }
     var notes by remember { mutableStateOf(task.notes) }
@@ -116,10 +119,11 @@ fun FullEditDialog(
                 )
 
                 // Start Time and Reminder Side by Side with Link/Link-off button
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(2.dp),
-                    modifier = Modifier.fillMaxWidth()
+                Column(
+                    modifier = Modifier
+                        .padding(8.dp)
+                        .fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(1.dp)
                 ) {
                     CustomTextField(
                         value = startTimeString,
@@ -127,7 +131,6 @@ fun FullEditDialog(
                         label = "Start Time",
                         placeholder = "Enter start time",
                         leadingIcon = Icons.Sharp.Start,
-                        modifier = Modifier.weight(1f),
                     )
 
                     Icon (
@@ -141,7 +144,6 @@ fun FullEditDialog(
                                     reminderString = startTimeString
                                 }
                             }
-                            .align(Alignment.CenterVertically)
                             .size(25.dp)
                     )
 
@@ -152,7 +154,6 @@ fun FullEditDialog(
                         placeholder = "Enter reminder time",
                         leadingIcon = Icons.Sharp.AddAlert,
                         enabled = !isReminderLinked,
-                        modifier = Modifier.weight(1f)
                     )
                 }
 
@@ -279,7 +280,7 @@ fun FullEditDialog(
                                     Toast.makeText(context, "Error saving task: ${e.message}", Toast.LENGTH_LONG).show()
                                 }
 
-                                val updatedTask = task.copy(
+                                val updatedTaskFormData = TaskFormData(
                                     name = taskName,
                                     position = position,
                                     notes = notes,
@@ -287,10 +288,11 @@ fun FullEditDialog(
                                     endTime = endTime,
                                     reminder = reminder,
                                     duration = duration,
-                                    type = taskType
+                                    taskType = taskType,
+                                    mainTaskId = linkedMainTaskIdIfHelper
                                 )
 
-                                onConfirmEdit()
+                                onConfirmEdit(task.id, updatedTaskFormData)
 
                             } // End of Coroutine
                         }

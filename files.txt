@@ -1,0 +1,72 @@
+|-- routineturboa/
+|   |-- MainActivity.kt
+|   |-- RoutineTurboApp.kt
+|   |-- data/
+|   |   |-- local/
+|   |   |   |-- AppDao.kt
+|   |   |   |-- AppData.kt
+|   |   |   |-- TaskEntity.kt
+|   |   |-- onedrive/
+|   |   |   |-- downloadFromOneDrive.kt
+|   |   |   |-- MsalApp.kt
+|   |   |   |-- OneDriveManager.kt
+|   |   |-- repository/
+|   |   |   |-- AppModule.kt
+|   |   |   |-- AppRepository.kt
+|   |-- reminders/
+|   |   |-- ReminderManager.kt
+|   |   |-- reminderManagerProvider.kt
+|   |   |-- ReminderReceiver.kt
+|   |   |-- ReminderWorker.kt
+|   |-- ui/
+|   |   |-- main/
+|   |   |   |-- MainScreen.kt
+|   |   |   |-- TasksLazyColumn.kt
+|   |   |-- models/
+|   |   |   |-- TaskEventsToFunctions.kt
+|   |   |   |-- TaskFormData.kt
+|   |   |   |-- TasksUiState.kt
+|   |   |-- reusable/
+|   |   |   |-- AlpabhetIcon.kt
+|   |   |   |-- AnimatedAlpha.kt
+|   |   |   |-- CustomTextField.kt
+|   |   |   |-- DottedLine.kt
+|   |   |   |-- SignInAndSyncButtons.kt
+|   |   |   |-- TaskCardPlaceholder.kt
+|   |   |   |-- dropdowns/
+|   |   |   |   |-- SelectTaskTypeDropdown.kt
+|   |   |   |   |-- ShowMainTasksDropdown.kt
+|   |   |-- scaffold/
+|   |   |   |-- BottomNavBar.kt
+|   |   |   |-- MainDrawer.kt
+|   |   |   |-- MainTopBar.kt
+|   |   |-- tasks/
+|   |   |   |-- ParentItemCard.kt
+|   |   |   |-- childItems/
+|   |   |   |   |-- ExtraTaskDetails.kt
+|   |   |   |   |-- HourColumn.kt
+|   |   |   |   |-- InLineQuickEdit.kt
+|   |   |   |   |-- MainTaskDetails.kt
+|   |   |   |-- controls/
+|   |   |   |   |-- OptionsMenu.kt
+|   |   |   |-- dialogs/
+|   |   |   |   |-- AddTaskDialog.kt
+|   |   |   |   |-- FullEditDialog.kt
+|   |   |   |   |-- TaskDetailsDialog.kt
+|   |   |-- theme/
+|   |   |   |-- Color.kt
+|   |   |   |-- CustomColorsPallete.kt
+|   |   |   |-- Theme.kt
+|   |   |   |-- Type.kt
+|   |-- utils/
+|   |   |-- Converters.kt
+|   |   |-- dateTimeEmitterFlow.kt
+|   |   |-- defaultTasks.kt
+|   |   |-- demoTasks.kt
+|   |   |-- NotificationPermissionHandler.kt
+|   |   |-- SineEasing.kt
+|   |   |-- TaskTypes.kt
+|   |   |-- TimeUtils.kt
+|   |-- viewmodel/
+|   |   |-- TasksViewModel.kt
+|   |   |-- TaskViewModelFactory.kt

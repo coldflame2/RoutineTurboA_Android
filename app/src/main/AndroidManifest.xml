@@ -44,7 +44,19 @@
                     android:path="/auth" />
             </intent-filter>
         </activity>
-        <receiver android:name=".reminders.ReminderReceiver" />
+        <receiver android:name=".reminders.receivers.ReminderReceiver" />
+        <receiver android:name=".reminders.receivers.SnoozeReceiver" />
+
+        <receiver android:name=".reminders.receivers.TestReceiver"
+            android:exported="true"
+            android:permission="N">
+            <intent-filter>
+                <action android:name="APP_SPECIFIC_BROADCAST" />
+            </intent-filter>
+        </receiver>
+
+
+
 
 
     </application>
