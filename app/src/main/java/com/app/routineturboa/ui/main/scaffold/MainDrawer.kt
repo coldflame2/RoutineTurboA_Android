@@ -141,7 +141,7 @@ fun MainDrawer(
             // Insert Demo Tasks
             DrawerItemTemplate("Insert Demo Tasks", Icons.Default.Settings) {
                 coroutineScope.launch {
-                    tasksViewModel.insertDemoTasks()
+                    tasksViewModel.insertDemoTasks(context)
                 }
             }
         }

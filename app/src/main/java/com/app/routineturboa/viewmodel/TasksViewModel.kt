@@ -1,11 +1,13 @@
 package com.app.routineturboa.viewmodel
 
+import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.routineturboa.data.local.RoutineRepository
 import com.app.routineturboa.data.local.TaskEntity
 import com.app.routineturboa.utils.TimeUtils.strToDateTime
+import com.app.routineturboa.utils.getDemoTasks
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -22,7 +24,14 @@ class TasksViewModel(private val repository: RoutineRepository) : ViewModel() {
     val tasks: StateFlow<List<TaskEntity>> = repository.getAllTasks()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // Function to fetch MainTasks from the repository
+    init {
+        if (tasks.value.isEmpty()) {
+            viewModelScope.launch {
+                repository.initializeDefaultTasks()
+            }
+        }
+    }
+
     fun getMainTasks(): Flow<List<TaskEntity>> {
         return repository.getTasksByType("MainTask")
     }
@@ -257,12 +266,6 @@ class TasksViewModel(private val repository: RoutineRepository) : ViewModel() {
         }
     }
 
-    init {
-        viewModelScope.launch {
-            repository.initializeDefaultTasks()
-        }
-    }
-
     fun fetchNextTask(baseTask: TaskEntity): TaskEntity? {
         Log.d(TAG, "Getting task below '${baseTask.name}' task...")
 
@@ -376,19 +379,23 @@ class TasksViewModel(private val repository: RoutineRepository) : ViewModel() {
         }
     }
 
-    suspend fun insertDemoTasks() {
-        viewModelScope.launch {
-            repository.initializeDemoTasks()
+    suspend fun insertDemoTasks(context: Context) {
+        val demoTasksList = getDemoTasks(context)
+        demoTasksList.forEach { task ->
+            repository.insertTask(task)
         }
+        updateLastTask()
+    }
 
+    private suspend fun updateLastTask() {
         val lastTask = fetchLastTask()
-        val updatedLastTask = lastTask?.copy(
-            startTime = strToDateTime("10:30 PM"),
-            endTime = strToDateTime("11:59 PM"),
-            reminder = strToDateTime("10:30 PM"),
-            duration = 89
+        if (lastTask != null) {
+            val updatedLastTask = lastTask.copy(
+                startTime = strToDateTime("10:30 PM"),
+                endTime = strToDateTime("11:59 PM"),
+                reminder = strToDateTime("10:30 PM"),
+                duration = 89
             )
-        if (updatedLastTask != null) {
             repository.updateTask(updatedLastTask)
         }
     }

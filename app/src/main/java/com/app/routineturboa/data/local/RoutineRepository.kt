@@ -4,27 +4,6 @@ import android.content.Context
 import android.util.Log
 import androidx.room.withTransaction
 import com.app.routineturboa.utils.TimeUtils.strToDateTime
-import com.app.routineturboa.utils.demoTaskEight
-import com.app.routineturboa.utils.demoTaskEighteen
-import com.app.routineturboa.utils.demoTaskEleven
-import com.app.routineturboa.utils.demoTaskFifteen
-import com.app.routineturboa.utils.demoTaskFive
-import com.app.routineturboa.utils.demoTaskFour
-import com.app.routineturboa.utils.demoTaskFourteen
-import com.app.routineturboa.utils.demoTaskNine
-import com.app.routineturboa.utils.demoTaskNineteen
-import com.app.routineturboa.utils.demoTaskSeven
-import com.app.routineturboa.utils.demoTaskSeventeen
-import com.app.routineturboa.utils.demoTaskSix
-import com.app.routineturboa.utils.demoTaskSixteen
-import com.app.routineturboa.utils.demoTaskTen
-import com.app.routineturboa.utils.demoTaskThirteen
-import com.app.routineturboa.utils.demoTaskThree
-import com.app.routineturboa.utils.demoTaskTwelve
-import com.app.routineturboa.utils.demoTaskTwenty
-import com.app.routineturboa.utils.demoTaskTwentyOne
-import com.app.routineturboa.utils.demoTaskTwentyTwo
-import com.app.routineturboa.utils.demoTaskTwo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -73,7 +52,7 @@ class RoutineRepository(val context: Context) {
     }
 
     private suspend fun insertDefaultTasks(defaultTask: TaskEntity): Long {
-        Log.d(tag,"Inserting default task.")
+        Log.d(tag, "Inserting default task.")
         return taskDao.insertTask(defaultTask)
     }
 
@@ -128,31 +107,14 @@ class RoutineRepository(val context: Context) {
         }
     }
 
-    suspend fun initializeDemoTasks() {
-        val tasks = taskDao.getAllTasks().first()
+    suspend fun getDemoTasks(context: Context): List<TaskEntity> {
+        val tasksInitialList = taskDao.getAllTasks().first() // first() collects the first emission from the flow
 
-        if (tasks.isNotEmpty()) {
-            insertTask(demoTaskTwo)
-            insertTask(demoTaskThree)
-            insertTask(demoTaskFour)
-            insertTask(demoTaskFive)
-            insertTask(demoTaskSix)
-            insertTask(demoTaskSeven)
-            insertTask(demoTaskEight)
-            insertTask(demoTaskNine)
-            insertTask(demoTaskTen)
-            insertTask(demoTaskEleven)
-            insertTask(demoTaskTwelve)
-            insertTask(demoTaskThirteen)
-            insertTask(demoTaskFourteen)
-            insertTask(demoTaskFifteen)
-            insertTask(demoTaskSixteen)
-            insertTask(demoTaskSeventeen)
-            insertTask(demoTaskEighteen)
-            insertTask(demoTaskNineteen)
-            insertTask(demoTaskTwenty)
-            insertTask(demoTaskTwentyOne)
-            insertTask(demoTaskTwentyTwo)
+        return if (tasksInitialList.isNotEmpty()) {
+            getDemoTasks(context) // Return the demo tasks if the list is not empty
+        } else {
+            tasksInitialList // Return the initial tasks if the list
         }
     }
+
 }
