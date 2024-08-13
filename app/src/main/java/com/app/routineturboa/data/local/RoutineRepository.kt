@@ -3,6 +3,7 @@ package com.app.routineturboa.data.local
 import android.content.Context
 import android.util.Log
 import androidx.room.withTransaction
+import com.app.routineturboa.R
 import com.app.routineturboa.utils.TimeUtils.strToDateTime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -86,7 +87,7 @@ class RoutineRepository(val context: Context) {
                 startTime = strToDateTime("00:01 AM"),
                 endTime = strToDateTime("06:00 AM"),
                 reminder = strToDateTime("06:00 AM"),
-                type = "default"
+                type = context.getString(R.string.task_type_default)
             )
 
             insertDefaultTasks(firstTask)
@@ -100,7 +101,7 @@ class RoutineRepository(val context: Context) {
                 startTime = strToDateTime("06:00 AM"),
                 endTime = strToDateTime("11:59 PM"),
                 reminder = strToDateTime("06:00 AM"),
-                type = "default",
+                type = context.getString(R.string.task_type_default)
             )
 
             insertDefaultTasks(lastTask)

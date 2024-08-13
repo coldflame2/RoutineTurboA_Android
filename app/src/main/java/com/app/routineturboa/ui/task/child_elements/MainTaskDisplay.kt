@@ -21,6 +21,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.app.routineturboa.utils.AlphabetIcon
 
 
 @Composable
@@ -32,18 +33,22 @@ fun MainTaskDisplay (
     isThisTaskClicked: Boolean,
     onStartQuickEdit: () -> Unit,
 ) {
+    val taskTypeFirstLetter: Char = taskType[0]
 
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        AlphabetIcon(letter = taskTypeFirstLetter)
+
         Text(
             text = taskName,
-            style = MaterialTheme.typography.titleMedium,
+            style = MaterialTheme.typography.titleMedium.copy(fontSize = 13.sp),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier
                 .weight(1f)
+                .padding(start = 10.dp)
         )
 
         Text(

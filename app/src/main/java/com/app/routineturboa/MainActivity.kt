@@ -46,7 +46,8 @@ class MainActivity : ComponentActivity() {
                 window.statusBarColor = MaterialTheme.colorScheme.primary.toArgb()
                 window.navigationBarColor = MaterialTheme.colorScheme.primary.toArgb()
 
-                MainScreen(reminderManager = reminderManager)
+                MainScreen(
+                    reminderManager = reminderManager)
 
                 if (showPermissionDialog.value) {
                     AlertDialog(

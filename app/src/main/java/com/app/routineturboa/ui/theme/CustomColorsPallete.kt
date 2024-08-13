@@ -18,8 +18,12 @@ data class CustomColorsPalette(
     val gray400: Color = Color.Unspecified,
 
     val mainTaskColor: Color = Color.Unspecified,
-    val basicsTaskColor: Color = Color.Unspecified
-)
+    val basicsTaskColor: Color = Color.Unspecified,
+    val helperTaskColor: Color = Color.Unspecified,
+    val quickTaskColor: Color = Color.Unspecified,
+
+) {
+}
 
 //<editor-fold "Colors for LightColorScheme"
 val LightGray100 = Color(color = 0xFFCECECE)
@@ -27,6 +31,9 @@ val LightGray200 = Color(color = 0xFF8F8F8F)
 val LightGray300 = Color(color = 0xFF525252)
 val LightGray400 = Color(color = 0xFF292929)
 val LightMainTaskColor = Color(color = 0xFFA9E2FD)
+val LightBasicsTaskColor = Color(color = 0xFFE9F5D7)
+val LightHelperTaskColor = Color(color = 0xFFF9C8FF)
+val LightQuickTaskColor = Color(color = 0xFFFFF0A3)
 
 //</editor-fold>
 
@@ -44,7 +51,10 @@ val LightCustomColorsPalette = CustomColorsPalette(
     gray200 = LightGray200,
     gray300 = LightGray300,
     gray400 = LightGray400,
-    mainTaskColor = LightMainTaskColor
+    mainTaskColor = LightMainTaskColor,
+    helperTaskColor = LightHelperTaskColor,
+    basicsTaskColor = LightBasicsTaskColor,
+    quickTaskColor = LightQuickTaskColor
 )
 
 val DarkCustomColorsPalette = CustomColorsPalette(
@@ -52,7 +62,10 @@ val DarkCustomColorsPalette = CustomColorsPalette(
     gray200 = DarkGray200,
     gray300 = DarkGray300,
     gray400 = DarkGray400,
-    mainTaskColor = DarkMainTaskColor
+    mainTaskColor = DarkMainTaskColor,
+    helperTaskColor = LightHelperTaskColor,
+    basicsTaskColor = LightBasicsTaskColor,
+    quickTaskColor = LightQuickTaskColor
 )
 
 val LocalCustomColorsPalette = staticCompositionLocalOf { CustomColorsPalette() }

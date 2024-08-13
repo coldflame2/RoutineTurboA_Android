@@ -74,7 +74,9 @@ fun AddTaskDialog(
     val clickedTaskPosition = clickedTask.position
 
     // Fetch tasks of type "MainTask"
-    val mainTasks = tasksViewModel.getMainTasks().collectAsState(initial = emptyList())
+    val mainTasks = tasksViewModel.getTasksByType(
+        type = context.getString(R.string.task_type_main)
+    ).collectAsState(initial = emptyList())
 
     // Data in State variables
     val id by remember { mutableIntStateOf(clickedTaskID + 1) }

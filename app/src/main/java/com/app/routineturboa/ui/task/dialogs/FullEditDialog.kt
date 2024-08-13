@@ -31,6 +31,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -48,6 +49,7 @@ import com.app.routineturboa.R
 import com.app.routineturboa.data.local.TaskEntity
 import com.app.routineturboa.ui.components.CustomTextField
 import com.app.routineturboa.ui.components.SelectTaskTypeDropdown
+import com.app.routineturboa.ui.components.ShowMainTasksDropdown
 import com.app.routineturboa.ui.theme.LocalCustomColorsPalette
 import com.app.routineturboa.utils.TimeUtils.dateTimeToString
 import com.app.routineturboa.utils.TimeUtils.strToDateTime
@@ -57,11 +59,13 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FullEditDialog(
+    mainTasks: State<List<TaskEntity>>,
     task: TaskEntity,
     onConfirmTaskEdit: suspend (TaskEntity) -> Unit,
     onCancel: () -> Unit
 ) {
     val context = LocalContext.current
+    var linkedMainTaskIdIfHelper by remember { mutableStateOf<Int?>(null) }
 
     // Actual data in State variables from 'task'
     var id by remember { mutableIntStateOf(task.id) }
@@ -201,7 +205,19 @@ fun FullEditDialog(
                     singleLine = false
                 )
 
-                SelectTaskTypeDropdown(taskType, onTaskTypeSelected = { newType -> taskType = newType })
+                SelectTaskTypeDropdown(
+                    taskType,
+                    onTaskTypeSelected = { newType -> taskType = newType }
+                )
+
+                // Show the main task dropdown only if task type is "HelperTask"
+                if (taskType == "HelperTask") {
+                    ShowMainTasksDropdown(
+                        mainTasks = mainTasks.value,
+                        selectedMainTaskId = linkedMainTaskIdIfHelper,
+                        onTaskSelected = { taskId -> linkedMainTaskIdIfHelper = taskId }
+                    )
+                }
 
                 CustomTextField(
                     value = idFormatted,
@@ -283,6 +299,7 @@ fun FullEditDialog(
                         Text("Save")
                     }
                 }
+
 
             }
         }

@@ -32,8 +32,8 @@ class TasksViewModel(private val repository: RoutineRepository) : ViewModel() {
         }
     }
 
-    fun getMainTasks(): Flow<List<TaskEntity>> {
-        return repository.getTasksByType("MainTask")
+    fun getTasksByType(type: String): Flow<List<TaskEntity>> {
+        return repository.getTasksByType(type)
     }
 
     fun updateTaskAndAdjustNext(initialEditedTask: TaskEntity) {

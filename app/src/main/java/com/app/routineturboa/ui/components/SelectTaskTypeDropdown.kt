@@ -46,6 +46,7 @@ fun SelectTaskTypeDropdown(
                     .fillMaxWidth()
                     .menuAnchor()
             )
+
             ExposedDropdownMenu(
                 expanded = expanded.value,
                 onDismissRequest = { expanded.value = false },

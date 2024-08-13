@@ -19,6 +19,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -68,33 +69,35 @@ fun ParentTaskItem(
 ) {
     val density = LocalDensity.current
     val context = LocalContext.current
-
+    val mainTaskTypeString = context.getString(R.string.task_type_main)
+    val mainTasks = tasksViewModel.getTasksByType(mainTaskTypeString).collectAsState(
+        initial = emptyList())
     var isDropDownExpanded by remember { mutableStateOf(false) }
     var longPressOffset by remember { mutableStateOf(Offset.Zero) }
-
     val isShowNotes = remember { mutableStateOf(false) }
-
     val currentTime = LocalDateTime.now()
     val isTaskNow = currentTime.isAfter(task.startTime) && currentTime.isBefore(task.endTime)
-
     var isShowTaskDetails by remember { mutableStateOf(false) }
-
     val cardHeight: Dp = when {
         isThisTaskQuickEditing -> 120.dp // if in-edit mode
         task.type == context.getString(R.string.task_type_quick) -> 45.dp
         task.type == context.getString(R.string.task_type_main) -> (1.dp * task.duration).coerceAtLeast(45.dp)
-        task.type == context.getString(R.string.task_type_helper) -> 40.dp
-        else -> 40.dp
+        task.type == context.getString(R.string.task_type_helper) -> 35.dp
+        task.type == context.getString(R.string.task_type_basics) -> 35.dp
+        else -> 30.dp
     }
-
     val cardBgColor = when (task.type) {
         context.getString(R.string.task_type_main)
         -> LocalCustomColorsPalette.current.mainTaskColor.copy(alpha=0.3f)
         context.getString(R.string.task_type_basics)
-        -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.4f)
+        -> LocalCustomColorsPalette.current.helperTaskColor.copy(alpha=0.3f)
+        context.getString(R.string.task_type_helper)
+        -> LocalCustomColorsPalette.current.quickTaskColor.copy(alpha=0.3f)
+        context.getString(R.string.task_type_quick)
+        -> LocalCustomColorsPalette.current.quickTaskColor.copy(alpha=0.3f)
+
         else -> MaterialTheme.colorScheme.surface.copy(alpha=1f)
     }
-
     val cardBorder = when {
         isTaskNow -> null
         isThisTaskQuickEditing -> null
@@ -120,6 +123,7 @@ fun ParentTaskItem(
             }
     ) {
         Row {
+
             HourColumn(
                 isThisTaskClicked = isThisTaskClicked,
                 isThisTaskNow = isTaskNow,
@@ -127,20 +131,15 @@ fun ParentTaskItem(
                 startTime = task.startTime
             )
 
-            Spacer(modifier = Modifier.width(1.dp))
+            Spacer(modifier = Modifier.width(3.dp))
 
             Card(
                 modifier = modifier
                     .alpha(if (isAnotherTaskEditing) 0.8f else 1f)
                     .height(cardHeight)
                     .fillMaxWidth()
-                    .padding(
-                        start = if (task.type == "QuickTask") 0.dp else 4.dp,
-                        end = 5.dp, top = 1.dp, bottom = 0.dp
-                    ),
-                colors = CardDefaults.cardColors(
-                    containerColor = cardBgColor
-                ),
+                    .padding(1.dp, 5.dp, 1.dp, 0.dp),
+                colors = CardDefaults.cardColors(containerColor = cardBgColor),
                 shape = RoundedCornerShape(0.dp),
                 border = cardBorder
             ) {
@@ -148,7 +147,7 @@ fun ParentTaskItem(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(
-                            if (isThisTaskQuickEditing) 2.dp else 15.dp,
+                            if (isThisTaskQuickEditing) 2.dp else 5.dp,
                             if (isThisTaskQuickEditing) 2.dp else 4.dp,
                             8.dp,
                             0.dp,
@@ -158,6 +157,7 @@ fun ParentTaskItem(
 
                     if (isThisTaskQuickEditing) {
                         QuickEdit(
+                            mainTasks = mainTasks,
                             task = task,
                             onEndEditing = { onEndEditing() },
                             tasksViewModel = tasksViewModel,
