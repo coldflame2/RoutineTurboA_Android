@@ -13,7 +13,7 @@ import java.util.Locale
 
 object TimeUtils {
 
-    val possibleFormats = listOf(
+    private val possibleFormats = listOf(
         DateTimeFormatter.ofPattern("h:mm a", Locale.US),
         DateTimeFormatter.ofPattern("hh:mm a", Locale.US),
         DateTimeFormatter.ofPattern("H:mm", Locale.US),
@@ -24,20 +24,22 @@ object TimeUtils {
      * String (various time formats) to LocalDateTime
      * A default date is added to input string
      */
-    fun strToDateTime(timeString: String): LocalDateTime {
-        val trimmedTimeString = timeString.trim().uppercase()
+    fun strToDateTime(inputString: String): LocalDateTime {
+        val inputStringTrimmed = inputString.trim().uppercase()
 
-        for (formatter in possibleFormats) {
+        for (eachFormat in possibleFormats) {
             try {
-                val localTime = LocalTime.parse(trimmedTimeString, formatter)
-                return LocalDateTime.of(LocalDate.now(), localTime)
+                val inputLocalTime = LocalTime.parse(inputStringTrimmed, eachFormat)
+                val inputLocalDateTime = LocalDateTime.of(LocalDate.now(), inputLocalTime)
+                return inputLocalDateTime
+
             } catch (e: DateTimeParseException) {
-                Log.e("TimeUtils", "Error parsing time string: $timeString")
+                Log.e("TimeUtils", "Error parsing time string: $inputString")
             }
         }
 
         // If we've exhausted all formatters without success, throw an exception
-        throw IllegalArgumentException("Error parsing time string: $timeString")
+        throw IllegalArgumentException("Error parsing time string: $inputString")
     }
 
     fun dateTimeToString(dateTime: LocalDateTime): String {

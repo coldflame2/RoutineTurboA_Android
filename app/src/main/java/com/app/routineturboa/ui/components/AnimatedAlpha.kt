@@ -1,4 +1,4 @@
-package com.app.routineturboa.utils
+package com.app.routineturboa.ui.components
 
 import androidx.compose.animation.core.InfiniteTransition
 import androidx.compose.animation.core.RepeatMode
@@ -7,6 +7,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import com.app.routineturboa.utils.SineEasing
 
 object AnimatedAlphaUtils {
     @Composable

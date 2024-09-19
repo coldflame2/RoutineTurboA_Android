@@ -107,15 +107,4 @@ class RoutineRepository(val context: Context) {
             insertDefaultTasks(lastTask)
         }
     }
-
-    suspend fun getDemoTasks(context: Context): List<TaskEntity> {
-        val tasksInitialList = taskDao.getAllTasks().first() // first() collects the first emission from the flow
-
-        return if (tasksInitialList.isNotEmpty()) {
-            getDemoTasks(context) // Return the demo tasks if the list is not empty
-        } else {
-            tasksInitialList // Return the initial tasks if the list
-        }
-    }
-
 }

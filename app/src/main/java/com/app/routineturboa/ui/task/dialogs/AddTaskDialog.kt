@@ -43,8 +43,8 @@ import androidx.compose.ui.window.DialogProperties
 import com.app.routineturboa.R
 import com.app.routineturboa.data.local.TaskEntity
 import com.app.routineturboa.ui.components.CustomTextField
-import com.app.routineturboa.ui.components.SelectTaskTypeDropdown
-import com.app.routineturboa.ui.components.ShowMainTasksDropdown
+import com.app.routineturboa.ui.task.dropdowns.SelectTaskTypeDropdown
+import com.app.routineturboa.ui.task.dropdowns.ShowMainTasksDropdown
 import com.app.routineturboa.utils.TimeUtils.dateTimeToString
 import com.app.routineturboa.utils.TimeUtils.strToDateTime
 import com.app.routineturboa.viewmodel.TasksViewModel
@@ -99,7 +99,7 @@ fun AddTaskDialog(
     var positionFormatted by remember {mutableStateOf(taskPosition.toString())}
 
     // Get duration fo task below to check limits of duration for new task
-    val taskBelowBeforeAdding = tasksViewModel.fetchNextTask(clickedTask!!)
+    val taskBelowBeforeAdding = tasksViewModel.fetchNextTask(clickedTask)
     val durationTaskBelowBeforeAdding = taskBelowBeforeAdding?.duration
 
     var isReminderLinked by remember { mutableStateOf(true) }
@@ -281,7 +281,7 @@ fun AddTaskDialog(
                 )
 
                 // Show the main task dropdown only if task type is "HelperTask"
-                if (taskType == "HelperTask") {
+                if (taskType == context.getString(R.string.task_type_helper)) {
                     ShowMainTasksDropdown(
                         mainTasks = mainTasks.value,
                         selectedMainTaskId = linkedMainTaskIdIfHelper,

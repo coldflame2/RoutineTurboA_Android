@@ -19,7 +19,7 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.app.routineturboa.utils.AnimatedAlphaUtils
+import com.app.routineturboa.ui.components.AnimatedAlphaUtils
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
@@ -69,25 +69,25 @@ fun HourColumn(
                 .padding(
                     start = 15.dp,
                     end = 1.dp,
-                    top = 1.dp,
+                    top = 0.dp,
                 )
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy((-8).dp),
+                verticalArrangement = Arrangement.spacedBy((-12).dp),
             ) {
                 Text(
                     text = startTimeHourString,
-                    style = MaterialTheme.typography.bodyLarge.copy(fontSize = 12.sp),
+                    style = MaterialTheme.typography.bodyLarge.copy(fontSize = 11.sp),
                 )
 
                 Text(
                     text = startTimeMinuteString,
-                    style = MaterialTheme.typography.bodyLarge.copy(fontSize = 12.sp),
+                    style = MaterialTheme.typography.bodyLarge.copy(fontSize = 11.sp),
                 )
             }
 
-            Spacer(modifier = Modifier.width(3.dp))
+            Spacer(modifier = Modifier.width(1.dp))
 
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,

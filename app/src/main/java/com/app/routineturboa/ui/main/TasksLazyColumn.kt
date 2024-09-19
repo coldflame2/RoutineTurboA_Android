@@ -99,7 +99,7 @@ fun TasksLazyColumn(
     LazyColumn(
         state = listState,
         modifier = Modifier.padding(paddingValues),
-        contentPadding = PaddingValues(bottom = 50.dp),
+        contentPadding = PaddingValues(1.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
         // Loading state or no tasks

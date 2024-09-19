@@ -2,22 +2,25 @@ package com.app.routineturboa.ui.task.dialogs
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 import com.app.routineturboa.data.local.TaskEntity
 import com.app.routineturboa.utils.TimeUtils.dateTimeToString
 
@@ -28,59 +31,133 @@ fun TaskDetailsDialog(
 ) {
     AlertDialog(
         onDismissRequest = { onDismiss() },
-        title = {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.fillMaxWidth()
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+        confirmButton = {
+            TextButton(
+                onClick = { onDismiss() },
             ) {
-                Icon(
-                    imageVector = Icons.Default.Info,
-                    contentDescription = "Task Info",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(40.dp)
-                )
-                Spacer(modifier = Modifier.size(8.dp))
-                Text(text = "Task Details", style = MaterialTheme.typography.titleLarge)
+                Text("Close", style = MaterialTheme.typography.titleMedium.copy(
+                    color = MaterialTheme.colorScheme.onPrimary))
             }
+        },
+        icon = {
+            Icon(
+                imageVector = Icons.Default.Info,
+                contentDescription = "Task Info",
+                tint = MaterialTheme.colorScheme.onPrimary
+            )
+        },
+        title = {
+            Text(
+                text = task.name,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
         },
         text = {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.padding(16.dp)
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth(0.9f),
+                color = MaterialTheme.colorScheme.secondaryContainer,
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
             ) {
-                Text(text = "ID: ${task.id}", style = MaterialTheme.typography.bodyMedium)
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(15.dp),
+                    modifier = Modifier.padding(top = 10.dp)
+                ) {
+                    // Time information
+                    Row(
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Column {
+                            Text(
+                                text = "Start",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
+                            Text(
+                                text = dateTimeToString( task.startTime),
+                                style = MaterialTheme.typography.titleSmall
+                            )
+                        }
 
-                val startTimeString = dateTimeToString(task.startTime)
-                Text(text = "Start Time: $startTimeString", style = MaterialTheme.typography.bodyMedium)
+                        Spacer(modifier = Modifier.width(25.dp))
+                        Column {
+                            Text(
+                                text = "End",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
+                            Text(
+                                text = dateTimeToString( task.endTime),
+                                style = MaterialTheme.typography.titleSmall
+                            )
+                        }
 
-                val endTimeString = dateTimeToString(task.endTime)
-                Text(text = "End Time: $endTimeString", style = MaterialTheme.typography.bodyMedium)
+                    }
 
-                Text(text = "Name: ${task.name}", style = MaterialTheme.typography.bodyMedium)
+                    // Notes
+                    if (task.notes.isNotBlank()) {
+                        Column {
+                            Text(
+                                text = "Notes",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
+                            Text(
+                                text = task.notes,
+                                style = MaterialTheme.typography.titleSmall
+                            )
+                        }
+                    }
 
-                if (task.notes.isNotBlank()) {
-                    Text(text = "Notes: ${task.notes}", style = MaterialTheme.typography.bodyMedium)
+                    // Reminder
+                    Column {
+                        Text(
+                            text = "Reminder",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                        Text(
+                            text = dateTimeToString(task.reminder),
+                            style = MaterialTheme.typography.titleSmall
+                        )
+                    }
+
+                    // Type
+                    Column {
+                        Text(
+                            text = "Type",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                        Text(
+                            text = task.type,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+
+                    // Internal details
+                    Column {
+                        Text(
+                            text = "Internal Details",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                        Text(
+                            text = "ID: ${task.id}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "Position: ${task.position}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
-
-                Text(text = "Position: ${task.position}", style = MaterialTheme.typography.bodyMedium)
-
-                Text(text = "Type: ${task.type}", style = MaterialTheme.typography.bodyMedium)
-
-                val reminderString = dateTimeToString(task.reminder)
-                Text(text = "Reminder: $reminderString", style = MaterialTheme.typography.bodyMedium)
-
-                // Adding a divider for better visual separation
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 8.dp),
-                    thickness = 1.dp,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)
-                )
             }
         },
-        confirmButton = {
-            Button(onClick = { onDismiss() }) {
-                Text("Close")
-            }
-        }
+        modifier = Modifier.padding(1.dp)
     )
 }
