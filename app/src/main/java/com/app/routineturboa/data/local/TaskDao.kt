@@ -1,5 +1,6 @@
 package com.app.routineturboa.data.local
 
+import android.database.sqlite.SQLiteConstraintException
 import android.util.Log
 import androidx.room.Dao
 import androidx.room.Delete
@@ -64,4 +65,18 @@ interface TaskDao {
 
     @Query("SELECT * FROM tasks_table WHERE id = (SELECT MAX(id) FROM tasks_table)")
     suspend fun getLastTask(): TaskEntity?
+
+    @Transaction
+    suspend fun safeInsertTask(task: TaskEntity): Long {
+        return try {
+            insertTask(task)  // returns new rowID
+        } catch (e: SQLiteConstraintException) {
+            Log.e("TaskDao", "Insertion failed: ${e.message}")
+            -1L  // Return -1 to indicate failure
+        }
+    }
+
+    @Query("DELETE FROM tasks_table")
+        suspend fun deleteAllTasks() // Deletes all tasks from the tasks table
+
 }

@@ -39,10 +39,11 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.app.routineturboa.MainActivity
 import com.app.routineturboa.RoutineTurboApp
+import com.app.routineturboa.viewmodel.TasksViewModel
 import kotlinx.coroutines.launch
 
 @Composable
-fun SignInItem() {
+fun OneDriveInterfaceButtons(tasksViewModel: TasksViewModel) {
     val tag = "SignInItem"
     val context = LocalContext.current
     val msalAuthManager = remember { RoutineTurboApp.instance.msalAuthManager }
@@ -51,14 +52,13 @@ fun SignInItem() {
     var isExpanded by remember { mutableStateOf(false) }
     var profileImageUrl by remember { mutableStateOf<String?>(null) }
     val coroutineScope = rememberCoroutineScope()
-
     val isMsalInitialized by msalAuthManager.isInitialized.collectAsState()
 
+    // Get isSignedIn, Account Name, and Profile Image
     LaunchedEffect(isMsalInitialized, isSignedIn) {
         if (isMsalInitialized) {
-            Log.d(
-                "SignInItem",
-                "LaunchedEffect: msalAuthManager is initialized. Getting current account and profile image..."
+            Log.d(tag,
+                "LaunchedEffect: msalAuthManager initialized. Getting current account and profile image..."
             )
 
             msalAuthManager.getCurrentAccount { account ->
@@ -85,6 +85,18 @@ fun SignInItem() {
 
         else {
             Log.d(tag, "LaunchedEffect: msalAuthManager is not initialized yet.")
+        }
+    }
+
+    fun handleSync() {
+        coroutineScope.launch {
+            try {
+                tasksViewModel.syncTasksFromOneDrive(context)
+                Toast.makeText(context, "Syncing...", Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                Log.e("SignInItem", "Sync error", e)
+                Toast.makeText(context, "Sync error: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
@@ -212,7 +224,9 @@ fun SignInItem() {
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { Log.d("SignInItem", "Sync Clicked")
+                        .clickable {
+                            handleSync()
+                            Log.d("SignInItem", "Sync Clicked")
                         }
                         .padding(vertical = 8.dp)
                 ) {

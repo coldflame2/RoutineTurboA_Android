@@ -10,4 +10,6 @@
     <string name="task_type_helper">Helper</string>
     <string name="task_type_main">Main</string>
     <string name="task_type_quick">Quick</string>
+    <string name="task_type_undefined">Undefined</string>
+
 </resources>

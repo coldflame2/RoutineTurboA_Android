@@ -8,6 +8,16 @@ import com.app.routineturboa.utils.TimeUtils.strToDateTime
 fun getDemoTasks(context: Context): List<TaskEntity> {
     return listOf(
         TaskEntity(
+            position = 1,
+            name = "Sleep/Wake up",
+            notes = "",
+            duration = 359,
+            startTime = strToDateTime("00:01 AM"),
+            endTime = strToDateTime("06:00 AM"),
+            reminder = strToDateTime("06:00 AM"),
+            type = context.getString(R.string.task_type_default)
+        ),
+        TaskEntity(
             position = 2,
             name = "Morning Ritual",
             notes = "Listen to the tapes, get ready for the day",
@@ -35,7 +45,7 @@ fun getDemoTasks(context: Context): List<TaskEntity> {
             startTime = strToDateTime("06:25 AM"),
             endTime = strToDateTime("06:35 AM"),
             reminder = strToDateTime("06:25 AM"),
-            type = "default"
+            type = context.getString(R.string.task_type_basics)
         ),
         TaskEntity(
             position = 5,
@@ -55,7 +65,7 @@ fun getDemoTasks(context: Context): List<TaskEntity> {
             startTime = strToDateTime("07:15 AM"),
             endTime = strToDateTime("07:30 AM"),
             reminder = strToDateTime("07:15 AM"),
-            type = "default"
+            type = context.getString(R.string.task_type_basics)
         ),
         TaskEntity(
             position = 7,
@@ -65,7 +75,7 @@ fun getDemoTasks(context: Context): List<TaskEntity> {
             startTime = strToDateTime("07:30 AM"),
             endTime = strToDateTime("08:00 AM"),
             reminder = strToDateTime("07:30 AM"),
-            type = "default"
+            type = context.getString(R.string.task_type_basics)
         ),
         TaskEntity(
             position = 8,
@@ -105,7 +115,7 @@ fun getDemoTasks(context: Context): List<TaskEntity> {
             startTime = strToDateTime("11:30 AM"),
             endTime = strToDateTime("12:00 PM"),
             reminder = strToDateTime("11:30 AM"),
-            type = "default"
+            type = context.getString(R.string.task_type_basics)
         ),
         TaskEntity(
             position = 12,
@@ -125,7 +135,7 @@ fun getDemoTasks(context: Context): List<TaskEntity> {
             startTime = strToDateTime("01:30 PM"),
             endTime = strToDateTime("02:00 PM"),
             reminder = strToDateTime("01:30 PM"),
-            type = "default"
+            type = context.getString(R.string.task_type_basics)
         ),
         TaskEntity(
             position = 14,
@@ -135,7 +145,7 @@ fun getDemoTasks(context: Context): List<TaskEntity> {
             startTime = strToDateTime("02:00 PM"),
             endTime = strToDateTime("03:00 PM"),
             reminder = strToDateTime("02:00 PM"),
-            type = "default"
+            type = context.getString(R.string.task_type_basics)
         ),
         TaskEntity(
             position = 15,
@@ -145,7 +155,7 @@ fun getDemoTasks(context: Context): List<TaskEntity> {
             startTime = strToDateTime("03:00 PM"),
             endTime = strToDateTime("04:00 PM"),
             reminder = strToDateTime("03:00 PM"),
-            type = "default"
+            type = context.getString(R.string.task_type_undefined)
         ),
         TaskEntity(
             position = 16,
@@ -165,7 +175,7 @@ fun getDemoTasks(context: Context): List<TaskEntity> {
             startTime = strToDateTime("05:30 PM"),
             endTime = strToDateTime("06:00 PM"),
             reminder = strToDateTime("05:30 PM"),
-            type = "default"
+            type = context.getString(R.string.task_type_basics)
         ),
         TaskEntity(
             position = 18,
@@ -175,7 +185,7 @@ fun getDemoTasks(context: Context): List<TaskEntity> {
             startTime = strToDateTime("06:00 PM"),
             endTime = strToDateTime("07:00 PM"),
             reminder = strToDateTime("06:00 PM"),
-            type = "default"
+            type = context.getString(R.string.task_type_basics)
         ),
         TaskEntity(
             position = 19,
@@ -195,7 +205,7 @@ fun getDemoTasks(context: Context): List<TaskEntity> {
             startTime = strToDateTime("09:00 PM"),
             endTime = strToDateTime("09:30 PM"),
             reminder = strToDateTime("09:00 PM"),
-            type = "default"
+            type = context.getString(R.string.task_type_basics)
         ),
         TaskEntity(
             position = 21,
@@ -205,7 +215,7 @@ fun getDemoTasks(context: Context): List<TaskEntity> {
             startTime = strToDateTime("09:30 PM"),
             endTime = strToDateTime("10:00 PM"),
             reminder = strToDateTime("09:30 PM"),
-            type = "default"
+            type = context.getString(R.string.task_type_basics)
         ),
         TaskEntity(
             position = 22,
@@ -215,6 +225,16 @@ fun getDemoTasks(context: Context): List<TaskEntity> {
             startTime = strToDateTime("10:00 PM"),
             endTime = strToDateTime("10:30 PM"),
             reminder = strToDateTime("10:00 PM"),
+            type = context.getString(R.string.task_type_basics)
+        ),
+        TaskEntity(
+            position = 23,
+            name = "End of day",
+            notes = "",
+            duration = 30,
+            startTime = strToDateTime("10:30 PM"),
+            endTime = strToDateTime("11:59 PM"),
+            reminder = strToDateTime("10:30 PM"),
             type = "default"
         )
     )

@@ -2,8 +2,9 @@ package com.app.routineturboa.data.local
 
 import android.content.Context
 import android.util.Log
-import androidx.room.withTransaction
 import com.app.routineturboa.R
+
+import androidx.room.withTransaction
 import com.app.routineturboa.utils.TimeUtils.strToDateTime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -16,27 +17,25 @@ class RoutineRepository(val context: Context) {
     private var routineDatabase = RoutineDatabase.getDatabase(context)
     private var taskDao: TaskDao = routineDatabase.taskDao()
 
-    fun getAllTasks(): Flow<List<TaskEntity>> = taskDao.getAllTasks()
+    fun getAllTasks(): Flow<List<TaskEntity>>{
+        Log.d(tag, "Getting all tasks.")
+        return taskDao.getAllTasks()
+    }
 
-    // Function to get tasks by type
     fun getTasksByType(type: String): Flow<List<TaskEntity>> {
         return taskDao.getTasksByType(type)
     }
 
     suspend fun insertTask(task: TaskEntity): Long {
-        Log.d(tag, "Inserting task with ID: ${task.id}. Task Name: ${task.name}")
+        Log.d(tag, "Inserting task '${task.name}' [id: ${task.id}")
+        val result = taskDao.safeInsertTask(task)
 
-        // Ensure the first and last tasks are correctly identified
-        val firstTask = taskDao.getFirstTask()
-        val lastTask = taskDao.getLastTask()
-
-        if (firstTask == null || lastTask == null) {
-            Log.e(tag, "First or last task not found. Please ensure default tasks are initialized.")
-            throw IllegalStateException("First or last task not found.")
+        if (result == -1L) { // -1 means failure
+            Log.i("TaskRepository",
+                "Task insertion failed due to either unique constraint or other factors.")
         }
-
-        // Insert the new task with its correct properties (id will be auto-generated)
-        return taskDao.insertTask(task)
+        // 'result' if successful is new rowID
+        return result
     }
 
     suspend fun updateTask(task: TaskEntity) {
@@ -74,12 +73,15 @@ class RoutineRepository(val context: Context) {
         taskDao = routineDatabase.taskDao()
     }
 
+    suspend fun deleteAllTasks() {
+        taskDao.deleteAllTasks()
+    }
+
     suspend fun initializeDefaultTasks() {
         val tasks = taskDao.getAllTasks().first()
 
         if (tasks.isEmpty()) {
             val firstTask = TaskEntity(
-                id = -1,
                 position = 1,
                 name = "Start of Day",
                 notes = "",
@@ -93,7 +95,6 @@ class RoutineRepository(val context: Context) {
             insertDefaultTasks(firstTask)
 
             val lastTask = TaskEntity(
-                id = -2,
                 position = Int.MAX_VALUE,
                 name = "End of Day",
                 notes = "",

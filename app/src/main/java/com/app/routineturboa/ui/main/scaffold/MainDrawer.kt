@@ -29,6 +29,8 @@ import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,7 +45,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.app.routineturboa.R
 import com.app.routineturboa.reminders.ReminderManager
-import com.app.routineturboa.ui.components.SignInItem
+import com.app.routineturboa.ui.components.OneDriveInterfaceButtons
+import com.app.routineturboa.ui.components.SmoothCircularProgressIndicator
 import com.app.routineturboa.viewmodel.TasksViewModel
 import kotlinx.coroutines.launch
 
@@ -62,6 +65,8 @@ fun MainDrawer(
     val screenWidth = configuration.screenWidthDp.dp
     val screenHeight = configuration.screenHeightDp.dp
 
+    val loading by tasksViewModel.loading.collectAsState()
+
     ModalDrawerSheet(
         //region ModalDrawerSheet Parameters
         drawerContainerColor = MaterialTheme.colorScheme.surface,
@@ -72,7 +77,7 @@ fun MainDrawer(
             .width(screenWidth * 0.7f)
             .height(screenHeight * 0.90f)
             .padding(top = 12.dp)
-            .offset(x = if (drawerState.isClosed) - screenWidth else 0.dp)
+            .offset(x = if (drawerState.isClosed) -screenWidth else 0.dp)
             .shadow(15.dp),
         drawerShape = RectangleShape
         //endregion
@@ -129,19 +134,34 @@ fun MainDrawer(
                 }
             }
 
-            SignInItem()
+            // OneDrive Sign in, Sync, and LogOut buttons
+            OneDriveInterfaceButtons(tasksViewModel)
 
-            // schedule reminders
+            // Schedule reminders
             DrawerItemTemplate("Schedule Reminders", Icons.Default.Build) {
                 coroutineScope.launch {
                     reminderManager.observeAndScheduleReminders(context)
                 }
             }
 
-            // Insert Demo Tasks
-            DrawerItemTemplate("Insert Demo Tasks", Icons.Default.Settings) {
+            // Insert default tasks
+            DrawerItemTemplate("Insert Default Tasks", Icons.Default.Settings) {
+                coroutineScope.launch {
+                    tasksViewModel.insertDefaultTasks(context)
+                }
+            }
+
+            // Insert demo tasks
+            DrawerItemTemplate("Insert Demo Tasks", Icons.Default.Settings, loading=loading) {
                 coroutineScope.launch {
                     tasksViewModel.insertDemoTasks(context)
+                }
+            }
+
+            // Delete all tasks
+            DrawerItemTemplate("Delete All", Icons.Default.Settings) {
+                coroutineScope.launch {
+                    tasksViewModel.deleteAllTasks(context)
                 }
             }
         }
@@ -149,7 +169,12 @@ fun MainDrawer(
 }
 
 @Composable
-fun DrawerItemTemplate(text: String, icon: ImageVector, onItemClick: () -> Unit) {
+fun DrawerItemTemplate(
+    text: String,
+    icon: ImageVector,
+    loading:Boolean=false,
+    onItemClick: () -> Unit
+) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
@@ -167,6 +192,9 @@ fun DrawerItemTemplate(text: String, icon: ImageVector, onItemClick: () -> Unit)
             text = text,
             style = MaterialTheme.typography.bodyLarge
         )
+        if (loading) {
+            SmoothCircularProgressIndicator()
+        }
     }
 }
 

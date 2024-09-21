@@ -11,12 +11,12 @@ import java.time.LocalDateTime
 data class TaskEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val name: String,
-    val notes: String,
+    val notes: String = "",
     val duration: Int,
     val startTime: LocalDateTime,
     val endTime: LocalDateTime,
     val reminder: LocalDateTime,
     val type: String,
     val position: Int,
-    val mainTaskId: Int? = null // This is the foreign key to link to another task
+    val mainTaskId: Int? = null
 )
