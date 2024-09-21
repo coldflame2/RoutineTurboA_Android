@@ -1,19 +1,25 @@
 import os
 
 def combine_kt_files(file_names):
-    # Script combine.py should be located at: RoutineTurboA\app\extras
+    # Script combine.py should be located at: RoutineTurboA\app\src\extra
 
     # This is where the combine.py is. It gives absolute path.
     script_path_or_current_working_dir_abs_path = os.getcwd()
+    print(f"Absolute path of current working directory (or script path): {script_path_or_current_working_dir_abs_path}")
 
     # Get relative (which will print only a dot, because it's cwd)
     script_or_cwd_relative = os.path.relpath(script_path_or_current_working_dir_abs_path)
+    print(f"Relative path of current working directory (or script path): {script_or_cwd_relative}")
 
-    # Move up a directory from a working directory to go to base
+    # Move up two directories from the working directory to go to base
     # This is the main starting point of this Android Project. It should be: 'RoutineTurboA'
-    base_directory = os.path.join(script_or_cwd_relative, '..')
+    base_directory = os.path.abspath(os.path.join(script_or_cwd_relative, '..', '..'))
+    print(f"Base directory (two levels up from current working directory): {base_directory}")
+
 
     kotlin_files_path = os.path.join(base_directory, 'src', 'main', 'java', 'com', 'app', 'routineturboa')
+    print(f"Kotlin files path: {os.path.abspath(kotlin_files_path)}")
+    
     output_file_path = os.path.join(script_or_cwd_relative, 'combined.txt')
 
     build_gradle_file = os.path.join(kotlin_files_path, 'build.gradle.kts')
@@ -62,9 +68,19 @@ def combine_kt_files(file_names):
 
 if __name__ == '__main__':
 
-    file_names = [
+    only_some_files = [
+        'AndroidManifest.xml',
+
         'MainActivity.kt',
-        # Add other filenames as needed
+        'RoutineTurboApp.kt',
+        
+        'RoutineDatabase.kt',
+        'RoutineRepository.kt',
+        'TaskDao.kt',
+        'TaskEntity.kt',
+        
+        'TasksViewModel.kt',
+        'TaskViewModelFactory.kt'
     ]
 
     file_names_all = [
@@ -72,16 +88,23 @@ if __name__ == '__main__':
 
         'MainActivity.kt',
         'RoutineTurboApp.kt',
+        
         'RoutineDatabase.kt',
         'RoutineRepository.kt',
         'TaskDao.kt',
         'TaskEntity.kt',
+        
+        'TasksViewModel.kt',
+        'TaskViewModelFactory.kt'
+        
         'downloadFromOneDrive.kt',
         'MsalAuthManager.kt',
         'OneDriveManager.kt',
+        
         'ReminderManager.kt',
         'ReminderReceiver.kt',
         'ScheduleReminders.kt',
+        
         'CustomTextField.kt',
         'DottedLine.kt',
         'SignInItem.kt',
@@ -97,17 +120,17 @@ if __name__ == '__main__':
         'AddTaskDialog.kt',
         'FullEditDialog.kt',
         'TaskDetailsDialog.kt',
+        
         'Converters.kt',
         'demoTasks.kt',
         'NotificationPermissionHandler.kt',
         'SineEasing.kt',
         'TimeUtils.kt',
-        'TasksViewModel.kt',
-        'TaskViewModelFactory.kt'
+        
     ]
 
     # Call the function with the directory and filenames
-    combine_kt_files(file_names_all)
+    combine_kt_files(only_some_files)
 
 
 

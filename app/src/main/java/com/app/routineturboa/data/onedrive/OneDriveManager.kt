@@ -11,13 +11,14 @@ import java.net.URL
 import java.util.concurrent.CompletableFuture
 
 class OneDriveManager(private val authProvider: IAuthenticationProvider) {
+    private val tag = "OneDriveManager"
 
     private val graphClient = GraphServiceClient.builder()
         .authenticationProvider(authProvider)
         .buildClient()
 
     fun listFiles(driveItemId: String? = null): List<DriveItem> {
-        Log.d("OneDriveManager", "Listing files for drive item ID: $driveItemId")
+        Log.d(tag, "Listing files for drive item ID: $driveItemId")
         val request = if (driveItemId == null) {
             graphClient.me().drive().root().children().buildRequest()
         } else {
@@ -25,35 +26,44 @@ class OneDriveManager(private val authProvider: IAuthenticationProvider) {
         }
 
         val files = request.get()?.currentPage ?: emptyList()
-        Log.d("OneDriveManager", "Found ${files.size} files")
+        Log.d(tag, "Found ${files.size} files")
         return files
     }
 
     fun downloadFile(driveItemId: String, destinationFile: File): Boolean {
-        Log.d("OneDriveManager", "Downloading file with ID: $driveItemId to ${destinationFile.absolutePath}")
+        Log.d(tag, "Downloading file with ID: $driveItemId to ${destinationFile.absolutePath}")
         val request = graphClient.me().drive().items(driveItemId).content().buildRequest()
 
         return try {
+            // Send the request to OneDrive and gets the file as an InputStream.
+            // Think of InputStream as a stream of data flowing from OneDrive to the app.
             val inputStream = request.get()
+
             if (inputStream != null) {
-                FileOutputStream(destinationFile).use { outputStream ->
-                    inputStream.copyTo(outputStream)
+                // create a new stream that writes the data to the specified file
+                val outputStream = FileOutputStream(destinationFile)
+
+                outputStream.use { streamData ->
+                    // Copy data from the input stream (OneDrive) to the output stream (local file)
+                    inputStream.copyTo(streamData)
                 }
-                Log.d("OneDriveManager", "File downloaded successfully")
+
+                Log.d(tag, "File downloaded successfully")
                 true
+
             } else {
-                Log.e("OneDriveManager", "Failed to download file: input stream is null")
+                Log.e(tag, "Failed to download file: input stream is null")
                 false
             }
         } catch (e: Exception) {
-            Log.e("OneDriveManager", "Error downloading file: ${e.message}")
+            Log.e(tag, "Error downloading file: $e")
             e.printStackTrace()
             false
         }
     }
 
     fun createFolder(folderName: String): DriveItem? {
-        Log.d("OneDriveManager", "Creating folder with name: $folderName")
+        Log.d(tag, "Creating folder with name: $folderName")
 
         val driveItem = DriveItem()
         driveItem.name = folderName
@@ -63,17 +73,17 @@ class OneDriveManager(private val authProvider: IAuthenticationProvider) {
             val result = graphClient.me().drive().root().children()
                 .buildRequest()
                 .post(driveItem)
-            Log.d("OneDriveManager", "Folder created successfully with ID: ${result.id}")
+            Log.d(tag, "Folder created successfully with ID: ${result.id}")
             result
         } catch (e: Exception) {
-            Log.e("OneDriveManager", "Error creating folder: ${e.message}")
+            Log.e(tag, "Error creating folder: ${e.message}")
             e.printStackTrace()
             null
         }
     }
 
     fun uploadFile(parentFolderId: String, fileName: String, file: File): DriveItem? {
-        Log.d("OneDriveManager", "Uploading file: ${file.absolutePath} to folder: $parentFolderId")
+        Log.d(tag, "Uploading file: ${file.absolutePath} to folder: $parentFolderId")
 
         return try {
             val fileContent = file.readBytes()
@@ -81,17 +91,19 @@ class OneDriveManager(private val authProvider: IAuthenticationProvider) {
                 .buildRequest()
                 .put(fileContent)
             if (result != null) {
-                Log.d("OneDriveManager", "File uploaded successfully with ID: ${result.id}")
+                Log.d(tag, "File uploaded successfully with ID: ${result.id}")
             }
             result
         } catch (e: Exception) {
-            Log.e("OneDriveManager", "Error uploading file: ${e.message}")
+            Log.e(tag, "Error uploading file: ${e.message}")
             e.printStackTrace()
             null
         }
     }
 
-    class MsalAuthProvider(private val authenticationResult: IAuthenticationResult) : IAuthenticationProvider {
+    class MsalAuthProvider(
+        private val authenticationResult: IAuthenticationResult
+    ) : IAuthenticationProvider {
         override fun getAuthorizationTokenAsync(requestUrl: URL): CompletableFuture<String> {
             return CompletableFuture.completedFuture(authenticationResult.accessToken)
         }

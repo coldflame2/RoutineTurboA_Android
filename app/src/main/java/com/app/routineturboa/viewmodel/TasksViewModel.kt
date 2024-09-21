@@ -1,16 +1,25 @@
 package com.app.routineturboa.viewmodel
 
+import android.app.Activity
 import android.content.Context
+import android.database.sqlite.SQLiteDatabase
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.app.routineturboa.R
+import com.app.routineturboa.data.local.RoutineDatabase
 import com.app.routineturboa.data.local.RoutineRepository
 import com.app.routineturboa.data.local.TaskEntity
+import com.app.routineturboa.data.onedrive.MsalAuthManager
+import com.app.routineturboa.data.onedrive.downloadFromOneDrive
+import com.app.routineturboa.utils.TimeUtils.isoStrToDateTime
 import com.app.routineturboa.utils.TimeUtils.strToDateTime
 import com.app.routineturboa.utils.getDemoTasks
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -21,16 +30,123 @@ const val TAG = "TasksViewModel"
 
 class TasksViewModel(private val repository: RoutineRepository) : ViewModel() {
 
-    val tasks: StateFlow<List<TaskEntity>> = repository.getAllTasks()
+    var tasks: StateFlow<List<TaskEntity>> = repository.getAllTasks()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    init {
-        if (tasks.value.isEmpty()) {
-            viewModelScope.launch {
-                repository.initializeDefaultTasks()
+    private val _loading = MutableStateFlow(false)
+    val loading: StateFlow<Boolean> = _loading
+
+    fun syncTasksFromOneDrive(context: Context) {
+        viewModelScope.launch {
+            val authManager = MsalAuthManager.getInstance(context)
+
+            // Ensure the user is signed in
+            val authResult = authManager.signIn(context as Activity)
+
+            authResult.let {
+                downloadFromOneDrive(it, context, this@TasksViewModel)
+
+                val onedriveDestination = context.getDatabasePath("RoutineTurbo_PyQt6.db")
+                val oneDriveDb = openDbFile(onedriveDestination.absolutePath)
+
+                // Fetch tasks from the OneDrive DB
+                val tasksFromOneDrive = fetchTasksFromOneDriveDb(oneDriveDb)
+
+                // Insert tasks into the local Room database
+                insertTasksIntoLocalDb(tasksFromOneDrive, repository)
+
+                // Close the OneDrive DB connection
+                oneDriveDb.close()
+
             }
         }
     }
+
+    private fun openDbFile(oneDriveDbFilePath: String): SQLiteDatabase {
+        return SQLiteDatabase.openDatabase(
+            oneDriveDbFilePath,
+            null,
+            SQLiteDatabase.OPEN_READONLY
+        )
+    }
+
+    private fun fetchTasksFromOneDriveDb(db: SQLiteDatabase): List<TaskEntity> {
+        val tasks = mutableListOf<TaskEntity>()
+
+        val cursor = db.rawQuery("SELECT * FROM tasks_table", null)
+        while (cursor.moveToNext()) {
+            val id = cursor.getInt(cursor.getColumnIndexOrThrow("id"))
+            val name = cursor.getString(cursor.getColumnIndexOrThrow("name"))
+            val notes = cursor.getString(cursor.getColumnIndexOrThrow("notes"))
+            val duration = cursor.getInt(cursor.getColumnIndexOrThrow("duration"))
+            val startTime = cursor.getString(cursor.getColumnIndexOrThrow("startTime"))
+            val endTime = cursor.getString(cursor.getColumnIndexOrThrow("endTime"))
+            val reminder = cursor.getString(cursor.getColumnIndexOrThrow("reminder"))
+            val type = cursor.getString(cursor.getColumnIndexOrThrow("type"))
+            val position = cursor.getInt(cursor.getColumnIndexOrThrow("position"))
+
+            val task = TaskEntity(
+                id = id,
+                name = name,
+                notes = notes,
+                duration = duration,
+                startTime = isoStrToDateTime(startTime),
+                endTime = isoStrToDateTime(endTime),
+                reminder = isoStrToDateTime(reminder),
+                type = type,
+                position = position
+            )
+            tasks.add(task)
+        }
+        cursor.close()
+
+        return tasks
+    }
+
+
+    private fun insertTasksIntoLocalDb(tasks: List<TaskEntity>, repository: RoutineRepository) {
+        tasks.forEach { task ->
+            viewModelScope.launch {
+                repository.insertTask(task) // Ensure this runs in a transaction or coroutine scope
+            }
+        }
+    }
+
+    private fun loadTasksFromDatabase() {
+        Log.d(TAG, "Loading tasks from the database...")
+        viewModelScope.launch {
+            _loading.value = true // Indicate loading state
+
+            // Force a new fetch of tasks from the repository
+            val newTasks = repository.getAllTasks().firstOrNull() ?: emptyList()
+
+            // Update the StateFlow with the new tasks
+            tasks = MutableStateFlow(newTasks)
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+            _loading.value = false // Indicate loading complete
+
+            Log.d(TAG, "tasks: ${tasks.value}")
+        }
+    }
+
+
+    private fun reinitializeDatabase(context: Context) {
+        Log.d(TAG, "Reinitializing Room database...")
+
+        // Close the current instance of the Room database if it exists
+//        RoutineDatabase.closeDatabase()
+
+        // Ensure the newly downloaded database file is in place
+        // For example, log the file path and size to verify it's correctly replaced
+        val localDbFile = context.getDatabasePath(context.getString(R.string.database_name))
+        Log.d(TAG, "Database file path: ${localDbFile.absolutePath}")
+        Log.d(TAG, "Database file size: ${localDbFile.length()} bytes")
+
+        // Reinitialize the Room database with the new file
+        RoutineDatabase.getDatabase(context)
+    }
+
 
     fun getTasksByType(type: String): Flow<List<TaskEntity>> {
         return repository.getTasksByType(type)
@@ -296,6 +412,7 @@ class TasksViewModel(private val repository: RoutineRepository) : ViewModel() {
         }
 
         val lastTask = tasks.maxByOrNull { it.position }
+
         if (lastTask == null) {
             Log.e(TAG, "Failed to find last task by position")
             return null
@@ -306,6 +423,7 @@ class TasksViewModel(private val repository: RoutineRepository) : ViewModel() {
         if (lastTask.endTime.toLocalTime() != expectedEndTime) {
             Log.e(TAG, "Last task (${lastTask.name}) end time is not 23:59. Actual end time: ${lastTask.endTime}")
         }
+
         val expectedTaskID = -2
         if (lastTask.id != expectedTaskID) {
             Log.e(TAG, "Last task (${lastTask.name}) has an unexpected ID. Expected: $expectedTaskID, Actual: ${lastTask.id}")
@@ -364,13 +482,14 @@ class TasksViewModel(private val repository: RoutineRepository) : ViewModel() {
             Log.e(TAG, "Last task (${task.name}) end time is not 23:59. Actual end time: ${task.endTime.toLocalTime()}")
         }
 
-        // Check if the ID is -2
-        val expectedTaskID = -2
-        if (task.id != expectedTaskID) {
-            Log.e(TAG, "Last task (${task.name}) has an unexpected ID. Expected: $expectedTaskID, Actual: ${task.id}")
+        // Check if position is max
+        val totalRows = tasks.value.size
+        if (task.position == totalRows) {
+            Log.d(TAG, "The task queried for isTaskLast is the last task.")
+            return true
+        } else {
+            return false
         }
-
-        return true
     }
 
     fun deleteTask(task: TaskEntity) {
@@ -379,24 +498,60 @@ class TasksViewModel(private val repository: RoutineRepository) : ViewModel() {
         }
     }
 
-    suspend fun insertDemoTasks(context: Context) {
-        val demoTasksList = getDemoTasks(context)
-        demoTasksList.forEach { task ->
-            repository.insertTask(task)
+    fun insertDemoTasks(context: Context) {
+        viewModelScope.launch {
+            _loading.value = true // Start loading
+
+            try {
+                val demoTasks = getDemoTasks(context)
+                demoTasks.forEach { task ->
+                    repository.insertTask(task)
+                }
+            } catch (e: Exception) {
+                Log.e("TasksViewModel", "Error inserting demo tasks", e)
+            } finally {
+                fixLastTaskTimings()
+                _loading.value = false // Stop loading
+            }
         }
-        updateLastTask()
     }
 
-    private suspend fun updateLastTask() {
+    private suspend fun fixLastTaskTimings() {
+        // This is a method to force the last task to meet the criteria but is only applicable for demo tasks
         val lastTask = fetchLastTask()
-        if (lastTask != null) {
-            val updatedLastTask = lastTask.copy(
-                startTime = strToDateTime("10:30 PM"),
-                endTime = strToDateTime("11:59 PM"),
-                reminder = strToDateTime("10:30 PM"),
-                duration = 89
+        val startTime = lastTask?.startTime
+        val endTime = strToDateTime("11:59 PM")
+        val duration = Duration.between(startTime, endTime)
+        val position = tasks.value.size
+
+        if ((lastTask != null) && (startTime != null)) {
+            val fixedLastTask = lastTask.copy(
+                startTime = startTime,
+                endTime = endTime,
+                duration = duration.toMinutes().toInt(),
+                reminder = startTime,
+                position = position
             )
-            repository.updateTask(updatedLastTask)
+            repository.updateTask(fixedLastTask)
+        }
+    }
+
+
+    fun insertDefaultTasks(context: Context) {
+        Log.d(TAG, "Initializing Default tasks.")
+        viewModelScope.launch {
+            _loading.value = true // Start loading
+            try {
+                repository.initializeDefaultTasks()
+            } finally {
+                _loading.value = false // Stop loading
+            }
+        }
+    }
+
+    fun deleteAllTasks(context: Context) {
+        viewModelScope.launch {
+            repository.deleteAllTasks() // Calls the repository method to delete tasks
         }
     }
 }

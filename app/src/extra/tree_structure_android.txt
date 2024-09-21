@@ -1,13 +1,3 @@
-
-
-I am building an app, compatible with API 34 for use in Android 14.0, using Kotlin, Room Library, MSAL for OneDrive integration, Jetpack compose, and KSP plugin.
-
-The app is called RoutineTurboA. It's functionality is like a to-do app, but it covers the entire 24 hours in a day. It starts from 00:01 and ends on 23:59. Each task starts from the previous task's end time.
-
- I am beginner and I built most of this using help from AI tools, including yourself. So the code may not be perfect or standard. I need your help in building and refining this app. I am interesting in learning as well as building this application. And the most important thing:  Use latest knowledge when helping me - latest API, methods, approach, should be latest, as applicable in year 2024. Do not help me with anything that's deprecated or no longer valid.
-
-Here's the structure of my app:
-
 |-- routineturboa/
 |   |-- MainActivity.kt
 |   |-- RoutineTurboApp.kt
@@ -27,9 +17,11 @@ Here's the structure of my app:
 |   |   |-- ScheduleReminders.kt
 |   |-- ui/
 |   |   |-- components/
+|   |   |   |-- AlpabhetIcon.kt
+|   |   |   |-- AnimatedAlpha.kt
 |   |   |   |-- CustomTextField.kt
 |   |   |   |-- DottedLine.kt
-|   |   |   |-- SignInItem.kt
+|   |   |   |-- OneDriveInterfaceButtons.kt
 |   |   |   |-- TaskCardPlaceholder.kt
 |   |   |-- main/
 |   |   |   |-- MainScreen.kt
@@ -39,15 +31,23 @@ Here's the structure of my app:
 |   |   |   |   |-- MainDrawer.kt
 |   |   |   |   |-- MainTopBar.kt
 |   |   |-- task/
-|   |   |   |-- QuickEdit.kt
-|   |   |   |-- TaskCard.kt
-|   |   |   |-- TaskDropdown.kt
+|   |   |   |-- ParentTaskItem.kt
+|   |   |   |-- child_elements/
+|   |   |   |   |-- ExtraTaskDetails.kt
+|   |   |   |   |-- HourColumn.kt
+|   |   |   |   |-- MainTaskDisplay.kt
+|   |   |   |   |-- QuickEdit.kt
+|   |   |   |   |-- TaskDropdown.kt
 |   |   |   |-- dialogs/
 |   |   |   |   |-- AddTaskDialog.kt
 |   |   |   |   |-- FullEditDialog.kt
+|   |   |   |   |-- TaskDetailsDialog.kt
+|   |   |   |-- dropdowns/
+|   |   |   |   |-- SelectTaskTypeDropdown.kt
+|   |   |   |   |-- ShowMainTasksDropdown.kt
 |   |   |-- theme/
 |   |   |   |-- Color.kt
-|   |   |   |-- CusomColorsPallete.kt
+|   |   |   |-- CustomColorsPallete.kt
 |   |   |   |-- Theme.kt
 |   |   |   |-- Type.kt
 |   |-- utils/
@@ -59,4 +59,3 @@ Here's the structure of my app:
 |   |-- viewmodel/
 |   |   |-- TasksViewModel.kt
 |   |   |-- TaskViewModelFactory.kt
-

@@ -20,6 +20,11 @@ object TimeUtils {
         DateTimeFormatter.ofPattern("HH:mm", Locale.US)
     )
 
+    fun isoStrToDateTime(inputIsoStr: String): LocalDateTime {
+        val inputFormatter = DateTimeFormatter.ISO_DATE_TIME
+        return LocalDateTime.parse(inputIsoStr, inputFormatter)
+    }
+
     /**
      * String (various time formats) to LocalDateTime
      * A default date is added to input string

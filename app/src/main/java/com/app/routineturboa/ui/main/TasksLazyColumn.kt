@@ -16,6 +16,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -24,11 +25,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.app.routineturboa.reminders.ReminderManager
-import com.app.routineturboa.ui.task.dialogs.AddTaskDialog
 import com.app.routineturboa.ui.components.EmptyTaskCardPlaceholder
 import com.app.routineturboa.ui.task.ParentTaskItem
+import com.app.routineturboa.ui.task.dialogs.AddTaskDialog
 import com.app.routineturboa.viewmodel.TasksViewModel
 import com.microsoft.identity.client.IAuthenticationResult
 import kotlinx.coroutines.delay
@@ -51,7 +51,8 @@ fun TasksLazyColumn(
     // <editor-fold desc="variables">
     val tag = "TasksLazyColumn"
 
-    val tasks by tasksViewModel.tasks.collectAsStateWithLifecycle()
+    val tasks by tasksViewModel.tasks.collectAsState()
+
     var areTasksLoading by remember { mutableStateOf(true) }
     val oneDriveAuthResult by remember { mutableStateOf<IAuthenticationResult?>(null) }
     val listState = rememberLazyListState()

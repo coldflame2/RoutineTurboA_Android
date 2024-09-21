@@ -46,6 +46,19 @@ class MsalAuthManager(context: Context) {
     suspend fun initialize() {
         Log.d(tag, "MsalAuthManager initialize function...")
 
+        // Try to load the current account (token cache)
+        try {
+            currentAccount = getCurrentAccountSuspend()
+            if (currentAccount != null) {
+                Log.d(tag, "MsalAuthManager: User is already logged in: ${currentAccount?.username}")
+            } else {
+                Log.d(tag, "MsalAuthManager: No user is logged in.")
+            }
+        } catch (e: Exception) {
+            Log.e(tag, "MsalAuthManager: Error getting current account", e)
+        }
+
+        _isInitialized.value = true
     }
 
     private fun onInitialized(callback: () -> Unit) {
@@ -108,26 +121,28 @@ class MsalAuthManager(context: Context) {
     }
 
     fun getCurrentAccount(callback: ((IAccount?) -> Unit)?) {
-        Log.d(tag, "Getting current account...")
-
         singleAccountApp?.getCurrentAccountAsync(
             object : ISingleAccountPublicClientApplication.CurrentAccountCallback {
                 override fun onAccountLoaded(activeAccount: IAccount?) {
-                    Log.d(tag, "getCurrentAccount: onAccountLoaded-currentAccount: ${activeAccount?.username}")
-                    callback?.invoke(activeAccount)
-                    currentAccount = activeAccount
+                    if (activeAccount != null) {
+                        Log.d(tag, "User is logged in: ${activeAccount.username}")
+                        currentAccount = activeAccount
+                        callback?.invoke(activeAccount)
+                    } else {
+                        Log.d(tag, "No user is logged in.")
+                        callback?.invoke(null)
+                    }
                 }
 
                 override fun onAccountChanged(priorAccount: IAccount?, currentAccount: IAccount?) {
-                    Log.d(tag, "getCurrentAccount: onAccountChanged-currentAccount: ${currentAccount?.username} and priorAccount: ${priorAccount?.username}")
+                    Log.d(tag, "Account changed.")
+                    this@MsalAuthManager.currentAccount = currentAccount
                     callback?.invoke(currentAccount)
-
                 }
 
                 override fun onError(exception: MsalException) {
                     Log.e(tag, "Error getting current account", exception)
                     callback?.invoke(null)
-
                 }
             }
         )
@@ -167,23 +182,18 @@ class MsalAuthManager(context: Context) {
                     .withScopes(listOf("User.Read", "Files.Read"))
                     .withCallback(object : AuthenticationCallback {
                         override fun onSuccess(result: IAuthenticationResult) {
+                            Log.d(tag, "Interactive login successful")
                             continuation.resume(result)
                         }
 
                         override fun onError(exception: MsalException) {
-                            if (exception.errorCode == "current_account_mismatch") {
-                                Log.e("MsalAuthManager", "Current account mismatch. Attempting sign out.")
-                                // If there's a mismatch, sign out and try again
-                                signOut {
-                                    signInAttempt()
-                                }
-                            } else {
-                                continuation.resumeWithException(exception)
-                            }
+                            Log.e(tag, "Interactive login error: ${exception.message}")
+                            continuation.resumeWithException(exception)
                         }
 
                         override fun onCancel() {
-                            continuation.resumeWithException(Exception("Sign-in canceled"))
+                            Log.d(tag, "Interactive login canceled")
+                            continuation.resumeWithException(Exception("Login canceled"))
                         }
                     })
                     .build()
@@ -191,7 +201,37 @@ class MsalAuthManager(context: Context) {
                 singleAccountApp?.acquireToken(parameters)
             }
 
-            signInAttempt()
+            // Try to acquire token silently first
+            val account = currentAccount
+            if (account != null) {
+                val silentParameters = AcquireTokenSilentParameters.Builder()
+                    .forAccount(account)
+                    .withScopes(listOf("User.Read", "Files.Read"))
+                    .fromAuthority(account.authority)
+                    .withCallback(object : AuthenticationCallback {
+                        override fun onSuccess(result: IAuthenticationResult) {
+                            Log.d(tag, "Silent token acquisition successful")
+                            continuation.resume(result)
+                        }
+
+                        override fun onError(exception: MsalException) {
+                            Log.e(tag, "Silent token acquisition error, falling back to interactive login: ${exception.message}")
+                            // If silent token acquisition fails, attempt interactive login
+                            signInAttempt()
+                        }
+
+                        override fun onCancel() {
+                            Log.e(tag, "Silent token acquisition canceled")
+                            continuation.resumeWithException(Exception("Silent token acquisition canceled"))
+                        }
+                    })
+                    .build()
+
+                singleAccountApp?.acquireTokenSilentAsync(silentParameters)
+            } else {
+                // No account available, proceed with interactive login
+                signInAttempt()
+            }
         }
     }
 
@@ -223,7 +263,7 @@ class MsalAuthManager(context: Context) {
      * @param account The account for which the token is being acquired.
      * @return The access token, or null if an error occurs.
      */
-    private suspend fun acquireTokenSilently(account: IAccount): String? = suspendCoroutine { continuation ->
+    suspend fun acquireTokenSilently(account: IAccount): String? = suspendCoroutine { continuation ->
         Log.d(tag, "acquiring tokens silently...")
         val parameters = AcquireTokenSilentParameters.Builder()
             .forAccount(account)
