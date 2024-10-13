@@ -9,8 +9,7 @@ import kotlinx.coroutines.withContext
 
 suspend fun downloadFromOneDrive(
     authResult: IAuthenticationResult,
-    context: Context,
-    tasksViewModel: TasksViewModel
+    context: Context
 ) {
     val tag = "downloadFromOneDrive"
     Log.d(tag, "Downloading from OneDrive")

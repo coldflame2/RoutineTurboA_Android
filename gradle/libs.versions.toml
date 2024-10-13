@@ -17,7 +17,7 @@ graphVersion = "5.10.0"
 coilCompose = "2.6.0"
 workRuntimeKtx = "2.9.0"
 kspVersion = "2.0.0-1.0.23"
-roomRuntime = "2.5.0"
+roomRuntime = "2.6.1"
 
 [libraries]
 androidx-compose-material3-window-size = { module = "androidx.compose.material3:material3-window-size-class" }

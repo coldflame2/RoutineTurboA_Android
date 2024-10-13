@@ -17,9 +17,20 @@ class MainActivity : ComponentActivity() {
 
         // Set to true to make system windows visible
         WindowCompat.setDecorFitsSystemWindows(window, true)
-        reminderManager = ReminderManager(this)
-        // Initialize the state variables
-        isNotificationPermissionGiven = mutableStateOf(NotificationPermissionHandler.isNotificationPermissionGiven(this))
+
+        // Get TaskDao from the Room database
+        val taskDao = RoutineDatabase.getDatabase().taskDao()
+
+        // Initialize the repository with TaskDao
+        val dataRepository = DataRepository(taskDao)
+
+        // Pass the repository to ReminderManager
+        reminderManager = ReminderManager(this, dataRepository)
+
+        // Initialize the state variables for Notifications permissions
+        isNotificationPermissionGiven = mutableStateOf(
+            NotificationPermissionHandler.isNotificationPermissionGiven(this)
+        )
         showPermissionDialog = mutableStateOf(!isNotificationPermissionGiven.value)
 
         // Register the ActivityResultLauncher
@@ -30,17 +41,29 @@ class MainActivity : ComponentActivity() {
                 window.statusBarColor = MaterialTheme.colorScheme.primary.toArgb()
                 window.navigationBarColor = MaterialTheme.colorScheme.primary.toArgb()
 
-                MainScreen(
-                    reminderManager = reminderManager)
+                // Initialize the TasksViewModel
+                val tasksVM: TasksViewModel = viewModel(factory = TasksViewModelFactory())
 
+                // Provide ReminderManager to the composable hierarchy
+                CompositionLocalProvider(LocalReminderManager provides reminderManager) {
+                    MainScreen(
+                        tasksVM = tasksVM
+                    )
+                }
+
+                // Show AlertDialog for granting permissions
                 if (showPermissionDialog.value) {
+                    Log.d(tag, "Permissions not given. Showing dialog for granting permissions.")
+
                     AlertDialog(
                         title = { Text("Notification Permission") },
-                        text = {
-                            Text (text = "This app needs notification permission to send you reminders." +
-                                    "Would you like to grant this permission?")
-                        },
                         onDismissRequest = { showPermissionDialog.value = false },
+                        text = {
+                            Text (
+                                text = "This app needs notification permission to send you reminders." +
+                                    "Would you like to grant this permission?"
+                            )
+                        },
                         dismissButton = {
                             Button(onClick = { showPermissionDialog.value = false }) {
                                 Text("Not Now")
@@ -109,142 +132,33 @@ class RoutineTurboApp : Application() {
 package com.app.routineturboa.data.local
 
 
-@Database(entities = [TaskEntity::class], version = 2, exportSchema = false)
+@Database(entities = [TaskEntity::class], version = 1, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class RoutineDatabase : RoomDatabase() {
+
     abstract fun taskDao(): TaskDao
 
-
     companion object {
+        private const val TAG = "RoutineDatabase"
+
         @Volatile
         private var INSTANCE: RoutineDatabase? = null
 
-        private val MIGRATION_1_2 = object : Migration(1, 2) {
-            override fun migrate(database: SupportSQLiteDatabase) {
-                // Adding the new column to the existing table
-                database.execSQL("ALTER TABLE tasks_table ADD COLUMN mainTaskId INTEGER DEFAULT NULL")
-            }
-        }
-
-        fun getDatabase(context: Context): RoutineDatabase {
+        fun getDatabase(): RoutineDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
-                    context.applicationContext,
+                    RoutineTurboApp.instance.applicationContext,
                     RoutineDatabase::class.java,
-                    context.getString(R.string.database_name)
+                    "routine_database"
                 )
-                    .addMigrations(MIGRATION_1_2)
-                    .build()
+                .build()
                 INSTANCE = instance
+                Log.d(TAG, "Database initialized.")
                 instance
             }
         }
     }
 }
-
-// Content from RoutineRepository.kt
-package com.app.routineturboa.data.local
-
-
-
-class RoutineRepository(val context: Context) {
-    val tag = "RoutineRepository"
-    private var routineDatabase = RoutineDatabase.getDatabase(context)
-    private var taskDao: TaskDao = routineDatabase.taskDao()
-
-    fun getAllTasks(): Flow<List<TaskEntity>> = taskDao.getAllTasks()
-
-    // Function to get tasks by type
-    fun getTasksByType(type: String): Flow<List<TaskEntity>> {
-        return taskDao.getTasksByType(type)
-    }
-
-    suspend fun insertTask(task: TaskEntity): Long {
-        Log.d(tag, "Inserting task with ID: ${task.id}. Task Name: ${task.name}")
-
-        // Ensure the first and last tasks are correctly identified
-        val firstTask = taskDao.getFirstTask()
-        val lastTask = taskDao.getLastTask()
-
-        if (firstTask == null || lastTask == null) {
-            Log.e(tag, "First or last task not found. Please ensure default tasks are initialized.")
-            throw IllegalStateException("First or last task not found.")
-        }
-
-        // Insert the new task with its correct properties (id will be auto-generated)
-        return taskDao.insertTask(task)
-    }
-
-    suspend fun updateTask(task: TaskEntity) {
-        Log.d(tag, "Updating task: ${task.name} and id:${task.id}")
-        taskDao.updateTask(task)
-    }
-
-    suspend fun <T> runAsTransaction(block: suspend () -> T): T {
-        return withContext(Dispatchers.IO) {
-            routineDatabase.withTransaction {
-                block()
-            }
-        }
-    }
-
-    private suspend fun insertDefaultTasks(defaultTask: TaskEntity): Long {
-        Log.d(tag, "Inserting default task.")
-        return taskDao.insertTask(defaultTask)
-    }
-
-    suspend fun updateTasksWithNewPositions(tasks: List<TaskEntity>) {
-        taskDao.updateTasksWithNewPositions(tasks)
-    }
-
-    suspend fun deleteTask(task: TaskEntity) = taskDao.deleteTask(task)
-
-    suspend fun getTaskById(taskId: Int): TaskEntity? = taskDao.getTaskById(taskId)
-
-    fun closeDatabase() {
-        routineDatabase.close()
-    }
-
-    fun reopenDatabase() {
-        routineDatabase = RoutineDatabase.getDatabase(context)
-        taskDao = routineDatabase.taskDao()
-    }
-
-    suspend fun initializeDefaultTasks() {
-        val tasks = taskDao.getAllTasks().first()
-
-        if (tasks.isEmpty()) {
-            val firstTask = TaskEntity(
-                id = -1,
-                position = 1,
-                name = "Start of Day",
-                notes = "",
-                duration = 359,
-                startTime = strToDateTime("00:01 AM"),
-                endTime = strToDateTime("06:00 AM"),
-                reminder = strToDateTime("06:00 AM"),
-                type = context.getString(R.string.task_type_default)
-            )
-
-            insertDefaultTasks(firstTask)
-
-            val lastTask = TaskEntity(
-                id = -2,
-                position = Int.MAX_VALUE,
-                name = "End of Day",
-                notes = "",
-                duration = 1079,
-                startTime = strToDateTime("06:00 AM"),
-                endTime = strToDateTime("11:59 PM"),
-                reminder = strToDateTime("06:00 AM"),
-                type = context.getString(R.string.task_type_default)
-            )
-
-            insertDefaultTasks(lastTask)
-        }
-    }
-}
-
 
 // Content from TaskDao.kt
 package com.app.routineturboa.data.local
@@ -255,8 +169,16 @@ const val tag = "TaskDao"
 @Dao
 interface TaskDao {
 
+    @Transaction
+    suspend fun runTaskTransaction(block: suspend () -> Unit) {
+        return block()
+    }
+
     @Query("SELECT * FROM tasks_table ORDER BY position ASC")
     fun getAllTasks(): Flow<List<TaskEntity>>
+
+    @Query("SELECT * FROM tasks_table WHERE position = (SELECT MAX(position) FROM tasks_table)")
+    suspend fun getTaskWithMaxPosition(): TaskEntity?
 
     // Query to get tasks by type
     @Query("SELECT * FROM tasks_table WHERE type = :type")
@@ -264,6 +186,9 @@ interface TaskDao {
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertTask(task: TaskEntity): Long
+
+    @Query("SELECT COUNT(*) FROM tasks_table")
+    suspend fun getTasksCount(): Int
 
     @Update
     suspend fun updateTask(task: TaskEntity)
@@ -304,6 +229,22 @@ interface TaskDao {
 
     @Query("SELECT * FROM tasks_table WHERE id = (SELECT MAX(id) FROM tasks_table)")
     suspend fun getLastTask(): TaskEntity?
+
+    @Transaction
+    suspend fun safeInsertTask(task: TaskEntity): Long {
+        return try {
+            insertTask(task)  // returns new rowID
+        } catch (e: SQLiteConstraintException) {
+            Log.e("TaskDao", "Insertion failed: ${e.message}")
+            -1L  // Return -1 to indicate failure
+        }
+    }
+
+    @Query("DELETE FROM tasks_table")
+    suspend fun deleteAllTasks() // Deletes all tasks from the tasks table
+
+    @Query("UPDATE tasks_table SET position = position + 1 WHERE position >= :position")
+    suspend fun incrementPositionsBelow(position: Int)
 }
 
 // Content from TaskEntity.kt
@@ -315,453 +256,1537 @@ package com.app.routineturboa.data.local
 data class TaskEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val name: String,
-    val notes: String,
+    val notes: String = "",
     val duration: Int,
     val startTime: LocalDateTime,
     val endTime: LocalDateTime,
     val reminder: LocalDateTime,
     val type: String,
     val position: Int,
-    val mainTaskId: Int? = null // This is the foreign key to link to another task
+    val mainTaskId: Int? = null
 )
 
 
-// Content from TasksViewModel.kt
-package com.app.routineturboa.viewmodel
+// Content from MainScreen.kt
+package com.app.routineturboa.ui.main
 
 
-const val TAG = "TasksViewModel"
+@RequiresApi(Build.VERSION_CODES.S)
+@Composable
+fun MainScreen(tasksVM: TasksViewModel) {
+    Log.d("MainScreen", "MainScreen starts...")
 
-class TasksViewModel(private val repository: RoutineRepository) : ViewModel() {
+    // Access ReminderManager using CompositionLocal LocalReminderManager
+    val reminderManager = LocalReminderManager.current
 
-    val tasks: StateFlow<List<TaskEntity>> = repository.getAllTasks()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val tasks by tasksVM.tasks.collectAsState()
+    val tasksUiState by tasksVM.tasksUiState.collectAsState()
 
-    init {
-        if (tasks.value.isEmpty()) {
-            viewModelScope.launch {
-                repository.initializeDefaultTasks()
+    val taskEventsToFunctions = TaskEventsToFunctions(
+        onAnyTaskClick = tasksVM::onAnyTaskClick,
+        onAnyTaskLongPress = tasksVM::onAnyTaskLongPress,
+        onQuickEditClick = tasksVM::onQuickEditClick,
+        onFullEditClick = tasksVM::onFullEditTask,
+        onAddNewClick = tasksVM::onAddNewClick,
+        onNewTaskSaveClick = tasksVM::onNewTaskSaveClick,
+        onDeleteClick = tasksVM::onDeleteTask,
+        onCancelClick = tasksVM::onCancelEdit,
+        onConfirmEdit = tasksVM::onConfirmEdit,
+        onShowTaskDetails = tasksVM::onShowTaskDetails,
+    )
+
+    val drawerState = rememberDrawerState(DrawerValue.Closed)
+
+    ModalNavigationDrawer(
+        // Rest of the UI color on drawer open
+        scrimColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+        drawerState = drawerState,
+        drawerContent = { MainDrawer(drawerState, tasksVM, reminderManager) },
+    ) {
+        Scaffold(
+            topBar = { MainTopBar(drawerState) },
+            bottomBar = { MainBottomBar(taskEventsToFunctions.onAddNewClick) }
+        ) { paddingValues ->  // These paddingValues are applied along the edges inside a box.
+            TasksLazyColumn(
+                paddingValues = paddingValues,
+                tasks = tasks,
+                tasksUiState = tasksUiState,
+                taskEventsToFunctions = taskEventsToFunctions
+            )
+        }
+    }
+}
+
+// Content from TasksLazyColumn.kt
+package com.app.routineturboa.ui.main
+
+
+@RequiresApi(Build.VERSION_CODES.S)
+@Composable
+// Usage: MainScreen
+fun TasksLazyColumn(
+    paddingValues: PaddingValues, // auto-calculated by Scaffold
+    tasks:  List<TaskEntity>,
+    tasksUiState: TasksUiState,
+    taskEventsToFunctions: TaskEventsToFunctions
+) {
+    val tag = "TasksLazyColumn"
+    val context = LocalContext.current
+    var showLoadingIndicator by remember { mutableStateOf(true) }
+
+    val mainTasks by remember(tasks) { mutableStateOf(tasks.filter { it.type == TaskTypes.MAIN }) }
+
+    LazyColumn(
+        modifier = Modifier.padding(paddingValues),  // Use paddingValues here
+        contentPadding = PaddingValues(0.dp, 0.dp, 15.dp, 0.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        if (!showLoadingIndicator && tasks.isNotEmpty()) {
+            items(tasks,
+                key = { task -> task.id }
+            ) { task ->
+                // Pass the necessary state and event handlers to ParentTaskItem
+                ParentTaskItem(
+                    task = task,
+                    mainTasks = mainTasks,
+                    tasksUiState = tasksUiState,
+                    taskEventsToFunctions = taskEventsToFunctions,
+                )
+            }
+
+        // Show indicator if empty tasks or showLoadingIndicator
+        } else {
+            items(8) { EmptyTaskCardPlaceholder() }
+        }  // end of if-else in Lazy Column
+    }  // end of Lazy Column
+
+    // AddTaskDialog (Inside the parent Box)
+    if (tasksUiState.isAddingNew && tasksUiState.clickedTaskId != null) {
+        val clickedTask = tasks.find { it.id == tasksUiState.clickedTaskId }
+        val taskBelowClickedTask = tasks.find {it.id == tasksUiState.taskBelowClickedTaskId}
+
+        val boxColor = Color.Black.copy(alpha = 0.3f)
+
+        Box(modifier = Modifier.background(boxColor)) {
+            if (clickedTask != null){
+                AddTaskDialog(
+                    mainTasks = mainTasks,
+                    clickedTask = clickedTask,
+                    taskBelowClickedTask = taskBelowClickedTask,
+                    onCancel = { taskEventsToFunctions.onCancelClick() },
+                    onAddClick = { newTaskFormData ->
+                        taskEventsToFunctions.onNewTaskSaveClick(newTaskFormData)
+                    },
+                )
+            } else {
+                Toast.makeText(
+                    context,"Select a task first", Toast.LENGTH_SHORT).show()
             }
         }
     }
 
-    private fun refreshTasks() {
-        viewModelScope.launch {
-            repository.getAllTasks().stateIn(
-                viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    // Show loading indicator at start (Temporary effect)
+    LaunchedEffect(tasks) {
+        delay(50)
+        showLoadingIndicator = false
+    }
+
+}
+
+// Content from BottomNavBar.kt
+package com.app.routineturboa.ui.scaffold
+
+
+@Composable
+fun MainBottomBar(
+    onAddNewClick: () -> Unit,  // For setting isAddingTask state True
+) {
+    var selectedItem by remember { mutableIntStateOf(0) }
+    val items = listOf("Home", "Tasks")
+    val icons = listOf(Icons.Filled.Home, Icons.AutoMirrored.Filled.List, Icons.Filled.Settings)
+
+    NavigationBar (
+        Modifier.height(65.dp)
+    ) {
+        items.forEachIndexed { index, item ->
+
+            NavigationBarItem(
+                label = { Text(item) },
+                selected = selectedItem == index,
+                onClick = { selectedItem = index },
+                icon = { Icon(icons[index], contentDescription = item) },
+            )
+
         }
+
+        // Add New Task Button
+        NavigationBarItem(
+            label = { Text("Add") },
+            selected = true,
+            onClick = onAddNewClick, // For setting isAddingTask state True
+            icon = {
+                Icon (
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "Add"
+                )
+            },
+        )
     }
+}
+
+// Content from MainDrawer.kt
+package com.app.routineturboa.ui.scaffold
 
 
-    fun getTasksByType(type: String): Flow<List<TaskEntity>> {
-        return repository.getTasksByType(type)
-    }
+@RequiresApi(Build.VERSION_CODES.S)
+@Composable
+fun MainDrawer(
+    drawerState: DrawerState,
+    tasksViewModel: TasksViewModel,
+    reminderManager: ReminderManager
+) {
+    val context = LocalContext.current
+    val appName = context.getString(R.string.app_name)
+    val coroutineScope = rememberCoroutineScope()
 
-    fun updateTaskAndAdjustNext(initialEditedTask: TaskEntity) {
-        Log.d(TAG, "Updating '${initialEditedTask.name}' task and its next task.")
+    val configuration = LocalConfiguration.current
+    val screenWidth = configuration.screenWidthDp.dp
+    val screenHeight = configuration.screenHeightDp.dp
 
-        viewModelScope.launch {
-            try {
-                // Data preparations
+    ModalDrawerSheet(
+        //region ModalDrawerSheet Parameters
+        drawerContainerColor = MaterialTheme.colorScheme.surface,
+        drawerContentColor = MaterialTheme.colorScheme.onSurface,
+        drawerTonalElevation = 9.dp,
 
-                val taskBelow = fetchNextTask(initialEditedTask)
-                if (taskBelow != null) {
-                    Log.d(TAG, "Task below to update: ${taskBelow.name}")
+        modifier = Modifier
+            .width(screenWidth * 0.7f)
+            .height(screenHeight * 0.90f)
+            .padding(top = 12.dp)
+            .offset(x = if (drawerState.isClosed) -screenWidth else 0.dp)
+            .shadow(15.dp),
+        drawerShape = RectangleShape
+        //endregion
+    ) {
+        // Content inside drawer
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+        ) {
+            // Top Header
+            Surface(
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.shadow(15.dp)
+            ) {
+                // Top Item with App Name
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 12.dp, horizontal = 10.dp)
+                ) {
+                    // region App Main Icon
+                    Image(
+                        painter = painterResource(id = R.drawable.routineturbo),
+                        contentDescription = "App Icon",
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                    )
+                    // endregion
 
-                    val startTimeTaskBelow = initialEditedTask.endTime
-                    val durationTaskBelow = Duration.between(startTimeTaskBelow, taskBelow.endTime)
-                    val durationTaskBelowInt = durationTaskBelow.toMinutes().toInt()
+                    Spacer(modifier = Modifier.width(10.dp))
 
-                    // Create a new task entity with the updated duration and start time
-                    val taskWithUpdatesForBelow = taskBelow.copy(
-                        duration = durationTaskBelowInt,
-                        startTime = startTimeTaskBelow
+                    Text(
+                        text = appName,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onPrimary
                     )
 
-                    Log.d(TAG, "old duration: ${taskBelow.duration}, new duration: ${taskWithUpdatesForBelow.duration}, " +
-                            "old startTime: ${taskBelow.startTime}, new start time: ${taskWithUpdatesForBelow.startTime}")
+                    Spacer(modifier = Modifier.weight(1f))
 
-                    // Run the transaction with both updates
-                    repository.runAsTransaction {
-                        repository.updateTask(initialEditedTask)
-                        repository.updateTask(taskWithUpdatesForBelow)
-                    }
-
-                } else {
-                    Log.d(TAG, "No task below to update. Updating only the edited task.")
-
-                    // Run the transaction with only the update to taskToUpdate
-                    repository.runAsTransaction {
-                        repository.updateTask(initialEditedTask)
-                    }
+                    Icon(
+                        Icons.AutoMirrored.Outlined.MenuOpen,
+                        contentDescription = null, // Handle accessibility if needed
+                        modifier = Modifier
+                            .size(24.dp) // Adjust size as necessary
+                            .clickable {
+                                coroutineScope.launch { drawerState.close() }
+                            },
+                        tint = Color.Gray
+                    )
                 }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error updating tasks", e)
             }
-        }
-    }
 
-    /**
-     * @name beginNewTaskOperations
-     * The begins the new task operations. The order of operations matter.
-     *
-     * @param clickedTask
-     * @param newTask
-     *
-     * ## Purpose
-     * This function manages the process of inserting a new task into an ordered list of tasks, ensuring proper positioning and duration management of affected tasks.
-     *
-     * ## Parameters
-     * - `clickedTask: TaskEntity`: The task after which the new task will be inserted.
-     * - `newTask: TaskEntity`: The new task to be inserted.
-     *
-     * ## Return Value
-     * - `Result<Boolean>`: A Result object containing a Boolean.
-     *   - Success (true) indicates all operations completed successfully.
-     *   - Failure contains an Exception with details about what went wrong.
-     *
-     * ## Process Flow
-     *
-     * ### 1. Duration Validation
-     * - **Timing**: Occurs before any database changes.
-     * - **Purpose**: Ensures the new task's duration is valid in relation to the task it will precede.
-     * - **Steps**:
-     *   a. Retrieves the task currently below the `clickedTask` (referred to as `taskBelowToBeShifted`).
-     *   b. Compares `newTask.duration` with `taskBelowToBeShifted.duration`.
-     *   c. If `newTask.duration` is greater than or equal to `taskBelowToBeShifted.duration`, the operation fails.
-     * - **Failure Handling**: Returns a `Result.failure` with an appropriate error message.
-     *
-     * ### 2. Update Positions
-     *      * - **Timing**: Occurs after all other operations are complete.
-     *      * - **Purpose**: Ensures all tasks below the newly inserted task have correct positions.
-     *      * - **Steps**:
-     *      *   a. Calls `updateTaskPositions(newTask)` to adjust positions of all tasks below the new task.
-     *      *   b. Increments the position of each affected task by 1.
-     *
-     * ### 3. New Task Insertion
-     * - **Timing**: Occurs immediately after successful duration validation.
-     * - **Purpose**: Adds the new task to the database.
-     * - **Note**: The `newTask` already has its position set (clickedTask.position + 1).
-     *
-     * ### 4. Update Duration of Shifted Task
-     * - **Timing**: Occurs right after the new task insertion.
-     * - **Purpose**: Adjusts the duration of the task that is now below the newly inserted task.
-     * - **Steps**:
-     *   a. Calculates the new duration: `taskBelowToBeShifted.duration - newTask.duration`
-     *   b. Updates `taskBelowToBeShifted` with this new duration.
-     * - **Note**: This task is referred to as "now-shifted" because the new task has been inserted above it.
-     *
-     *
-     * ## Important Considerations
-     * 1. **Transaction Management**: The entire process is wrapped in a database transaction. This ensures that either all operations succeed, or none are applied if any step fails.
-     *
-     * 2. **Error Handling**:
-     *    - Validation errors (e.g., invalid duration) and Unexpected exceptions result in a `Result.failure` return.
-     *
-     * 3. **Positional Awareness**: The function assumes that `newTask.position` is already set correctly (clickedTask.position + 1) before being passed to this function.
-     *
-     * 6. **Task Relationships**:
-     *    - `clickedTask`: The task after which the new task will be inserted.
-     *    - `newTask`: The task being inserted.
-     *    - `taskBelowToBeShifted`: Initially the task below `clickedTask`, ends up below `newTask` after insertion.
-     *
-     * ## Usage
-     * This function should be called when a user action triggers the insertion of a new task at a specific position in the task list. It handles all necessary validations and updates to maintain the integrity of the task list structure.
-     */
-    fun beginNewTaskOperations(clickedTask: TaskEntity, newTask: TaskEntity): Result<Boolean> {
-        return runBlocking {
-            try {
-                repository.runAsTransaction {
-                    Log.d(TAG, "----Starting new task operations-----")
+            // OneDrive Sign in, Sync, and LogOut buttons
+            SignInAndSyncButtons(tasksViewModel)
 
-                    val taskBelowToBeShifted = fetchNextTask(clickedTask)
-                        ?: return@runAsTransaction Result.failure(Exception("Task below clicked task not found"))
-
-                    Log.d(TAG, " **** Clicked task: '${clickedTask.name}', " +
-                            "New task: '${newTask.name}'," +
-                            "Task Below: '${taskBelowToBeShifted.name}'")
-
-                    // 1. Validate duration
-                    Log.d(TAG, " **** 1st Step) Validating duration...")
-                    val taskBelowToBeShiftedDuration = taskBelowToBeShifted.duration
-
-                    if (newTask.duration >= taskBelowToBeShiftedDuration )  {
-                        Log.e(TAG, "Invalid duration. New Task duration: ${newTask.duration}, " +
-                                "Task Below Duration: $taskBelowToBeShiftedDuration")
-                        return@runAsTransaction Result.failure(Exception("Invalid new task duration"))
-                    }
-
-                    // 2. Update Positions of all the tasks below the new Task
-                    Log.d(TAG, " **** 2nd Step) Updating positions...")
-                    incrementTasksBelow(clickedTask)
-
-                    // 3. Inserting new task...
-                    Log.d(TAG, " **** 3rd Step) Inserting new task...")
-                    repository.insertTask(newTask)
-
-                    // 4. Updating duration and startTime of shifted task
-                    Log.d(TAG, " **** 4th Step) Updating duration and startTime of shifted task...")
-                    val updatedDuration = taskBelowToBeShiftedDuration - newTask.duration
-                    val updatedStartTime = newTask.endTime
-
-                    val taskBelowNowShifted = taskBelowToBeShifted.copy()
-
-                    Log.d(TAG, "taskBelow-NOW-Shifted Position: ${taskBelowNowShifted.position}" +
-                            " taskBelow-To-Be-Shifted Position: ${taskBelowToBeShifted.position}")
-
-                    // Exclude the last task from the update
-                    if (!isTaskLast(taskBelowNowShifted)) {
-                        Log.d(TAG, "Task Below is not the last task. Updating with new duration, start Time, and new position.")
-                        val taskBelowNowShiftedUpdated = taskBelowToBeShifted.copy(
-                            duration = updatedDuration,
-                            startTime = updatedStartTime,
-                            position = newTask.position + 1
-                        )
-                        updateTaskAndAdjustNext(taskBelowNowShiftedUpdated)
-                    } else {
-                        Log.d(TAG, "Task Below is the last task. Updating with new duration and start Time.")
-                        val taskBelowNowShiftedUpdated = taskBelowToBeShifted.copy(
-                            duration = updatedDuration,
-                            startTime = updatedStartTime
-                        )
-                        updateTaskAndAdjustNext(taskBelowNowShiftedUpdated)
-                    }
-
-                    Result.success(true)
+            // Schedule reminders
+            DrawerItemTemplate("Schedule Reminders", Icons.Default.Build) {
+                coroutineScope.launch {
+                    reminderManager.observeAndScheduleReminders(context)
                 }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error inserting task", e)
-                Result.failure(e)
+            }
+
+            // Insert default tasks
+            DrawerItemTemplate("Insert Default Tasks", Icons.Default.Settings) {
+                coroutineScope.launch {
+                    tasksViewModel.insertDefaultTasks()
+                }
+            }
+
+            // Insert demo tasks
+            DrawerItemTemplate("Insert Demo Tasks", Icons.Default.Settings) {
+                coroutineScope.launch {
+                    tasksViewModel.insertDemoTasks(context)
+                }
+            }
+
+            // Delete all tasks
+            DrawerItemTemplate("Delete All", Icons.Default.Settings) {
+                coroutineScope.launch {
+                    tasksViewModel.deleteAllTasks()
+                }
             }
         }
     }
+}
 
-    private fun incrementTasksBelow(referenceTask: TaskEntity?) {
-
-        if (referenceTask == null) {
-            Log.e(TAG, "incrementTasksBelow: anchorTask is null")
-            return
-        }
-
-        val taskBelowReferenceTask = fetchNextTask(referenceTask)
-
-        if (taskBelowReferenceTask != null ){
-            if (isTaskLast(taskBelowReferenceTask)) {
-                Log.e(TAG, "incrementTasksBelow: taskBelowReferenceTask is last task. Skipping updating positions.")
-                return
-            }
-        }
-
-        viewModelScope.launch {
-            Log.d(TAG, "Updating task positions below clickedTask: ${referenceTask.name}")
-
-            val currentTasks = tasks.value
-            // Find the index of the reference task
-            val referenceTaskIndex = currentTasks.indexOfFirst { it.id == referenceTask.id }
-
-            // Exclude the last task from the update
-            val listOfTasksToUpdate = currentTasks
-                .drop(referenceTaskIndex + 1)  // Skip tasks up to and including the reference task
-                .dropLast(1)  // Remove the last task
-
-            Log.d(TAG, "tasks to update - ${listOfTasksToUpdate.map { "Name:${it.name}, Position:${it.position}"}}")
-
-            var newPosition = referenceTask.position + 1
-
-            val tasksWithNewPositions = mutableListOf<TaskEntity>()
-
-            for (task in listOfTasksToUpdate) {
-                newPosition++
-                val taskWithNewPosition = task.copy(position = newPosition)
-                Log.d(TAG, "Updating task '${task.name}' position from ${task.position} to ${taskWithNewPosition.position}")
-                tasksWithNewPositions.add(taskWithNewPosition)
-            }
-
-            if (tasksWithNewPositions.isNotEmpty()) {
-                // Update all affected tasks in a single transaction
-                val updateResult = repository.updateTasksWithNewPositions(tasksWithNewPositions)
-                Log.d(TAG, "Update result: $updateResult")
-            } else {
-                Log.d(TAG, "No tasks to update")
-            }
-        }
-    }
-
-    fun fetchNextTask(baseTask: TaskEntity): TaskEntity? {
-        Log.d(TAG, "Getting task below '${baseTask.name}' task...")
-
-        if (isTaskLast(baseTask)){
-            Log.d(TAG, "baseTask is last task. Returning null.")
-            return null
-        }
-
-        val currentTasks = tasks.value
-        val baseTaskIndex = currentTasks.indexOfFirst { it.id == baseTask.id }
-
-        return if (baseTaskIndex != -1 && baseTaskIndex < currentTasks.size - 1) {
-            val nextTask = currentTasks[baseTaskIndex + 1]
-            Log.d(TAG, "Next Task: ${nextTask.name}")
-            nextTask
-        } else {
-            Log.d(TAG, "No task found below or clicked task is not in the list.")
-            null
-        }
-    }
-
-    private fun fetchLastTask(): TaskEntity? {
-        val tasks = tasks.value
-
-        if (tasks.isEmpty()) {
-            Log.e(TAG, "Task list is empty")
-            return null
-        }
-
-        val lastTask = tasks.maxByOrNull { it.position }
-        if (lastTask == null) {
-            Log.e(TAG, "Failed to find last task by position")
-            return null
-        }
-
-        // Check if the end time is 23:59
-        val expectedEndTime = LocalTime.of(23, 59)
-        if (lastTask.endTime.toLocalTime() != expectedEndTime) {
-            Log.e(TAG, "Last task (${lastTask.name}) end time is not 23:59. Actual end time: ${lastTask.endTime}")
-        }
-        val expectedTaskID = -2
-        if (lastTask.id != expectedTaskID) {
-            Log.e(TAG, "Last task (${lastTask.name}) has an unexpected ID. Expected: $expectedTaskID, Actual: ${lastTask.id}")
-        }
-
-        return lastTask
-    }
-
-    fun isTaskFirst(task: TaskEntity): Boolean {
-        val tasks = tasks.value
-
-        if (tasks.isEmpty()) {
-            Log.d(TAG, "Task list is empty")
-            return false
-        }
-
-        val firstTask = tasks.minByOrNull { it.position }
-        if (firstTask == null) {
-            Log.e(TAG, "Failed to find first task by position")
-            return false
-        }
-
-        if (task.position != 1) {
-            return false
-        }
-
-        // Check if the start time is 00:01
-        val expectedStartTime = LocalTime.of(0, 1)
-        if (task.startTime.toLocalTime() != expectedStartTime) {
-            Log.e(TAG, "First task (${task.name}) start time is not 00:01. Actual start time: ${task.startTime.toLocalTime()}")
-        }
-
-        // Check if the ID is -1
-        val expectedTaskID = -1
-        if (task.id != expectedTaskID) {
-            Log.e(TAG, "First task (${task.name}) has an unexpected ID. Expected: $expectedTaskID, Actual: ${task.id}")
-        }
-
-        return true
-    }
-
-    fun isTaskLast(task: TaskEntity): Boolean {
-        val lastTask = fetchLastTask()
-        if (lastTask == null) {
-            Log.e(TAG, "Failed to get last task")
-            return false
-        }
-
-        if (task.position != lastTask.position) {
-            return false
-        }
-
-        // Check if the end time is 23:59
-        val expectedEndTime = LocalTime.of(23, 59)
-        if (task.endTime.toLocalTime() != expectedEndTime) {
-            Log.e(TAG, "Last task (${task.name}) end time is not 23:59. Actual end time: ${task.endTime.toLocalTime()}")
-        }
-
-        // Check if the ID is -2
-        val expectedTaskID = -2
-        if (task.id != expectedTaskID) {
-            Log.e(TAG, "Last task (${task.name}) has an unexpected ID. Expected: $expectedTaskID, Actual: ${task.id}")
-        }
-
-        return true
-    }
-
-    fun deleteTask(task: TaskEntity) {
-        viewModelScope.launch {
-            repository.deleteTask(task)
-        }
-    }
-
-    suspend fun insertDemoTasks(context: Context) {
-        val demoTasksList = getDemoTasks(context)
-        demoTasksList.forEach { task ->
-            repository.insertTask(task)
-        }
-        updateLastTask()
-    }
-
-    private suspend fun updateLastTask() {
-        val lastTask = fetchLastTask()
-        if (lastTask != null) {
-            val updatedLastTask = lastTask.copy(
-                startTime = strToDateTime("10:30 PM"),
-                endTime = strToDateTime("11:59 PM"),
-                reminder = strToDateTime("10:30 PM"),
-                duration = 89
-            )
-            repository.updateTask(updatedLastTask)
-        }
-    }
-
-    fun syncTasksFromOneDrive(context: Context) {
-        viewModelScope.launch {
-            val authManager = MsalAuthManager.getInstance(context)
-
-            // Ensure the user is signed in
-            val authResult = authManager.signIn(context as Activity)
-
-            // Now that you have the authResult, proceed with the download
-            authResult.let {
-                downloadFromOneDrive(it, context, this@TasksViewModel)
-
-                // Reopen Room database after download
-                val db = RoutineDatabase.getDatabase(context)
-                db.close()
-                Room.databaseBuilder(
-                    context.applicationContext,
-                    RoutineDatabase::class.java,
-                    "RoutineTurbo.db"
-                ).build()
-
-                // Refresh the ViewModel data
-                refreshTasks()
-            } ?: Log.e(TAG, "Authentication failed")
+@Composable
+fun DrawerItemTemplate(
+    text: String,
+    icon: ImageVector,
+    loading:Boolean=false,
+    onItemClick: () -> Unit
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onItemClick)
+            .padding(16.dp)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null, // Handle accessibility if needed
+            modifier = Modifier.size(24.dp) // Adjust size as necessary
+        )
+        Spacer(modifier = Modifier.width(16.dp)) // Adjust spacing between icon and text
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyLarge
+        )
+        if (loading) {
+            SmoothCircularProgressIndicator()
         }
     }
 }
 
 
-// Content from TaskViewModelFactory.kt
+
+// Content from MainTopBar.kt
+package com.app.routineturboa.ui.scaffold
 
 
-class TaskViewModelFactory(
-    private val repository: RoutineRepository
-) : ViewModelProvider.Factory {
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MainTopBar(drawerState: DrawerState) {
+    val currentDate: String = SimpleDateFormat("MMMM d",
+        Locale.getDefault()).format(Date())
+    val coroutineScope = rememberCoroutineScope()
 
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(TasksViewModel::class.java)) {
-            @Suppress("UNCHECKED_CAST")
-            return TasksViewModel(repository) as T
+    val scrollBehavior = exitUntilCollapsedScrollBehavior()
+
+    TopAppBar(
+        //<editor-fold desc="TopAppBar Parameters">
+        colors = TopAppBarDefaults.largeTopAppBarColors(
+            containerColor = MaterialTheme.colorScheme.primary,
+            titleContentColor = MaterialTheme.colorScheme.onPrimary,
+        ),
+        title = { Text(text = currentDate) },
+        navigationIcon = {
+            IconButton(
+                onClick = { coroutineScope.launch { drawerState.open() } }
+            ) {
+                Icon(
+                    Icons.Outlined.Menu,
+                    contentDescription = "Menu"
+                )
+            }
+        },
+        actions = {
+            IconButton(
+                onClick = { /*TODO: Main Top Bar button action.*/ }
+            ) {
+                Icon(
+                    Icons.Outlined.ViewDay,
+                    contentDescription = "View Day"
+                )
+            }
+        },
+        scrollBehavior = scrollBehavior,
+        //</editor-fold>
+    )
+}
+
+
+// Content from QuickEdit.kt
+package com.app.routineturboa.ui.task.child
+
+
+@RequiresApi(Build.VERSION_CODES.S)
+@Composable
+fun QuickEdit(
+    mainTasks: List<TaskEntity>?,
+    task: TaskEntity,
+    isFullEditing: Boolean,
+    onFullEditClick: (Int) -> Unit,
+    onConfirmEdit: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    val tag = "QuickEditScreen"
+    val context = LocalContext.current
+
+
+    val startTime by remember { mutableStateOf(task.startTime) }
+    var taskName by remember { mutableStateOf(task.name) }
+    var durationString by remember { mutableStateOf(task.duration.toString()) }
+    var endTime by remember { mutableStateOf(task.endTime) }
+    var endTimeString by remember { mutableStateOf(dateTimeToString(endTime)) }
+
+    LaunchedEffect(durationString) {
+        if (durationString.isNotEmpty()) {
+            try {
+                endTimeString =
+                    dateTimeToString(task.startTime.plusMinutes(durationString.toLong()))
+            } catch (e: NumberFormatException) {
+                Toast.makeText(context, "Invalid duration format", Toast.LENGTH_SHORT).show()
+            }
         }
-        throw IllegalArgumentException("Unknown ViewModel class")
     }
+
+    Column(modifier = Modifier.padding(5.dp)) {
+        // Task Name and Duration Row
+        Row(
+            modifier = Modifier
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(15.dp)
+        ) {
+            Box (
+                modifier = Modifier
+                    .weight(2f)
+                    .height(45.dp)
+                    .background(
+                        MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.6f),
+                        MaterialTheme.shapes.small
+                    ),
+            ) {
+                BasicTextField(
+                    value = taskName,
+                    onValueChange = { newTaskName -> taskName = newTaskName },
+                    singleLine = true,
+                    textStyle = MaterialTheme.typography.titleMedium.copy(
+                        color = MaterialTheme.colorScheme.onSurface
+                    ),
+                    decorationBox = { innerTextField ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .padding(start=10.dp)
+                                .fillMaxHeight() // This makes sure the content is centered vertically
+                        ) {
+                            if (taskName.isEmpty()) {
+                                Text(
+                                    "task name..."
+                                )
+                            }
+                            innerTextField()
+                        }
+
+                    }
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(45.dp)
+                    .background(
+                        MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.6f),
+                        MaterialTheme.shapes.small
+                    ),
+
+                ) {
+                BasicTextField(
+                    value = durationString,
+                    onValueChange = { newDuration -> durationString = newDuration },
+                    singleLine = true,
+                    textStyle = MaterialTheme.typography.titleMedium.copy(
+                        color = MaterialTheme.colorScheme.onSurface
+                    ),
+                    decorationBox = { innerTextField ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .padding(start=10.dp)
+                                .fillMaxHeight() // This makes sure the content is centered vertically
+                        ) {
+                            if (durationString.isEmpty()) {
+                                Text("Duration...")
+                            }
+                            innerTextField()
+                        }
+                    }
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // Save and Cancel Buttons Row
+        Row(
+            modifier = Modifier.fillMaxWidth()
+                .height(43.dp), // Set the height for the entire row
+
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            // Full-Screen Edit Button
+            Button(
+                onClick = { onFullEditClick(task.id) },
+                modifier = Modifier.fillMaxHeight(),
+                shape = RoundedCornerShape(15.dp),
+                contentPadding = PaddingValues(10.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.inversePrimary.copy(alpha =0.2f),
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                )
+            ) {
+                Text("Full-screen Editing",
+                    style = MaterialTheme.typography.labelLarge)
+            }
+
+            // Save Button
+            Button(
+                onClick = {
+                    try {
+                        endTimeString = dateTimeToString(startTime.plusMinutes(durationString.toLong()))
+                        endTime = strToDateTime(endTimeString)
+
+                        val taskWithUpdatedData =
+                            task.copy(name = taskName, duration = durationString.toInt(), endTime = endTime)
+
+                        onConfirmEdit()
+
+                    } catch (e: Exception) {
+                        Log.e(tag, "Error: $e")
+                        Toast.makeText(
+                            context,
+                            "Error saving task values: ${e.message}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+
+                },
+                modifier = Modifier.fillMaxHeight(),
+                shape = RoundedCornerShape(15.dp),
+                contentPadding = PaddingValues(10.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.inversePrimary.copy(alpha = 0.2f),
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                )
+            ) {
+                Text("Save",
+                    style = MaterialTheme.typography.labelLarge)
+            }
+        }
+
+        if (isFullEditing) {
+            FullEditDialog(
+                mainTasks = mainTasks?: emptyList(),
+                task = task,
+                onConfirmEdit = onConfirmEdit,
+                onCancel = onCancel
+            )
+        }
+    }
+}
+
+
+
+// Content from AddTaskDialog.kt
+package com.app.routineturboa.ui.task.dialogs
+
+
+
+@Composable
+fun AddTaskDialog(
+    mainTasks: List<TaskEntity>,
+    clickedTask: TaskEntity? = null,
+    taskBelowClickedTask: TaskEntity? = null,
+    onAddClick: (TaskFormData) -> Unit,
+    onCancel: () -> Unit
+) {
+    val tag = "AddTaskDialog"
+
+    if (clickedTask == null) {
+        Log.e(tag, "clickedTask is null")
+        Toast.makeText(LocalContext.current, "Click a task first.", Toast.LENGTH_SHORT).show()
+        return
+    }
+
+    Log.d(tag, "clickedTask: $clickedTask")
+
+    // Context and Initial Task Data
+    val context = LocalContext.current
+    val clickedTaskEndTime = clickedTask.endTime
+    val clickedTaskID = clickedTask.id
+    val clickedTaskPosition = clickedTask.position
+
+    // Data in State variables
+    val id by remember { mutableIntStateOf(clickedTaskID + 1) }
+    var startTime by remember { mutableStateOf(clickedTaskEndTime) }
+    val defaultDuration = 1L
+    var endTime by remember { mutableStateOf(startTime.plusMinutes(defaultDuration)) }
+    var taskName by remember { mutableStateOf(" ") }
+    var notes by remember { mutableStateOf( " ") }
+    var duration by remember { mutableLongStateOf(defaultDuration) }
+    var reminder by remember { mutableStateOf(startTime) }
+    var taskType by remember { mutableStateOf("") }
+
+    // Add 1 to position of new task
+    var taskPosition by remember { mutableIntStateOf(clickedTaskPosition.plus(1)) }
+
+    // Convert state variables to  string for display
+    var startTimeFormatted by remember {mutableStateOf(dateTimeToString(startTime))}
+    var endTimeFormatted by remember {mutableStateOf(dateTimeToString(endTime))}
+    var reminderFormatted by remember {mutableStateOf(dateTimeToString(reminder))}
+    var durationFormatted by remember {mutableStateOf(duration.toString())}
+    val idFormatted by remember {mutableStateOf(id.toString())}
+    var positionFormatted by remember {mutableStateOf(taskPosition.toString())}
+
+
+    val durationTaskBelowBeforeAdding = taskBelowClickedTask?.duration
+
+    var isReminderLinked by remember { mutableStateOf(true) }
+
+    Log.d(tag, "clicked task name and position: ${clickedTask.name} ${clickedTask.position}")
+    Log.d(tag, "clicked task end time: ${clickedTask.endTime}")
+    Log.d(tag, "new task start time: $startTimeFormatted")
+
+    // State to hold selected main task ID
+    var linkedMainTaskIdIfHelper by remember { mutableStateOf<Int?>(null) }
+
+    // Calculate endTime based on duration input
+    LaunchedEffect(durationFormatted) {
+        if (durationFormatted.isNotEmpty()) {
+            try {
+                val durationLong = durationFormatted.toLong()
+                if (durationLong > 0 || durationLong < durationTaskBelowBeforeAdding!!) {
+                    endTimeFormatted = dateTimeToString(startTime.plusMinutes(durationLong))
+                } else {
+                    Toast.makeText(context, "Invalid duration. End time unchanged.", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: NumberFormatException) {
+                Toast.makeText(context, "Invalid duration format. End time unchanged.", Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            Toast.makeText(context, "Duration is empty. End time unchanged.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // Calculate Duration based on End Time
+    LaunchedEffect(endTimeFormatted) {
+        if (endTimeFormatted.isNotEmpty()) {
+            try {
+                // Attempt to parse the end time string
+                val endTimeParsed = strToDateTime(endTimeFormatted)
+
+                if (endTimeParsed.isAfter(startTime)) {
+                    // Calculate the duration in minutes
+                    val durationInMinutes = java.time.Duration.between(startTime, endTimeParsed).toMinutes()
+
+                    // Update the durationFormatted state variable
+                    durationFormatted = durationInMinutes.toString()
+                } else {
+                    // End time is not valid or is not after start time
+                    Toast.makeText(context, ".", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                // Handle any unexpected exceptions
+                Toast.makeText(context, "Error processing end time.", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    // Update reminder time if linked
+    LaunchedEffect(startTimeFormatted) {
+        if (isReminderLinked) {
+            reminderFormatted = startTimeFormatted
+        }
+    }
+
+    // Listen for changes in the task type dropdown
+    LaunchedEffect(taskType) {
+        if (taskType == "HelperTask") {
+            // Reset selectedMainTaskId when task type is changed to HelperTask
+            linkedMainTaskIdIfHelper = null
+        }
+    }
+
+    Dialog(
+        onDismissRequest = { onCancel() },
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth(0.9f),
+            color = MaterialTheme.colorScheme.secondaryContainer,
+            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(8.dp)
+                    .fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Text("Add New Task", style = MaterialTheme.typography.titleLarge)
+
+                CustomTextField(
+                    value = taskName,
+                    onValueChange = { taskName = it },
+                    label = "Task Name",
+                    placeholder = "Enter task name",
+                    leadingIcon = Icons.Default.AddTask,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                // Start Time and Reminder Side by Side with Link/Link-off button
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    CustomTextField(
+                        value = startTimeFormatted,
+                        onValueChange = { startTimeFormatted = it },
+                        label = "Start Time",
+                        placeholder = "Enter start time",
+                        leadingIcon = Icons.Sharp.Start,
+                        modifier = Modifier.weight(1f),
+                    )
+
+                    Icon (
+                        imageVector = if (isReminderLinked) Icons.Default.Link else Icons.Default.LinkOff,
+                        contentDescription = "Link Reminder",
+                        modifier = Modifier
+                            .clickable {
+                                isReminderLinked = !isReminderLinked
+                                if (isReminderLinked) {
+                                    reminderFormatted = startTimeFormatted
+                                }
+                            }
+                            .align(Alignment.CenterVertically)
+                            .size(30.dp)
+                    )
+
+                    CustomTextField(
+                        value = reminderFormatted,
+                        onValueChange = { reminderFormatted = it },
+                        label = "Reminder",
+                        placeholder = "Enter reminder time",
+                        leadingIcon = Icons.Sharp.AddAlert,
+                        enabled = !isReminderLinked,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                // Duration and End Time Side by Side
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    CustomTextField(
+                        value = durationFormatted,
+                        onValueChange = { durationFormatted = it },
+                        label = "Duration",
+                        placeholder = "Enter duration",
+                        leadingIcon = Icons.Sharp.Timer,
+                        keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f),
+                    )
+
+                    CustomTextField(
+                        value = endTimeFormatted,
+                        onValueChange = { endTimeFormatted = it },
+                        label = "End Time",
+                        placeholder = "Enter End Time",
+                        leadingIconResId = R.drawable.arrowrighttoleft,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+
+                CustomTextField(
+                    value = notes,
+                    onValueChange = { notes = it },
+                    label = "Notes",
+                    placeholder = "Add Notes",
+                    leadingIcon = Icons.Default.Link,
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    singleLine = false
+                )
+
+                // Task type dropdown
+                SelectTaskTypeDropdown(
+                    selectedTaskType = taskType,
+                    onTaskTypeSelected = { newType ->
+                        taskType = newType
+                    }
+                )
+
+                // Show the main task dropdown only if task type is "HelperTask"
+                if (taskType == TaskTypes.HELPER) {
+                    ShowMainTasksDropdown(
+                        mainTasks = mainTasks,
+                        selectedMainTaskId = linkedMainTaskIdIfHelper,
+                        onTaskSelected = { taskId -> linkedMainTaskIdIfHelper = taskId }
+                    )
+                }
+
+                TextField(
+                    value = idFormatted,
+                    onValueChange = { },
+                    label = { Text("Task ID") },
+                    enabled = false,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+
+                CustomTextField(
+                    value = positionFormatted,
+                    onValueChange = {positionFormatted = it},
+                    label = "Position (Don't Change) (Only for dev)",
+                    placeholder = "Internal purposes. Don't change.",
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = true
+                )
+
+                Row(
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    // Cancel Button
+                    Button(
+                        modifier = Modifier.padding(5.dp),
+                        shape = RoundedCornerShape(25.dp),
+                        onClick = onCancel
+                    ) { Text("Cancel") }
+
+                    // Add Button
+                    Button(
+                        modifier = Modifier.padding(5.dp),
+                        shape = RoundedCornerShape(25.dp),
+                        onClick = {
+                            if (taskName.isNotBlank() && duration > 0) {
+                                startTime = strToDateTime(startTimeFormatted)
+                                endTime = strToDateTime(endTimeFormatted)
+                                reminder = strToDateTime(reminderFormatted)
+                                duration = durationFormatted.toLong()
+                                taskPosition = positionFormatted.toInt()
+
+                                val newTaskFormData = TaskFormData(
+                                    position = taskPosition,
+                                    name = taskName,
+                                    notes = notes,
+                                    startTime = startTime,
+                                    endTime = endTime,
+                                    duration = duration.toInt(),
+                                    reminder = reminder,
+                                    mainTaskId = linkedMainTaskIdIfHelper, // Link to the selected main task,
+                                    taskType = taskType
+                                )
+
+                                onAddClick(newTaskFormData)
+
+                            } else {
+                                Toast.makeText(context,
+                                    "Please fill all fields correctly", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    ) { Text("Add")}  // END Add Button
+                }  // Buttons Row
+            }
+        }
+    }
+}
+
+// Content from FullEditDialog.kt
+package com.app.routineturboa.ui.task.dialogs
+
+
+@RequiresApi(Build.VERSION_CODES.S)
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FullEditDialog(
+    mainTasks: List<TaskEntity>,
+    task: TaskEntity,
+    onConfirmEdit: () -> Unit,
+    onCancel: () -> Unit
+) {
+    val context = LocalContext.current
+    var linkedMainTaskIdIfHelper by remember { mutableStateOf<Int?>(null) }
+
+    // Actual data in State variables from 'task'
+    var id by remember { mutableIntStateOf(task.id) }
+    var taskName by remember { mutableStateOf(task.name) }
+    var notes by remember { mutableStateOf(task.notes) }
+    var startTime by remember { mutableStateOf(task.startTime) }
+    var endTime by remember { mutableStateOf(task.endTime) }
+    var duration by remember { mutableIntStateOf(task.duration) }
+    var reminder by remember { mutableStateOf(task.reminder) }
+    var position by remember { mutableIntStateOf(task.position) }
+    var taskType by remember { mutableStateOf(task.type) }
+
+    // Convert state variables to  string for display
+    var startTimeString by remember {mutableStateOf(dateTimeToString(startTime))}
+    var endTimeString by remember {mutableStateOf(dateTimeToString(endTime))}
+    var reminderString by remember {mutableStateOf(dateTimeToString(reminder))}
+    var durationString by remember {mutableStateOf(duration.toString())}
+    val idFormatted by remember {mutableStateOf(id.toString())}
+    var positionString by remember {mutableStateOf(position.toString())}
+
+    val coroutineScope = rememberCoroutineScope()
+    var isReminderLinked by remember { mutableStateOf(true) }
+
+    Dialog(
+        onDismissRequest = {onCancel()},
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth(0.9f),
+            color = MaterialTheme.colorScheme.secondaryContainer,
+            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(8.dp)
+                    .fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Text("Edit Task", style = MaterialTheme.typography.titleLarge)
+
+                CustomTextField(
+                    value = taskName,
+                    onValueChange = { taskName = it },
+                    label = "Task Name",
+                    placeholder = "Enter task name",
+                    leadingIcon = Icons.Default.AddTask,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                // Start Time and Reminder Side by Side with Link/Link-off button
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    CustomTextField(
+                        value = startTimeString,
+                        onValueChange = { startTimeString = it },
+                        label = "Start Time",
+                        placeholder = "Enter start time",
+                        leadingIcon = Icons.Sharp.Start,
+                        modifier = Modifier.weight(1f),
+                    )
+
+                    Icon (
+                        imageVector = if (isReminderLinked) Icons.Default.Link
+                        else Icons.Default.LinkOff,
+                        contentDescription = "Link Reminder",
+                        modifier = Modifier
+                            .clickable {
+                                isReminderLinked = !isReminderLinked
+                                if (isReminderLinked) {
+                                    reminderString = startTimeString
+                                }
+                            }
+                            .align(Alignment.CenterVertically)
+                            .size(25.dp)
+                    )
+
+                    CustomTextField(
+                        value = reminderString,
+                        onValueChange = { reminderString = it },
+                        label = "Reminder",
+                        placeholder = "Enter reminder time",
+                        leadingIcon = Icons.Sharp.AddAlert,
+                        enabled = !isReminderLinked,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                // Duration and End Time Side by Side
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    LaunchedEffect (durationString){
+                        if (durationString.isNotEmpty()) {
+                            try {
+                                endTimeString = dateTimeToString(startTime.plusMinutes(durationString.toLong()))
+                            } catch (e: NumberFormatException) {
+                                Toast.makeText(context, "Invalid duration format", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+
+                    }
+
+                    CustomTextField(
+                        value = durationString,
+                        onValueChange = { durationString = it },
+                        label = "Duration",
+                        placeholder = "Enter duration",
+                        leadingIcon = Icons.Sharp.Timer,
+                        keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f),
+                    )
+
+                    CustomTextField(
+                        value = endTimeString,
+                        onValueChange = { endTimeString = it },
+                        label = "End Time",
+                        placeholder = "Enter End Time",
+                        leadingIconResId = R.drawable.arrowrighttoleft,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+
+                CustomTextField(
+                    value = notes,
+                    onValueChange = { notes = it },
+                    label = "Notes",
+                    placeholder = "Add Notes",
+                    leadingIcon = Icons.Default.Link,
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    singleLine = false
+                )
+
+                SelectTaskTypeDropdown(
+                    taskType,
+                    onTaskTypeSelected = { newType -> taskType = newType }
+                )
+
+                // Show the main task dropdown only if task type is "HelperTask"
+                if (taskType == "HelperTask") {
+                    ShowMainTasksDropdown(
+                        mainTasks = mainTasks,
+                        selectedMainTaskId = linkedMainTaskIdIfHelper,
+                        onTaskSelected = { taskId -> linkedMainTaskIdIfHelper = taskId }
+                    )
+                }
+
+                CustomTextField(
+                    value = idFormatted,
+                    onValueChange = { },
+                    label = "ID (Only for dev)",
+                    placeholder = "Internal purposes",
+                    enabled = false,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+
+                CustomTextField(
+                    value = positionString,
+                    onValueChange = {positionString = it},
+                    label = "Position (Don't Change) (Only for dev)",
+                    placeholder = "Internal purposes. Don't change.",
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = true
+                )
+
+                Row(
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    // Cancel Button
+                    Button(
+                        modifier = Modifier
+                            .padding(5.dp)
+                            .size(120.dp, 50.dp),
+                        shape = RoundedCornerShape(25.dp),
+
+                        onClick = { onCancel() },
+                        colors = ButtonDefaults.buttonColors(
+                            LocalCustomColorsPalette.current.gray200,
+                        )
+
+                    ) {
+                        Text("Cancel")
+                    }
+
+                    // Save Button
+                    FloatingActionButton(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .padding(5.dp)
+                            .size(120.dp, 50.dp),
+                        elevation = FloatingActionButtonDefaults.elevation(10.dp),
+                        onClick = {
+                            Log.d("EditTaskScreen", "Save Button clicked...")
+                            coroutineScope.launch {
+                                try {
+                                    startTime = strToDateTime(startTimeString)
+                                    endTime = strToDateTime(endTimeString)
+                                    reminder = strToDateTime(reminderString)
+                                    duration = durationString.toInt()
+                                    id = idFormatted.toInt()
+                                    position = positionString.toInt()
+
+                                } catch (e: Exception) {
+                                    Log.e("EditTaskScreen", "Error: $e")
+                                    Toast.makeText(context, "Error saving task: ${e.message}", Toast.LENGTH_LONG).show()
+                                }
+
+                                val updatedTask = task.copy(
+                                    name = taskName,
+                                    position = position,
+                                    notes = notes,
+                                    startTime = startTime,
+                                    endTime = endTime,
+                                    reminder = reminder,
+                                    duration = duration,
+                                    type = taskType
+                                )
+
+                                onConfirmEdit()
+
+                            } // End of Coroutine
+                        }
+                    ) {
+                        Text("Save")
+                    }
+                }
+
+
+            }
+        }
+    }
+}
+
+
+// Content from TaskDetailsDialog.kt
+package com.app.routineturboa.ui.task.dialogs
+
+
+@Composable
+fun TaskDetailsDialog(
+    task: TaskEntity,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = { onDismiss() },
+        properties = DialogProperties(usePlatformDefaultWidth = true),
+        confirmButton = {
+            TextButton(
+                onClick = { onDismiss() },
+            ) {
+                Text("Close", style = MaterialTheme.typography.titleMedium.copy(
+                    color = MaterialTheme.colorScheme.onPrimary))
+            }
+        },
+        icon = {
+            Icon(
+                imageVector = Icons.Default.Info,
+                contentDescription = "Task Info",
+                tint = MaterialTheme.colorScheme.onPrimary
+            )
+        },
+        title = {
+            Text(
+                text = "${task.name} [${task.duration} Mins]",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+            )
+        },
+        text = {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth(0.9f)
+            ) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(15.dp),
+                    modifier = Modifier.padding(top = 10.dp)
+                ) {
+                    // Time information
+                    Row(
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Column {
+                            Text(
+                                text = "Start",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
+                            Text(
+                                text = dateTimeToString( task.startTime),
+                                style = MaterialTheme.typography.titleSmall
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(25.dp))
+                        Column {
+                            Text(
+                                text = "End",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
+                            Text(
+                                text = dateTimeToString( task.endTime),
+                                style = MaterialTheme.typography.titleSmall
+                            )
+                        }
+
+                    }
+
+                    Column {
+                        Text(
+                            text = "Notes",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                        Text(
+                            text = task.notes.takeIf { it.isNotBlank() } ?: "None",
+                            style = MaterialTheme.typography.titleSmall
+                        )
+                    }
+
+                    // Reminder
+                    Column {
+                        Text(
+                            text = "Reminder",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                        Text(
+                            text = dateTimeToString(task.reminder),
+                            style = MaterialTheme.typography.titleSmall
+                        )
+                    }
+
+                    // Type
+                    Column {
+                        Text(
+                            text = "Type",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                        Text(
+                            text = task.type,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+
+                    // Internal details
+                    Column {
+                        Text(
+                            text = "Internal Details",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                        Text(
+                            text = "ID: ${task.id}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "Position: ${task.position}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+        },
+        modifier = Modifier.padding(0.dp)
+    )
+}
+
+// Content from TasksViewModel.kt
+package com.app.routineturboa.viewmodel
+
+
+class TasksViewModel(private val repository: DataRepository) : ViewModel() {
+    private val tag = "TasksViewModel"
+
+    val tasks: StateFlow<List<TaskEntity>> = repository.tasks
+        // Expose tasks regular flow from Repository as a StateFlow to be collected by UI
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    // Define private internal Mutable state flow with TaskUiState data class
+    private val _tasksUiState = MutableStateFlow(TasksUiState())
+    // Expose UI state as a StateFlow to be collected by UI
+    val tasksUiState: StateFlow<TasksUiState> = _tasksUiState.asStateFlow()
+
+    // Functions to update UI state
+    fun onAnyTaskClick(taskId: Int) {
+        Log.d(tag, "onAnyTaskClick: $taskId")
+        _tasksUiState.update {
+            it.copy(
+                clickedTaskId = taskId,
+                inEditTaskId = null,
+                isQuickEditing = false,
+                isFullEditing = false,
+            )
+        }
+    }
+
+    fun onAnyTaskLongPress(taskId: Int) {
+        onAnyTaskClick(taskId)
+        _tasksUiState.update {
+            it.copy(
+                longPressedTaskId = taskId,
+            )
+        }
+    }
+
+    fun onAddNewClick(){
+        if (_tasksUiState.value.clickedTaskId != null) {
+            _tasksUiState.update {
+                it.copy(
+                    isAddingNew = true,
+                    taskBelowClickedTaskId = it.clickedTaskId?.plus(1)
+                )
+            }
+        }
+
+    }
+
+    fun onQuickEditClick(taskId: Int) {
+        Log.d(tag, "onQuickEditClick: $taskId")
+        _tasksUiState.update {
+            it.copy(
+                clickedTaskId = taskId,
+                inEditTaskId = taskId,
+                isQuickEditing = true,
+                isFullEditing = false,
+            )
+        }
+    }
+
+    fun onFullEditTask(taskId: Int) {
+        Log.d(tag, "onFullEditTask: $taskId")
+        _tasksUiState.update {
+            it.copy(
+                clickedTaskId = null,
+                inEditTaskId = taskId,
+                isQuickEditing = false,
+                isFullEditing = true,
+            )
+        }
+    }
+
+    fun onShowTaskDetails(taskId: Int) {
+        Log.d(tag, "onShowTaskDetails: $taskId")
+        _tasksUiState.update {
+            it.copy(
+                isShowingDetails = true,
+                showingDetailsTaskId = taskId,
+                isQuickEditing = false,
+                isFullEditing = false,
+            )
+        }
+    }
+
+    fun onNewTaskSaveClick(newTaskFormData: TaskFormData) {
+
+        _tasksUiState.update {
+            it.copy(
+                isAddingNew = true,
+                taskBelowClickedTaskId = it.clickedTaskId?.plus(1)
+            )
+        }
+
+        beginNewTaskOperations(newTaskFormData)
+    }
+
+    fun onCancelEdit() {
+        Log.d(tag, "onCancelEdit")
+        _tasksUiState.update {
+            it.copy(
+                isAddingNew = false,
+                inEditTaskId = null,
+                isQuickEditing = false,
+                isFullEditing = false,
+                isShowingDetails = false,
+            )
+        }
+    }
+
+    fun onConfirmEdit() {
+        Log.d(tag, "onConfirmEdit")
+        _tasksUiState.update {
+            it.copy(
+                isAddingNew = false,
+                isQuickEditing = false,
+                isFullEditing = false,
+            )
+        }
+    }
+
+    fun onDeleteTask(taskId: Int? = _tasksUiState.value.clickedTaskId) {
+        if (taskId == null) return
+        val task = tasks.value.find { it.id == taskId } ?: return
+        Log.d(tag, "Deleting task: ${task.name}")
+        viewModelScope.launch {
+            repository.deleteTask(task)
+        }
+
+        // update the UI state
+        _tasksUiState.update {
+            it.copy(
+                inEditTaskId = null,
+                isQuickEditing = false,
+                isFullEditing = false,
+            )
+        }
+    }
+
+    // Get next task after a reference task
+    fun getNextTask(referenceTask: TaskEntity): TaskEntity? {
+        val currentTasks = tasks.value
+        val index = currentTasks.indexOfFirst { it.id == referenceTask.id }
+        return if (index != -1 && index < currentTasks.size - 1) {
+            currentTasks[index + 1]
+        } else {
+            null
+        }
+    }
+
+    // Sync tasks from OneDrive
+    fun syncTasksFromOneDrive(context: Context) {
+        viewModelScope.launch {
+            try {
+                val authManager = MsalAuthManager.getInstance(context)
+                val authResult = authManager.signIn(context as Activity)
+                authResult.let {
+                    repository.syncTasksFromOneDrive(it, context)
+                }
+            } catch (e: Exception) {
+                Log.e(tag, "Error syncing tasks from OneDrive", e)
+            }
+        }
+    }
+
+    fun getTasksByType(type: String): Flow<List<TaskEntity>> {
+        return repository.getTasksByType(type)
+    }
+
+    // Update task and adjust next
+    fun updateTaskAndAdjustNext(initialEditedTask: TaskEntity) {
+        viewModelScope.launch {
+            repository.updateTaskAndAdjustNext(initialEditedTask)
+        }
+    }
+
+    // Begin new task operations
+    private fun beginNewTaskOperations(newTaskFormData: TaskFormData): LiveData<Result<Boolean>> {
+        val resultLiveData = MutableLiveData<Result<Boolean>>()
+        val clickedTaskEntity = tasks.value.find { it.id == _tasksUiState.value.clickedTaskId }
+        val newTaskEntity = createTaskEntityFromForm(newTaskFormData)
+
+        if (clickedTaskEntity != null) {
+            viewModelScope.launch {
+                val result = repository.beginNewTaskOperations(clickedTaskEntity, newTaskEntity)
+                resultLiveData.postValue(result)
+            }
+        }
+        return resultLiveData
+    }
+
+    private fun createTaskEntityFromForm(form: TaskFormData): TaskEntity {
+        return TaskEntity(
+            position = form.position,
+            name = form.name,
+            notes = form.notes,
+            startTime = form.startTime,
+            endTime = form.endTime,
+            duration = form.duration,
+            reminder = form.reminder,
+            type = form.taskType,
+            mainTaskId = form.mainTaskId
+        )
+    }
+
+
+    fun deleteAllTasks() {
+        Log.d(tag, "Deleting all tasks...")
+        viewModelScope.launch {
+            repository.deleteAllTasks()
+        }
+    }
+
+    fun insertDemoTasks(context: Context) {
+        Log.d(tag, "Inserting demo tasks.")
+        viewModelScope.launch {
+            Log.d(tag, "First, deleting the tasks...")
+            deleteAllTasks()
+            try {
+                val demoTasks = getDemoTasks(context)
+                demoTasks.forEach { task ->
+                    repository.insertTask(task)
+                }
+            } catch (e: Exception) {
+                Log.e("TasksViewModel", "Error inserting demo tasks", e)
+            } finally {
+            }
+        }
+    }
+
+    fun insertDefaultTasks() {
+        Log.d(tag, "Initializing Default tasks.")
+        viewModelScope.launch {
+            try {
+                repository.initializeDefaultTasks()
+            } finally {
+            }
+        }
+    }
+
+    //<editor-fold desc="Logic for creating currentTask StateFlow">
+
+    // Current time flow emitting LocalDateTime every set seconds (set to 10 minutes)
+    private val currentTimeFlow: Flow<LocalDateTime> = dateTimeEmitterFlow(600)
+
+    // Define the StateFlow for the current task
+    private val currentTask: StateFlow<TaskEntity?> = getCurrentTaskFlow(tasks, currentTimeFlow)
+
+    private fun getCurrentTaskFlow(
+        tasksFlow: StateFlow<List<TaskEntity>>,
+        currentTimeFlow: Flow<LocalDateTime>,
+    ): StateFlow<TaskEntity?> {
+        // Combine tasks and current time to find the active task
+        val currentTaskFlow = combine(tasksFlow, currentTimeFlow) { taskList, currentTime ->
+            taskList.find { it.startTime <= currentTime && currentTime < it.endTime }
+        }
+
+        // Convert combined flow into StateFlow
+        return currentTaskFlow.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = null
+        )
+    }
+
+
+    //</editor-fold>
 }
 

@@ -37,48 +37,55 @@ Here's the organization of files and modules in Android version:
 |   |-- RoutineTurboApp.kt
 |   |-- data/
 |   |   |-- local/
-|   |   |   |-- RoutineDatabase.kt
-|   |   |   |-- RoutineRepository.kt
-|   |   |   |-- TaskDao.kt
+|   |   |   |-- AppDao.kt
+|   |   |   |-- AppData.kt
 |   |   |   |-- TaskEntity.kt
 |   |   |-- onedrive/
 |   |   |   |-- downloadFromOneDrive.kt
-|   |   |   |-- MsalAuthManager.kt
+|   |   |   |-- MsalApp.kt
 |   |   |   |-- OneDriveManager.kt
+|   |   |-- repository/
+|   |   |   |-- AppRepository.kt
 |   |-- reminders/
 |   |   |-- ReminderManager.kt
+|   |   |-- reminderManagerProvider.kt
 |   |   |-- ReminderReceiver.kt
-|   |   |-- ScheduleReminders.kt
+|   |   |-- ReminderWorker.kt
 |   |-- ui/
-|   |   |-- components/
+|   |   |-- main/
+|   |   |   |-- MainScreen.kt
+|   |   |   |-- TasksLazyColumn.kt
+|   |   |-- models/
+|   |   |   |-- TaskEventsToFunctions.kt
+|   |   |   |-- TaskFormData.kt
+|   |   |   |-- TasksUiState.kt
+|   |   |-- reusable/
 |   |   |   |-- AlpabhetIcon.kt
 |   |   |   |-- AnimatedAlpha.kt
 |   |   |   |-- CustomTextField.kt
 |   |   |   |-- DottedLine.kt
-|   |   |   |-- OneDriveInterfaceButtons.kt
+|   |   |   |-- SignInAndSyncButtons.kt
 |   |   |   |-- TaskCardPlaceholder.kt
-|   |   |-- main/
-|   |   |   |-- MainScreen.kt
-|   |   |   |-- TasksLazyColumn.kt
-|   |   |   |-- scaffold/
-|   |   |   |   |-- BottomNavBar.kt
-|   |   |   |   |-- MainDrawer.kt
-|   |   |   |   |-- MainTopBar.kt
-|   |   |-- task/
-|   |   |   |-- ParentTaskItem.kt
-|   |   |   |-- child_elements/
+|   |   |   |-- dropdowns/
+|   |   |   |   |-- SelectTaskTypeDropdown.kt
+|   |   |   |   |-- ShowMainTasksDropdown.kt
+|   |   |-- scaffold/
+|   |   |   |-- BottomNavBar.kt
+|   |   |   |-- MainDrawer.kt
+|   |   |   |-- MainTopBar.kt
+|   |   |-- tasks/
+|   |   |   |-- ParentItemCard.kt
+|   |   |   |-- childItems/
 |   |   |   |   |-- ExtraTaskDetails.kt
 |   |   |   |   |-- HourColumn.kt
-|   |   |   |   |-- MainTaskDisplay.kt
-|   |   |   |   |-- QuickEdit.kt
-|   |   |   |   |-- TaskDropdown.kt
+|   |   |   |   |-- InLineQuickEdit.kt
+|   |   |   |   |-- MainTaskDetails.kt
+|   |   |   |-- controls/
+|   |   |   |   |-- OptionsMenu.kt
 |   |   |   |-- dialogs/
 |   |   |   |   |-- AddTaskDialog.kt
 |   |   |   |   |-- FullEditDialog.kt
 |   |   |   |   |-- TaskDetailsDialog.kt
-|   |   |   |-- dropdowns/
-|   |   |   |   |-- SelectTaskTypeDropdown.kt
-|   |   |   |   |-- ShowMainTasksDropdown.kt
 |   |   |-- theme/
 |   |   |   |-- Color.kt
 |   |   |   |-- CustomColorsPallete.kt
@@ -86,12 +93,17 @@ Here's the organization of files and modules in Android version:
 |   |   |   |-- Type.kt
 |   |-- utils/
 |   |   |-- Converters.kt
+|   |   |-- dateTimeEmitterFlow.kt
+|   |   |-- defaultTasks.kt
 |   |   |-- demoTasks.kt
 |   |   |-- NotificationPermissionHandler.kt
 |   |   |-- SineEasing.kt
+|   |   |-- TaskTypes.kt
 |   |   |-- TimeUtils.kt
 |   |-- viewmodel/
 |   |   |-- TasksViewModel.kt
 |   |   |-- TaskViewModelFactory.kt
+
+
 
 

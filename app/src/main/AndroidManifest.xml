@@ -20,8 +20,6 @@
         android:enableOnBackInvokedCallback="true"
         tools:targetApi="tiramisu">
 
-
-
         <activity
             android:name=".MainActivity"
             android:exported="true"

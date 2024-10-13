@@ -49,6 +49,8 @@ class OneDriveManager(private val authProvider: IAuthenticationProvider) {
                 }
 
                 Log.d(tag, "File downloaded successfully")
+                getLastModifiedTime(driveItemId)
+                getItemDetails(driveItemId)
                 true
 
             } else {
@@ -98,6 +100,45 @@ class OneDriveManager(private val authProvider: IAuthenticationProvider) {
             Log.e(tag, "Error uploading file: ${e.message}")
             e.printStackTrace()
             null
+        }
+    }
+
+    fun getLastModifiedTime(itemId: String): String {
+        Log.d(tag, "Fetching last modified time for item with ID: $itemId")
+        return try {
+            val item = graphClient.me().drive().items(itemId).buildRequest().get()
+            val lastModifiedTime = item?.lastModifiedDateTime
+
+            if (lastModifiedTime != null) {
+                val result = "Last Modified Time: $lastModifiedTime"
+                Log.d(tag, result)
+                result
+            } else {
+                Log.e(tag, "No last modified time found for this item.")
+                "No last modified time available"
+            }
+        } catch (e: Exception) {
+            Log.e(tag, "Error fetching last modified time: ${e.message}")
+            e.printStackTrace()
+            "Error fetching last modified time"
+        }
+    }
+
+    fun getItemDetails(itemId: String): String {
+        Log.d(tag, "Getting details for item with ID: $itemId")
+        return try {
+            val item = graphClient.me().drive().items(itemId).buildRequest().get()
+
+            val details = "Name: ${item?.name}\n" +
+                    "Type: ${item?.folder?.let { "Folder" } ?: "File"}\n" +
+                    "Size: ${item?.size} bytes"
+
+            Log.d(tag, details)
+            details
+        } catch (e: Exception) {
+            Log.e(tag, "Error fetching item details: ${e.message}")
+            e.printStackTrace()
+            "Error fetching details"
         }
     }
 

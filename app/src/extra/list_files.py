@@ -1,6 +1,3 @@
-import os
-
-
 def print_tree_structure(target_dir, output_path):
     # Ensure the directory exists
     if not os.path.exists(target_dir):
@@ -33,21 +30,39 @@ def print_tree_structure(target_dir, output_path):
         # for representing files
         sub_indent = indent_prefix * (level + 1) + prefix
 
-        # ignore pycache
-        if '__pycache__' in dirs:
-            dirs.remove('__pycache__')
-        if 'flask_session' in dirs:
-            dirs.remove('flask_session')
+        # Directories to Ignore
+        exclude_dirs = [
+                '__pycache__', 
+                'flask_session', 
+                '.git', 
+                '.gradle', 
+                '.idea'
+            ]
+        for exclude in exclude_dirs:
+            if exclude in dirs:
+                dirs.remove(exclude)
 
         # Check if current directory is inside icons folder
         if 'icons' in root:
             for d in dirs:
+
+                # Just add the 'icons' directory (without the actual icons)
                 sub_indent = indented_prefix_string + indent_prefix
                 output.append('{}{}/\n'.format(sub_indent, d))
                 output.append('{}## icons\n'.format(sub_indent + indent_prefix))
+
             # Skip processing files in the icons directory
             dirs[:] = []
 
+        # Special handling for 'app/build' directory
+        if os.path.basename(root) == 'build' and 'app' in root:
+            for d in dirs:
+                output.append('{}{}/\n'.format(sub_indent, d))
+            # Skip further traversal into 'build' subdirectories and files
+            dirs[:] = []
+            continue
+            
+        # Print file names for other directories
         for f in files:
             # Print file names
             output.append('{}{}\n'.format(sub_indent, f))
@@ -70,8 +85,11 @@ if __name__ == "__main__":
     target_src_dir = os.path.join(script_dir, '..', 'main', 'java', 'com', 'app', 'routineturboa')
     print(f"target_src_dir: {target_src_dir} \n")
 
+    # to be used when I need files from some other directory
+    alt_target_src_dir = "C:\\Users\\vivid\\Documents\\C-Creative Projects\\RoutineTurboA"
+
     # Output_dir can be anything, ideally same as 'script_dir' if it is 'extra'
-    output_file_path = os.path.join(script_dir, 'tree_structure_android.txt')
+    alt_output_file_path = os.path.join(alt_target_src_dir, 'files.txt')
 
     # Print the tree structure
-    print_tree_structure(target_src_dir, output_file_path)
+    print_tree_structure(target_src_dir, alt_output_file_path)

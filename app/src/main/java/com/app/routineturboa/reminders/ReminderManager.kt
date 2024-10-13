@@ -11,12 +11,17 @@ import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import com.app.routineturboa.R
-import com.app.routineturboa.data.local.RoutineRepository
+import com.app.routineturboa.data.repository.AppRepository
 import java.time.ZoneId
 
-class ReminderManager(private val context: Context) {
+class ReminderManager(
+    private val context: Context,
+    private val appRepository: AppRepository
+) {
+
     private val notificationManager: NotificationManager = context.getSystemService(
         Context.NOTIFICATION_SERVICE) as NotificationManager
+
     private val alarmManager: AlarmManager = context.getSystemService(
         Context.ALARM_SERVICE) as AlarmManager
 
@@ -50,7 +55,7 @@ class ReminderManager(private val context: Context) {
     private fun scheduleReminder(taskId: Int, reminderTime: Long) {
         Log.d("ReminderManager", "Scheduling reminder for task $taskId at $reminderTime")
 
-        val intent = Intent(context, ReminderReceiver::class.java).apply {
+        val intent = Intent(context, ReminderReceiver()::class.java).apply {
             putExtra("TASK_ID", taskId)
         }
 
@@ -76,9 +81,8 @@ class ReminderManager(private val context: Context) {
     @RequiresApi(Build.VERSION_CODES.S)
     suspend fun observeAndScheduleReminders(context: Context) {
         Log.d("ReminderManager", "Observing and scheduling reminders")
-        val dbRepository = RoutineRepository(context)
 
-        dbRepository.getAllTasks().collect { tasks ->
+        appRepository.tasks.collect { tasks ->
             tasks.forEach { task ->
                 task.reminder.let { reminderTime ->
                     try {

@@ -1,11 +1,11 @@
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import com.app.routineturboa.data.local.RoutineRepository
+import com.app.routineturboa.data.repository.AppRepository
 import com.app.routineturboa.viewmodel.TasksViewModel
 
 class TaskViewModelFactory(
-    private val repository: RoutineRepository
+    private val repository: AppRepository
 ) : ViewModelProvider.Factory {
 
     override fun <T : ViewModel> create(modelClass: Class<T>): T {

@@ -5,7 +5,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.util.Log
-import com.app.routineturboa.data.onedrive.MsalAuthManager
+import com.app.routineturboa.data.onedrive.MsalApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -13,7 +13,7 @@ import kotlinx.coroutines.launch
 
 class RoutineTurboApp : Application() {
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
-    lateinit var msalAuthManager: MsalAuthManager
+    lateinit var msalApp: MsalApp
 
     companion object {
         lateinit var instance: RoutineTurboApp
@@ -22,16 +22,15 @@ class RoutineTurboApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
-
         Log.d("MyApplication", "     ***** STARTING APPLICATION ****** ")
 
         instance = this
 
-        msalAuthManager = MsalAuthManager.getInstance(this)
+        msalApp = MsalApp.getInstance(this)
 
         applicationScope.launch {
             Log.d("MyApplication", "Calling MsalAuthManager.initialize from MyApplication")
-            msalAuthManager.initialize()
+            msalApp.initialize()
         }
 
         createNotificationChannel()

@@ -10,62 +10,65 @@ import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.app.routineturboa.data.local.RoutineRepository
-import com.app.routineturboa.reminders.ReminderManager
-import com.app.routineturboa.ui.main.scaffold.MainBottomBar
-import com.app.routineturboa.ui.main.scaffold.MainDrawer
-import com.app.routineturboa.ui.main.scaffold.MainTopBar
+import com.app.routineturboa.data.repository.AppRepository
+
+import com.app.routineturboa.reminders.LocalReminderManager
 import com.app.routineturboa.viewmodel.TasksViewModel
+import com.app.routineturboa.ui.models.TaskEventsToFunctions
+
+// Composable
+import com.app.routineturboa.ui.scaffold.MainBottomBar
+import com.app.routineturboa.ui.scaffold.MainDrawer
+import com.app.routineturboa.ui.scaffold.MainTopBar
 
 @RequiresApi(Build.VERSION_CODES.S)
 @Composable
-fun MainScreen(reminderManager: ReminderManager) {
+fun MainScreen() {
     Log.d("MainScreen", "MainScreen starts...")
 
-    val context = LocalContext.current
-    val taskViewModelFactory = remember { TaskViewModelFactory(RoutineRepository(context)) }
-    val tasksViewModel: TasksViewModel = viewModel(factory = taskViewModelFactory)
+    // Access ReminderManager using CompositionLocal LocalReminderManager
+    val reminderManager = LocalReminderManager.current
 
-    val isAddingTask = remember { mutableStateOf(false) }
-    val clickedTaskId = remember { mutableStateOf<Int?>(null) }
-    val editingTaskId = remember { mutableStateOf<Int?>(null) }
-    val isQuickEditing = remember { mutableStateOf(false) }
-    val isFullEditing = remember { mutableStateOf(false) }
-    val isAnotherTaskEditing = remember { mutableStateOf(false) }
+    val taskViewModelFactory = remember { TaskViewModelFactory(AppRepository()) }
+    val tasksVM: TasksViewModel = viewModel(factory = taskViewModelFactory)
+    val tasks by tasksVM.tasks.collectAsState()
+
+    val tasksUiState by tasksVM.tasksUiState.collectAsState()
+
+    val taskEventsToFunctions = TaskEventsToFunctions(
+        onAnyTaskClick = tasksVM::onAnyTaskClick,
+        onAnyTaskLongPress = tasksVM::onAnyTaskLongPress,
+        onQuickEditClick = tasksVM::onQuickEditClick,
+        onFullEditClick = tasksVM::onFullEditTask,
+        onAddNewClick = tasksVM::onAddNewClick,
+        onNewTaskSaveClick = tasksVM::onNewTaskSaveClick,
+        onDeleteClick = tasksVM::onDeleteTask,
+        onCancelClick = tasksVM::onCancelEdit,
+        onConfirmEdit = tasksVM::onConfirmEdit,
+        onShowTaskDetails = tasksVM::onShowTaskDetails,
+    )
 
     val drawerState = rememberDrawerState(DrawerValue.Closed)
 
     ModalNavigationDrawer(
         // Rest of the UI color on drawer open
-        scrimColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f),
+        scrimColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.2f),
         drawerState = drawerState,
-        drawerContent = { MainDrawer(drawerState, tasksViewModel, reminderManager) },
+        drawerContent = { MainDrawer(drawerState, tasksVM, reminderManager) },
     ) {
         Scaffold(
             topBar = { MainTopBar(drawerState) },
-            bottomBar = {
-                if (!isQuickEditing.value && !isFullEditing.value) {
-                    MainBottomBar(
-                        isAddingTask = isAddingTask,
-                    )
-                }
-            }
-        ) { paddingValues ->
+            bottomBar = { MainBottomBar(taskEventsToFunctions.onAddNewClick) }
+        ) { paddingValues ->  // These paddingValues are applied along the edges inside a box.
             TasksLazyColumn(
                 paddingValues = paddingValues,
-                tasksViewModel = tasksViewModel,
-                reminderManager = reminderManager,
-
-                clickedTaskId = clickedTaskId,
-                isAddingTask = isAddingTask,
-                editingTaskId = editingTaskId,
-                isQuickEditing = isQuickEditing,
-                isFullEditing = isFullEditing,
-                isAnotherTaskEditing = isAnotherTaskEditing,
+                tasks = tasks,
+                tasksUiState = tasksUiState,
+                taskEventsToFunctions = taskEventsToFunctions
             )
         }
     }

@@ -80,7 +80,20 @@ if __name__ == '__main__':
         'TaskEntity.kt',
         
         'TasksViewModel.kt',
-        'TaskViewModelFactory.kt'
+        
+         'MainScreen.kt',
+        'TasksLazyColumn.kt',
+        'BottomNavBar.kt',
+        'MainDrawer.kt',
+        'MainTopBar.kt',
+        'QuickEdit.kt',
+        'TaskCard.kt',
+        'TaskDropdown.kt',
+        'AddTaskDialog.kt',
+        'FullEditDialog.kt',
+        'TaskDetailsDialog.kt',
+        
+        
     ]
 
     file_names_all = [
@@ -95,7 +108,7 @@ if __name__ == '__main__':
         'TaskEntity.kt',
         
         'TasksViewModel.kt',
-        'TaskViewModelFactory.kt'
+        'com.app.routineturboa.viewmodel.TaskViewModelFactory.kt'
         
         'downloadFromOneDrive.kt',
         'MsalAuthManager.kt',

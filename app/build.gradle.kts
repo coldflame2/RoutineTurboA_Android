@@ -6,6 +6,21 @@ plugins {
 }
 
 android {
+    signingConfigs {
+        create("release") {
+            keyAlias = System.getenv("RELEASE_KEY_ALIAS") ?: project.properties["RELEASE_KEY_ALIAS"] as String
+            keyPassword = System.getenv("RELEASE_KEY_PASSWORD") ?: project.properties["RELEASE_KEY_PASSWORD"] as String
+            storeFile = file(System.getenv("RELEASE_STORE_FILE") ?: project.properties["RELEASE_STORE_FILE"] as String)
+            storePassword = System.getenv("RELEASE_STORE_PASSWORD") ?: project.properties["RELEASE_STORE_PASSWORD"] as String
+        }
+
+        create("dev") {
+            keyAlias = System.getenv("RELEASE_KEY_ALIAS") ?: project.properties["RELEASE_KEY_ALIAS"] as String
+            keyPassword = System.getenv("RELEASE_KEY_PASSWORD") ?: project.properties["RELEASE_KEY_PASSWORD"] as String
+            storeFile = file(System.getenv("RELEASE_STORE_FILE") ?: project.properties["RELEASE_STORE_FILE"] as String)
+            storePassword = System.getenv("RELEASE_STORE_PASSWORD") ?: project.properties["RELEASE_STORE_PASSWORD"] as String
+        }
+    }
     namespace = "com.app.routineturboa"
     compileSdk = 34
 
@@ -13,13 +28,12 @@ android {
         applicationId = "com.app.routineturboa"
         minSdk = 30
         targetSdk = 34
-        versionCode = 3
-        versionName = "3.2.0"
+        versionCode = 4
+        versionName = "4.0.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
         }
-        versionNameSuffix = "alpha"
     }
 
     buildTypes {
@@ -29,14 +43,23 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
             applicationIdSuffix = ".release"
         }
 
-        getByName("debug") {
+        debug {
+            signingConfig = signingConfigs.getByName("debug")
             applicationIdSuffix = ".debug"
         }
+
+        create("dev") {
+            signingConfig = signingConfigs.getByName("dev")
+            applicationIdSuffix = ".dev"
+            isDebuggable = true
+        }
     }
+
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
@@ -48,7 +71,7 @@ android {
         compose = true
     }
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.1" // Ensure this version is compatible with Kotlin 1.9.0
+        kotlinCompilerExtensionVersion = "1.5.1"
     }
 
     packaging {
@@ -68,7 +91,7 @@ dependencies {
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
-    ksp(libs.androidx.room.compiler)
+    ksp(libs.androidx.room.compiler)  // Room
     implementation(libs.msal)
     implementation(libs.volley)
     implementation(libs.graph)
