@@ -46,6 +46,10 @@
         </activity>
         <receiver android:name=".reminders.receivers.ReminderReceiver" />
         <receiver android:name=".reminders.receivers.SnoozeReceiver" />
+        <receiver
+            android:name=".reminders.receivers.TaskCompletionReceiver"
+            android:exported="false"
+            android:enabled="true" />
 
         <receiver android:name=".reminders.receivers.TestReceiver"
             android:exported="true"

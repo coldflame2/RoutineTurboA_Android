@@ -77,28 +77,6 @@ fun EmptyTaskCardPlaceholder (modifier: Modifier = Modifier) {
     }
 }
 
-@Composable
-fun SmoothCircularProgressIndicator(modifier: Modifier = Modifier) {
-    val infiniteTransition = rememberInfiniteTransition(label = "Loading Infinite Transition")
-    val angle by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ), label = ""
-    )
 
-    CircularProgressIndicator(
-        progress = { angle / 360f },
-        modifier = modifier
-            .height(30.dp)
-            .width(30.dp),
-        color = MaterialTheme.colorScheme.primary,
-        strokeWidth = 2.dp,
-        trackColor = Color.LightGray,
-        strokeCap = StrokeCap.Round
-    )
-}
 
 

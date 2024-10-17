@@ -10,7 +10,9 @@ import androidx.annotation.RequiresApi
 import com.app.routineturboa.data.repository.AppRepository
 import com.app.routineturboa.reminders.receivers.ReminderReceiver
 import kotlinx.coroutines.flow.first
+import java.time.Instant
 import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
 class ReminderManager @Inject constructor(
@@ -51,16 +53,25 @@ class ReminderManager @Inject constructor(
                     .toInstant()
                     .toEpochMilli()
 
+                // DateTimeFormatter for human-readable date format
+                val dateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+                    .withZone(ZoneId.systemDefault())
+
+                // Convert reminderTimeMillis to human-readable format
+                val reminderTimeFormatted = dateFormatter.format(Instant.ofEpochMilli(reminderTimeMillis))
+                val currentTimeFormatted = dateFormatter.format(Instant.now())
+
+
                 if (reminderTimeMillis > System.currentTimeMillis()) {
                     val success = scheduleReminder(task.id, task.name, reminderTimeMillis)
                     if (!success) {
                         permissionMissing = true
                     }
-                    Log.d(TAG, "Reminder scheduled for task ${task.id}.")
+                    Log.d(TAG, "Reminder scheduled for task ${task.id} at $reminderTimeFormatted (current time: $currentTimeFormatted).")
 
                 } else {
                     cancelReminder(task.id)
-                    Log.d(TAG, "Reminder for task ${task.id} canceled (past time).")
+                    Log.d(TAG, "Reminder for task ${task.id} canceled (past time: $reminderTimeFormatted, current time: $currentTimeFormatted).")
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to parse reminder time for task ${task.id}: $reminderTime", e)
@@ -157,6 +168,10 @@ class ReminderManager @Inject constructor(
      * @param taskName The name of the task to trigger.
      */
     fun manuallyTriggerReminder(taskId: Int, taskName: String) {
+        if (taskId == -1){
+            return
+        }
+
         // Create the same intent that would be used by the AlarmManager
         val reminderIntent = Intent(context, ReminderReceiver::class.java).apply {
             putExtra("TASK_ID", taskId)

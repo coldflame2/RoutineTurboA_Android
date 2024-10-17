@@ -39,12 +39,12 @@ fun HourColumn(
     val infiniteTransition = rememberInfiniteTransition(label = "BorderAnimation")
     val animatedAlpha = AnimatedAlphaUtils.animatedAlpha(
         transition = infiniteTransition,
-        initialValue = 0.1f,
-        targetValue = 1f,
-        duration = 500,
+        initialValue = 0.2f,
+        targetValue = 0.9f,
+        duration = 400,
     )
 
-    val hourColorBgColor = when {
+    val backgroundColor = when {
         isThisTaskClicked -> {
             MaterialTheme.colorScheme.primary.copy(alpha = 1f)
         }
@@ -52,23 +52,22 @@ fun HourColumn(
             MaterialTheme.colorScheme.primary.copy(alpha = animatedAlpha)
         }
         else -> {
-            MaterialTheme.colorScheme.tertiary.copy(alpha = 0.1f)
+            MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
         }
     }
 
 
     Card (
         shape = RectangleShape,
-        colors = CardDefaults.cardColors(containerColor = hourColorBgColor)
+        colors = CardDefaults.cardColors(containerColor = backgroundColor)
     ) {
         Row(
-            verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .height(cardHeight)
-                .width(55.dp)
+                .width(50.dp)
                 .padding(
                     start = 15.dp,
-                    end = 1.dp,
+                    end = 13.dp,
                     top = 0.dp,
                 )
         ) {
@@ -89,6 +88,7 @@ fun HourColumn(
 
             Spacer(modifier = Modifier.width(1.dp))
 
+            // AM/PM Strings
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy((-15).dp), // Adjust to control space between A/P and M
@@ -97,14 +97,14 @@ fun HourColumn(
                     text = startTimeAinAm, // A or P
                     style = MaterialTheme.typography.bodyLarge.copy(
                         fontSize = 10.sp,
-                        color = MaterialTheme.colorScheme.secondary
+                        color = MaterialTheme.colorScheme.onSecondary
                     ),
                 )
                 Text(
                     text = startTimeMinAm, // M
                     style = MaterialTheme.typography.bodyLarge.copy(
                         fontSize = 10.sp,
-                        color = MaterialTheme.colorScheme.secondary
+                        color = MaterialTheme.colorScheme.onSecondary
                     ),
                 )
             }

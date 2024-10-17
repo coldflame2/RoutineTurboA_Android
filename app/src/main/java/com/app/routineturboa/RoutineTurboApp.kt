@@ -4,9 +4,11 @@ import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.os.StrictMode
 import android.util.Log
 import com.app.routineturboa.data.onedrive.MsalApp
 import com.app.routineturboa.data.repository.AppRepository
+import com.app.routineturboa.reminders.NotificationHelper
 import com.app.routineturboa.reminders.ReminderManager
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
@@ -34,19 +36,7 @@ class RoutineTurboApp : Application() {
 
         instance = this
         msalApp = MsalApp.getInstance(this)
-        applicationScope.launch {
-            msalApp.initialize()
-        }
-        createNotificationChannel()
-    }
-
-    private fun createNotificationChannel() {
-        val channelId = "tasks_channel_id"
-        val channelName = "Tasks Reminders"
-        val importance = NotificationManager.IMPORTANCE_HIGH
-        val channel = NotificationChannel(channelId, channelName, importance)
-        channel.description = "Channel for tasks reminders"
-        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        notificationManager.createNotificationChannel(channel)
+        applicationScope.launch { msalApp.initialize() }
+        NotificationHelper.createNotificationChannel(this)
     }
 }

@@ -12,6 +12,9 @@
 |   |   |-- room/
 |   |   |   |-- AppDao.kt
 |   |   |   |-- AppData.kt
+|   |   |   |-- TaskCompletionEntity.kt
+|   |   |   |-- TaskCompletionHistory.kt
+|   |   |   |-- TaskDateEntity.kt
 |   |   |   |-- TaskEntity.kt
 |   |-- reminders/
 |   |   |-- NotificationHelper.kt
@@ -19,6 +22,7 @@
 |   |   |-- receivers/
 |   |   |   |-- ReminderReceiver.kt
 |   |   |   |-- SnoozeReceiver.kt
+|   |   |   |-- TaskCompletionReceiver.kt
 |   |   |   |-- TestReceiver.kt
 |   |-- ui/
 |   |   |-- main/
@@ -31,9 +35,9 @@
 |   |   |-- reusable/
 |   |   |   |-- AlpabhetIcon.kt
 |   |   |   |-- AnimatedAlpha.kt
+|   |   |   |-- CircularProgressIndicator.kt
 |   |   |   |-- CustomTextField.kt
 |   |   |   |-- DottedLine.kt
-|   |   |   |-- ExactAlarmPermissionDialog.kt
 |   |   |   |-- SignInAndSyncButtons.kt
 |   |   |   |-- TaskCardPlaceholder.kt
 |   |   |   |-- dropdowns/
@@ -55,6 +59,8 @@
 |   |   |   |-- dialogs/
 |   |   |   |   |-- AddTaskDialog.kt
 |   |   |   |   |-- FullEditDialog.kt
+|   |   |   |   |-- PickDateDialog.kt
+|   |   |   |   |-- TaskCompletionDialog.kt
 |   |   |   |   |-- TaskDetailsDialog.kt
 |   |   |-- theme/
 |   |   |   |-- Color.kt
@@ -72,4 +78,3 @@
 |   |   |-- TimeUtils.kt
 |   |-- viewmodel/
 |   |   |-- TasksViewModel.kt
-|   |   |-- TaskViewModelFactory.kt

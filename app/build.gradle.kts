@@ -88,6 +88,8 @@ dependencies {
     implementation(libs.hiltAndroid)
     kapt(libs.hiltCompiler)
 
+    implementation(libs.material) // Add the Material Components library here
+
     // Room dependencies
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)

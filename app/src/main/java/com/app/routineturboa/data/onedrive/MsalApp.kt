@@ -15,9 +15,12 @@ import com.microsoft.identity.client.IPublicClientApplication
 import com.microsoft.identity.client.ISingleAccountPublicClientApplication
 import com.microsoft.identity.client.PublicClientApplication
 import com.microsoft.identity.client.exception.MsalException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -46,20 +49,22 @@ class MsalApp(context: Context) {
     suspend fun initialize() {
         Log.d(tag, "MsalAuthManager initialize function...")
 
-        // Try to load the current account (token cache)
-        try {
-            currentAccount = getCurrentAccountSuspend()
-            if (currentAccount != null) {
-                Log.d(tag, "MsalAuthManager: User is already logged in: ${currentAccount?.username}")
-            } else {
-                Log.d(tag, "MsalAuthManager: No user is logged in.")
+        withContext(Dispatchers.IO) {
+            try {
+                currentAccount = getCurrentAccountSuspend()
+                if (currentAccount != null) {
+                    Log.d(tag, "MsalAuthManager: User is already logged in: ${currentAccount?.username}")
+                } else {
+                    Log.d(tag, "MsalAuthManager: No user is logged in.")
+                }
+            } catch (e: Exception) {
+                Log.e(tag, "MsalAuthManager: Error getting current account", e)
             }
-        } catch (e: Exception) {
-            Log.e(tag, "MsalAuthManager: Error getting current account", e)
         }
 
         _isInitialized.value = true
     }
+
 
     private fun onInitialized(callback: () -> Unit) {
         Log.d(tag, "MsalAuthManager onInitialized")
@@ -68,12 +73,16 @@ class MsalApp(context: Context) {
     private fun createMsalApplication() {
         Log.d(tag, "Creating MSAL single account application")
 
-        PublicClientApplication.createSingleAccountPublicClientApplication(
-            appContext,
-            R.raw.auth_config_single_account,
-            getMsalClientListener()
-        )
+        // Run MSAL client creation on a background thread
+        CoroutineScope(Dispatchers.IO).launch {
+            PublicClientApplication.createSingleAccountPublicClientApplication(
+                appContext,
+                R.raw.auth_config_single_account,
+                getMsalClientListener()
+            )
+        }
     }
+
 
     /**
      * This function provides a listener that handles the success or failure of the MSAL client creation.
@@ -97,7 +106,8 @@ class MsalApp(context: Context) {
     /**
      * This is a suspending function that wraps getCurrentAccountAsync in a coroutine.
      */
-    private suspend fun getCurrentAccountSuspend(): IAccount? = suspendCoroutine { continuation ->
+    // Keep only the suspend function to get the current account
+    suspend fun getCurrentAccountSuspend(): IAccount? = suspendCancellableCoroutine { continuation ->
         Log.d(tag, "Getting current account using suspend function.")
 
         singleAccountApp?.getCurrentAccountAsync(
@@ -120,7 +130,7 @@ class MsalApp(context: Context) {
         )
     }
 
-    fun getCurrentAccount(callback: ((IAccount?) -> Unit)?) {
+    suspend fun getCurrentAccount(callback: ((IAccount?) -> Unit)?) {
         singleAccountApp?.getCurrentAccountAsync(
             object : ISingleAccountPublicClientApplication.CurrentAccountCallback {
                 override fun onAccountLoaded(activeAccount: IAccount?) {

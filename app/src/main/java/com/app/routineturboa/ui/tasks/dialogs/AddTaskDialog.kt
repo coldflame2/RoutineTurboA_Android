@@ -110,20 +110,20 @@ fun AddTaskDialog(
 
     // Calculate endTime based on duration input
     LaunchedEffect(durationFormatted) {
-        if (durationFormatted.isNotEmpty()) {
-            try {
-                val durationLong = durationFormatted.toLong()
-                if (durationLong > 0 || durationLong < durationTaskBelowBeforeAdding!!) {
-                    endTimeFormatted = dateTimeToString(startTime.plusMinutes(durationLong))
-                } else {
-                    Toast.makeText(context, "Invalid duration. End time unchanged.", Toast.LENGTH_SHORT).show()
-                }
-            } catch (e: NumberFormatException) {
-                Toast.makeText(context, "Invalid duration format. End time unchanged.", Toast.LENGTH_SHORT).show()
-            }
-        } else {
-            Toast.makeText(context, "Duration is empty. End time unchanged.", Toast.LENGTH_SHORT).show()
-        }
+//        if (durationFormatted.isNotEmpty()) {
+//            try {
+//                val durationLong = durationFormatted.toLong()
+//                if (durationLong > 0 || durationLong < durationTaskBelowBeforeAdding!!) {
+//                    endTimeFormatted = dateTimeToString(startTime.plusMinutes(durationLong))
+//                } else {
+//                    Toast.makeText(context, "Invalid duration. End time unchanged.", Toast.LENGTH_SHORT).show()
+//                }
+//            } catch (e: NumberFormatException) {
+//                Toast.makeText(context, "Invalid duration format. End time unchanged.", Toast.LENGTH_SHORT).show()
+//            }
+//        } else {
+//            Toast.makeText(context, "Duration is empty. End time unchanged.", Toast.LENGTH_SHORT).show()
+//        }
     }
 
     // Calculate Duration based on End Time

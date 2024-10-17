@@ -7,9 +7,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -23,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 
 import com.app.routineturboa.data.room.TaskEntity
+import com.app.routineturboa.data.room.TaskCompletionHistory
 import com.app.routineturboa.utils.TaskTypes
 
 import com.app.routineturboa.ui.models.TaskEventsToFunctions
@@ -30,45 +34,52 @@ import com.app.routineturboa.ui.models.TasksUiState
 import com.app.routineturboa.ui.tasks.ParentTaskItem
 import com.app.routineturboa.ui.tasks.dialogs.AddTaskDialog
 import com.app.routineturboa.ui.reusable.EmptyTaskCardPlaceholder
+import com.app.routineturboa.ui.tasks.dialogs.TaskCompletionDialog
 
 @RequiresApi(Build.VERSION_CODES.S)
 @Composable
 // Usage: MainScreen
 fun TasksLazyColumn(
     paddingValues: PaddingValues, // auto-calculated by Scaffold
-    tasks:  List<TaskEntity>,
+    tasks: List<TaskEntity>,
+    tasksCompleted: List<TaskCompletionHistory>,
     tasksUiState: TasksUiState,
     taskEventsToFunctions: TaskEventsToFunctions
 ) {
     val tag = "TasksLazyColumn"
-    val context = LocalContext.current
-    var showLoadingIndicator by remember { mutableStateOf(true) }
 
     val mainTasks by remember(tasks) { mutableStateOf(tasks.filter { it.type == TaskTypes.MAIN }) }
 
     LazyColumn(
-        modifier = Modifier.padding(paddingValues),  // Use paddingValues here
-        contentPadding = PaddingValues(0.dp, 0.dp, 15.dp, 0.dp),
+        modifier = Modifier.padding(paddingValues),  // Use paddingValues passed from MainScreen here
+        contentPadding = PaddingValues(0.dp, 5.dp, 15.dp, 0.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
-        if (!showLoadingIndicator && tasks.isNotEmpty()) {
-            items(tasks,
-                key = { task -> task.id }
-            ) { task ->
-                // Pass the necessary state and event handlers to ParentTaskItem
+        if (tasks.isNotEmpty()) {
+            items(tasks, key = { task -> task.id }) { task ->
                 ParentTaskItem(
                     task = task,
                     mainTasks = mainTasks,
                     tasksUiState = tasksUiState,
-                    taskEventsToFunctions = taskEventsToFunctions,
+                    taskEventsToFunctions = taskEventsToFunctions
                 )
             }
 
-        // Show indicator if empty tasks or showLoadingIndicator
+        // Show message if no tasks exist for the selected date
         } else {
-            items(8) { EmptyTaskCardPlaceholder() }
-        }  // end of if-else in Lazy Column
-    }  // end of Lazy Column
+            item {
+                Text(
+                    text = "No tasks for this date",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+        }
+    }
+
 
     // AddTaskDialog (Inside the parent Box)
     if (tasksUiState.isAddingNew && tasksUiState.clickedTaskId != null) {
@@ -90,15 +101,14 @@ fun TasksLazyColumn(
                 )
             } else {
                 Toast.makeText(
-                    context,"Select a task first", Toast.LENGTH_SHORT).show()
+                    LocalContext.current,
+                    "Select a task first", Toast.LENGTH_SHORT
+                ).show()
             }
         }
     }
 
-    // Show loading indicator at start (Temporary effect)
-    LaunchedEffect(tasks) {
-        delay(50)
-        showLoadingIndicator = false
+    if (tasksUiState.isShowingCompletedTasks) {
+        TaskCompletionDialog(tasksCompleted, taskEventsToFunctions.onCancelClick)
     }
-
 }

@@ -21,7 +21,7 @@ import java.time.format.DateTimeFormatter
 
 
 @Composable
-fun ExtraTaskDetails (
+fun TaskTimings (
     startTime: LocalDateTime,
     endTime: LocalDateTime,
     duration: Int,

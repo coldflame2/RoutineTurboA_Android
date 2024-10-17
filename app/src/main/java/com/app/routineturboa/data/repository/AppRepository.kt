@@ -5,7 +5,9 @@ import android.database.sqlite.SQLiteDatabase
 import android.util.Log
 import com.app.routineturboa.data.onedrive.downloadFromOneDrive
 import com.app.routineturboa.data.room.AppDao
+import com.app.routineturboa.data.room.TaskCompletionEntity
 import com.app.routineturboa.data.room.TaskEntity
+import com.app.routineturboa.data.room.TaskCompletionHistory
 import com.app.routineturboa.utils.TaskTypes
 import com.app.routineturboa.utils.TimeUtils.isoStrToDateTime
 import com.app.routineturboa.utils.TimeUtils.strToDateTime
@@ -18,6 +20,8 @@ import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.withContext
 import java.time.Duration
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
 class AppRepository @Inject constructor(
@@ -27,6 +31,16 @@ class AppRepository @Inject constructor(
 
     val tasks: Flow<List<TaskEntity>> = appDao.getAllTasks()
 
+    fun getTasksForDate(date: LocalDate): Flow<List<TaskEntity>> {
+        Log.d(tag, "Fetching tasks for date: $date")
+        return appDao.getTasksByDate(date)
+    }
+
+
+    fun getAllTasksInTaskDates(): Flow<List<TaskEntity>> {
+        return appDao.allTasksInTaskDatesEntity()
+    }
+
     private suspend fun isTaskLast(task: TaskEntity): Boolean {
         val lastTask = getLastTask().firstOrNull()
         return lastTask?.id == task.id
@@ -34,6 +48,10 @@ class AppRepository @Inject constructor(
 
     private fun getLastTask(): Flow<TaskEntity?> = flow {
         appDao.getTaskWithMaxPosition()
+    }
+
+    suspend fun getTaskName(taskId: Int): String? {
+        return appDao.getTaskName(taskId)
     }
 
     // Begin new task operations
@@ -57,7 +75,7 @@ class AppRepository @Inject constructor(
 
                 incrementTasksPositionBelow(clickedTask)
 
-                insertTask(newTask)
+//                insertTaskWithDate(newTask)
 
                 val updatedDuration = taskBelowToBeShiftedDuration - newTask.duration
                 val updatedStartTime = newTask.endTime
@@ -160,7 +178,7 @@ class AppRepository @Inject constructor(
         // Insert tasks into the local Room database
         tasksFromOneDrive.forEach { task ->
             coroutineScope {
-                insertTask(task)
+                Log.d(tag, "#TODO: Insert task from OneDrive into Room")
             }
         }
 
@@ -213,17 +231,10 @@ class AppRepository @Inject constructor(
         return appDao.getTasksByType(type)
     }
 
-    suspend fun insertTask(task: TaskEntity): Long {
-        Log.d(tag, "Inserting task '${task.name}' [id: ${task.id}")
-        val result = appDao.safeInsertTask(task)
-
-        if (result == -1L) { // -1 means failure
-            Log.i("TaskRepository",
-                "Task insertion failed due to either unique constraint or other factors.")
-        }
-        // 'result' if successful is new rowID
-        return result
+    suspend fun insertTaskWithDate(taskEntity: TaskEntity, taskDate: LocalDate): Long {
+        return appDao.safeInsertTaskWithDate(taskEntity, taskDate)
     }
+
 
     private suspend fun updateTask(task: TaskEntity) {
         Log.d(tag, "Updating task: ${task.name} (id:${task.id})")
@@ -239,9 +250,9 @@ class AppRepository @Inject constructor(
         }
     }
 
-    private suspend fun insertDefaultTasks(defaultTask: TaskEntity): Long {
+    private suspend fun insertDefaultTasks(defaultTask: TaskEntity, selectedDate: LocalDate): Long {
         Log.d(tag, "Inserting default task.")
-        return appDao.insertTask(defaultTask)
+        return appDao.safeInsertTaskWithDate(defaultTask, selectedDate)
     }
 
     suspend fun deleteTask(task: TaskEntity) = appDao.deleteTask(task)
@@ -252,7 +263,7 @@ class AppRepository @Inject constructor(
         appDao.deleteAllTasks()
     }
 
-    suspend fun initializeDefaultTasks() {
+    suspend fun initializeDefaultTasks(selectedDate: LocalDate) {
         val tasks = appDao.getAllTasks().first()
 
         if (tasks.isEmpty()) {
@@ -267,7 +278,7 @@ class AppRepository @Inject constructor(
                 type = TaskTypes.BASICS
             )
 
-            insertDefaultTasks(firstTask)
+            insertDefaultTasks(firstTask, selectedDate)
 
             val lastTask = TaskEntity(
                 position = Int.MAX_VALUE,
@@ -280,9 +291,43 @@ class AppRepository @Inject constructor(
                 type = TaskTypes.BASICS
             )
 
-            insertDefaultTasks(lastTask)
+            insertDefaultTasks(lastTask, selectedDate)
         }
     }
-    
+
+    suspend fun markTaskAsCompleted(taskId: Int) {
+        val today = LocalDate.now()
+
+        // Create a new TaskCompletionEntity to mark the task as completed for today
+        val taskCompletion = TaskCompletionEntity(
+            taskId = taskId,
+            date = today,
+            isCompleted = true
+        )
+
+        // Insert the task completion into the database
+        appDao.insertTaskCompletion(taskCompletion)
+    }
+
+    suspend fun upsertTaskCompletion(taskCompletion: TaskCompletionEntity) {
+        appDao.upsertTaskCompletion(taskCompletion)
+    }
+
+    suspend fun getTaskCompletion(taskId: Int, date: LocalDate): TaskCompletionEntity? {
+        return appDao.getTaskCompletion(taskId, date)
+    }
+
+    suspend fun getTasksWithCompletionStatus(): List<TaskCompletionHistory> {
+        return appDao.getTasksWithCompletionStatus()
+    }
+
+    suspend fun getAllTaskCompletions(): List<TaskCompletionEntity> {
+        return appDao.getAllTaskCompletions()
+    }
+
+    suspend fun getTaskCompletionsByTaskId(taskId: Int): List<TaskCompletionEntity> {
+        return appDao.getTaskCompletionsByTaskId(taskId)
+    }
+
 
 }

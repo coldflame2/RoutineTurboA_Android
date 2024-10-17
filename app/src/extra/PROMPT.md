@@ -31,11 +31,11 @@ I am a beginner who has developed most of this app using AI tools, like GPT and 
 Today, it's about RoutineTurboA, the android version.
 
 Here's the organization of files and modules in Android version:
-
 |-- routineturboa/
 |   |-- MainActivity.kt
 |   |-- RoutineTurboApp.kt
 |   |-- data/
+|   |   |-- DbConstants.kt
 |   |   |-- onedrive/
 |   |   |   |-- downloadFromOneDrive.kt
 |   |   |   |-- MsalApp.kt
@@ -46,6 +46,9 @@ Here's the organization of files and modules in Android version:
 |   |   |-- room/
 |   |   |   |-- AppDao.kt
 |   |   |   |-- AppData.kt
+|   |   |   |-- TaskCompletionEntity.kt
+|   |   |   |-- TaskCompletionHistory.kt
+|   |   |   |-- TaskDateEntity.kt
 |   |   |   |-- TaskEntity.kt
 |   |-- reminders/
 |   |   |-- NotificationHelper.kt
@@ -53,6 +56,7 @@ Here's the organization of files and modules in Android version:
 |   |   |-- receivers/
 |   |   |   |-- ReminderReceiver.kt
 |   |   |   |-- SnoozeReceiver.kt
+|   |   |   |-- TaskCompletionReceiver.kt
 |   |   |   |-- TestReceiver.kt
 |   |-- ui/
 |   |   |-- main/
@@ -65,9 +69,9 @@ Here's the organization of files and modules in Android version:
 |   |   |-- reusable/
 |   |   |   |-- AlpabhetIcon.kt
 |   |   |   |-- AnimatedAlpha.kt
+|   |   |   |-- CircularProgressIndicator.kt
 |   |   |   |-- CustomTextField.kt
 |   |   |   |-- DottedLine.kt
-|   |   |   |-- ExactAlarmPermissionDialog.kt
 |   |   |   |-- SignInAndSyncButtons.kt
 |   |   |   |-- TaskCardPlaceholder.kt
 |   |   |   |-- dropdowns/
@@ -89,6 +93,8 @@ Here's the organization of files and modules in Android version:
 |   |   |   |-- dialogs/
 |   |   |   |   |-- AddTaskDialog.kt
 |   |   |   |   |-- FullEditDialog.kt
+|   |   |   |   |-- PickDateDialog.kt
+|   |   |   |   |-- TaskCompletionDialog.kt
 |   |   |   |   |-- TaskDetailsDialog.kt
 |   |   |-- theme/
 |   |   |   |-- Color.kt
@@ -106,6 +112,8 @@ Here's the organization of files and modules in Android version:
 |   |   |-- TimeUtils.kt
 |   |-- viewmodel/
 |   |   |-- TasksViewModel.kt
+
+
 
 
 

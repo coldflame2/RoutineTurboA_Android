@@ -55,35 +55,35 @@ fun SignInAndSyncButtons(tasksViewModel: TasksViewModel) {
     val isMsalInitialized by msalAuthManager.isInitialized.collectAsState()
 
     // Get isSignedIn, Account Name, and Profile Image
-    LaunchedEffect(isMsalInitialized, isSignedIn) {
+    LaunchedEffect(isMsalInitialized) {
         if (isMsalInitialized) {
-            Log.d(tag,
-                "LaunchedEffect: msalAuthManager initialized. Getting current account and profile image..."
-            )
+            Log.d(tag, "LaunchedEffect: msalAuthManager initialized. Getting current account and profile image...")
 
-            msalAuthManager.getCurrentAccount { account ->
-                isSignedIn = account != null
-                username = account?.username ?: ""
+            // Use the coroutineScope to launch the suspend function
+            coroutineScope.launch {
+                try {
+                    val account = msalAuthManager.getCurrentAccountSuspend()
+                    isSignedIn = account != null
+                    username = account?.username ?: ""
 
-                //strip username of @ if present
-                if (username.contains("@")) {
-                    username = username.substringBefore("@")
-                }
-
-                Log.d(tag, "isSignedIn:$isSignedIn and username:$username")
-
-                if (account != null) {
-                    Log.d(tag, "LaunchedEffect: account is not null. Getting profile image URL.")
-                    coroutineScope.launch {
-                        profileImageUrl = msalAuthManager.getProfileImageUrl()
+                    // Strip username of @ if present
+                    if (username.contains("@")) {
+                        username = username.substringBefore("@")
                     }
-                } else {
-                    Log.d(tag, "LaunchedEffect: account is null. No profile image URL.")
+
+                    Log.d(tag, "isSignedIn:$isSignedIn and username:$username")
+
+                    if (account != null) {
+                        Log.d(tag, "LaunchedEffect: account is not null. Getting profile image URL.")
+                        profileImageUrl = msalAuthManager.getProfileImageUrl()
+                    } else {
+                        Log.d(tag, "LaunchedEffect: account is null. No profile image URL.")
+                    }
+                } catch (e: Exception) {
+                    Log.e(tag, "Error retrieving current account", e)
                 }
             }
-        }
-
-        else {
+        } else {
             Log.d(tag, "LaunchedEffect: msalAuthManager is not initialized yet.")
         }
     }

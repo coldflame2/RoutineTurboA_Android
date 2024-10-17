@@ -1,61 +1,62 @@
 package com.app.routineturboa.ui.scaffold
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Menu
-import androidx.compose.material.icons.outlined.ViewDay
-import androidx.compose.material3.DrawerState
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.TopAppBarDefaults.exitUntilCollapsedScrollBehavior
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.material.icons.automirrored.filled.ArrowRight
+import androidx.compose.material.icons.automirrored.filled.ReadMore
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.Date
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainTopBar(drawerState: DrawerState) {
-    val currentDate: String = SimpleDateFormat("MMMM d",
-        Locale.getDefault()).format(Date())
+fun MainTopBar(
+    drawerState: DrawerState,
+    selectedDate: LocalDate,
+    onDatePickerClick: () -> Unit
+) {
     val coroutineScope = rememberCoroutineScope()
 
-    val scrollBehavior = exitUntilCollapsedScrollBehavior()
+    // Formatting the current date for display in the TopAppBar title
+    val dateFormatter = DateTimeFormatter.ofPattern("MMMM d, yyyy", Locale.getDefault())
+    val currentDate = selectedDate.format(dateFormatter)
 
     TopAppBar(
-        //<editor-fold desc="TopAppBar Parameters">
         colors = TopAppBarDefaults.largeTopAppBarColors(
             containerColor = MaterialTheme.colorScheme.primary,
             titleContentColor = MaterialTheme.colorScheme.onPrimary,
         ),
+
         title = { Text(text = currentDate) },
+
+        // To open the drawer
         navigationIcon = {
             IconButton(
                 onClick = { coroutineScope.launch { drawerState.open() } }
             ) {
                 Icon(
-                    Icons.Outlined.Menu,
+                    Icons.Default.ChevronRight,
                     contentDescription = "Menu"
                 )
             }
         },
+
         actions = {
+            // PickDateDialog button
             IconButton(
-                onClick = { /*TODO: Main Top Bar button action.*/ }
+                onClick = onDatePickerClick
             ) {
                 Icon(
-                    Icons.Outlined.ViewDay,
+                    Icons.Outlined.CalendarMonth,
                     contentDescription = "View Day"
                 )
             }
-        },
-        scrollBehavior = scrollBehavior,
-        //</editor-fold>
+        }
     )
+
 }

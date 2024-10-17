@@ -10,17 +10,22 @@ import androidx.lifecycle.viewModelScope
 import com.app.routineturboa.data.room.TaskEntity
 import com.app.routineturboa.data.onedrive.MsalApp
 import com.app.routineturboa.data.repository.AppRepository
+import com.app.routineturboa.data.room.TaskCompletionHistory
 import com.app.routineturboa.ui.models.TaskFormData
 import com.app.routineturboa.ui.models.TasksUiState
 import com.app.routineturboa.utils.getDemoTasks
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 import javax.inject.Inject
 
 @HiltViewModel
@@ -29,8 +34,8 @@ class TasksViewModel @Inject constructor (
 ) : ViewModel() {
     private val tag = "TasksViewModel"
 
+    // StateFlow for all tasks
     val tasks: StateFlow<List<TaskEntity>> = repository.tasks
-        // Expose tasks regular flow from Repository as a StateFlow to be collected by UI
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
@@ -42,7 +47,58 @@ class TasksViewModel @Inject constructor (
     // Expose UI state as a StateFlow to be collected by UI
     val tasksUiState: StateFlow<TasksUiState> = _tasksUiState.asStateFlow()
 
+    /**
+     * tasksByDate is a StateFlow that emits a list of tasks for the currently selected date.
+     * It uses 'transformLatest' to listen to the changes in _selectedDate StateFlow.
+     * It reacts to each new date by canceling any ongoing task fetch for the previous date.
+     * It then collects the new tasks for the selected date.
+     * Finally, it is converted to hot flow (StateFlow) itself using .stateIn
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val tasksByDate: StateFlow<List<TaskEntity>> = tasksUiState.transformLatest { uiState ->
+        // Get the selected date from the TasksUiState
+        val selectedDate = uiState.selectedDate
+
+        if (selectedDate != null) {
+            // Log or perform side-effects if necessary
+            Log.d("TasksViewModel", "Fetching tasks for date: $selectedDate")
+
+            // Fetch tasks for the selected date from the repository
+            val tasksFlow = repository.getTasksForDate(selectedDate)
+
+            // Collect tasks and emit them
+            tasksFlow.collect { tasks ->
+                emit(tasks)
+            }
+        } else {
+            // If selectedDate is null, emit an empty list
+            emit(emptyList())
+        }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+
+    private val _taskCompletions = MutableStateFlow<List<TaskCompletionHistory>>(emptyList())
+    val taskCompletions: StateFlow<List<TaskCompletionHistory>> = _taskCompletions
+
+    fun onDateChange(date: LocalDate) {
+        Log.d(tag, "Date changed: $date")
+        _tasksUiState.update {
+            it.copy(selectedDate = date)
+        }
+    }
+
+    fun loadTaskCompletions() {
+        Log.d(tag, "Loading completed tasks...")
+        viewModelScope.launch {
+            _taskCompletions.value = repository.getTasksWithCompletionStatus() // Fetch tasks with their completions
+        }
+    }
+
     // region: On clicks to update UI state like show dialog boxes
+
 
     fun onAnyTaskClick(taskId: Int) {
         Log.d(tag, "onAnyTaskClick: $taskId")
@@ -113,6 +169,18 @@ class TasksViewModel @Inject constructor (
         }
     }
 
+    fun onShowCompletedTasks() {
+        Log.d(tag, "onShowCompletedTasks")
+        _tasksUiState.update {
+            it.copy(
+                isShowingDetails = false,
+                isQuickEditing = false,
+                isFullEditing = false,
+                isShowingCompletedTasks = true,
+            )
+        }
+    }
+
     fun onCancelEdit() {
         Log.d(tag, "onCancelEdit")
         _tasksUiState.update {
@@ -122,6 +190,7 @@ class TasksViewModel @Inject constructor (
                 isFullEditing = false,
                 inEditTaskId = null,
                 isShowingDetails = false,
+                isShowingCompletedTasks = false,
             )
         }
     }
@@ -130,10 +199,11 @@ class TasksViewModel @Inject constructor (
 
     // region: On clicks to update tasks database
 
-    fun onNewTaskSaveClick(newTaskFormData: TaskFormData) {
+    fun onConfirmNewTaskClick(newTaskFormData: TaskFormData) {
+        Log.d(tag, "Confirm new task Clicked...")
         _tasksUiState.update {
             it.copy(
-                isAddingNew = true,
+                isAddingNew = false,
                 taskBelowClickedTaskId = it.clickedTaskId?.plus(1)
             )
         }
@@ -155,7 +225,6 @@ class TasksViewModel @Inject constructor (
         }
 
     }
-
 
     fun onDeleteTask(taskId: Int? = _tasksUiState.value.clickedTaskId) {
         if (taskId == null) return
@@ -245,7 +314,7 @@ class TasksViewModel @Inject constructor (
             try {
                 val demoTasks = getDemoTasks(context)
                 demoTasks.forEach { task ->
-                    repository.insertTask(task)
+                    repository.insertTaskWithDate(task, LocalDate.now())
                 }
             } catch (e: Exception) {
                 Log.e("TasksViewModel", "Error inserting demo tasks", e)
@@ -258,9 +327,16 @@ class TasksViewModel @Inject constructor (
         Log.d(tag, "Initializing Default tasks.")
         viewModelScope.launch {
             try {
-                repository.initializeDefaultTasks()
+                val selectedDate = _tasksUiState.value.selectedDate
+                repository.initializeDefaultTasks(selectedDate)
             } finally {
             }
         }
     }
+
+    // Expose a method to get task name by taskId
+    suspend fun getTaskName(taskId: Int): String? {
+        return repository.getTaskName(taskId)
+    }
+
 }

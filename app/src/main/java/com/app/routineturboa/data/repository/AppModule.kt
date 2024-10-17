@@ -2,6 +2,7 @@ package com.app.routineturboa.data.repository
 
 import android.content.Context
 import androidx.room.Room
+import com.app.routineturboa.data.DbConstants
 import com.app.routineturboa.data.room.AppDao
 import com.app.routineturboa.data.room.AppData
 import com.app.routineturboa.reminders.ReminderManager
@@ -29,12 +30,12 @@ object AppModule {
     @Provides
     @Singleton
     fun provideAppData(@ApplicationContext context: Context): AppData {
-        // Build and provide the Room database instance
         return Room.databaseBuilder(
             context.applicationContext,
             AppData::class.java,
-            "routine_database"
-        ).build()
+            DbConstants.DATABASE_NAME
+        )
+        .build()
     }
 
     @Provides

@@ -1,17 +1,22 @@
 package com.app.routineturboa.ui.models
 
+import java.time.LocalDate
+
 data class TaskEventsToFunctions(
     val onAnyTaskClick: (Int) -> Unit,
     val onAnyTaskLongPress: (Int) -> Unit,
 
-    val onQuickEditClick: (Int) -> Unit,
-    val onFullEditClick: (Int) -> Unit,
+    val onShowAddNewClick: () -> Unit,
+    val onShowQuickEditClick: (Int) -> Unit,
+    val onShowFullEditClick: (Int) -> Unit,
     val onShowTaskDetails: (Int) -> Unit,
-
-    val onAddNewClick: () -> Unit,
-    val onNewTaskSaveClick: (TaskFormData) -> Unit,
+    val onShowCompletedTasks: () -> Unit,
 
     val onCancelClick: () -> Unit,
+
+    val onNewTaskSaveClick: (TaskFormData) -> Unit,
     val onConfirmEdit: (Int, TaskFormData) -> Unit,
     val onDeleteClick: (Int) -> Unit,
+
+    val onDateChange: (LocalDate) -> Unit,
 )
