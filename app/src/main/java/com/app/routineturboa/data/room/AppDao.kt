@@ -13,7 +13,7 @@ import com.app.routineturboa.data.DbConstants
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
 
-const val tag = "TaskDao"
+const val tag = "AppDao"
 
 @Dao
 interface AppDao {
@@ -23,115 +23,93 @@ interface AppDao {
         return block()
     }
 
-    /**
-     * @ Query:
-     *
-     * Select tasks based on the specific date,
-     * By joining the TaskEntity with TaskDateEntity using the foreign key taskId.
-     */
-    @Query("""
-    SELECT ${DbConstants.TASKS_TABLE}.* 
-    FROM ${DbConstants.TASKS_TABLE} 
-    INNER JOIN task_dates ON ${DbConstants.TASKS_TABLE}.id = task_dates.taskId
-    WHERE task_dates.taskDate = :date
-    ORDER BY ${DbConstants.TASKS_TABLE}.position ASC
-""")
-    fun getTasksByDate(date: LocalDate): Flow<List<TaskEntity>>
-
-
-    @Query("""
-    SELECT * FROM ${DbConstants.TASKS_TABLE} ORDER BY ${DbConstants.TASKS_TABLE}.position ASC;
-    """)
-    fun allTasksInTaskDatesEntity(): Flow<List<TaskEntity>>
-
     @Query("SELECT * FROM ${DbConstants.TASKS_TABLE} ORDER BY position ASC")
     fun getAllTasks(): Flow<List<TaskEntity>>
 
-    @Query("SELECT * FROM ${DbConstants.TASKS_TABLE} WHERE position = (SELECT MAX(position) FROM ${DbConstants.TASKS_TABLE})")
-    suspend fun getTaskWithMaxPosition(): TaskEntity?
 
-    // Query to get tasks by type
-    @Query("SELECT * FROM ${DbConstants.TASKS_TABLE} WHERE type = :type")
-    fun getTasksByType(type: String): Flow<List<TaskEntity>>
+    @Query("""
+        SELECT EXISTS(
+            SELECT 1 FROM ${DbConstants.TASK_DATES_TABLE}
+            WHERE taskId = :taskId AND taskDate = :date
+        )
+    """)
+    suspend fun isNonRecurringTaskOnThisDate(taskId: Int, date: LocalDate): Boolean
 
-    @Query("SELECT COUNT(*) FROM ${DbConstants.TASKS_TABLE}")
-    suspend fun getTasksCount(): Int
 
+    @Transaction
+    suspend fun incrementPositionsBelowWithLogging(startingPosition: Int) {
+        // Log before updating
+        Log.d(tag, "Incrementing positions for tasks starting from position: $startingPosition")
+
+        try {
+            // Call the original DAO function
+            incrementPositionsBelow(startingPosition)
+
+            // Log success
+            Log.d(tag, "Positions incremented for tasks starting from position: $startingPosition")
+        } catch (e: Exception) {
+            // Log failure
+            Log.e(tag, "Failed to increment positions: ${e.message}")
+        }
+    }
+
+    @Query("UPDATE ${DbConstants.TASKS_TABLE} SET position = position + 1 WHERE position >= :startingPosition")
+    suspend fun incrementPositionsBelow(startingPosition: Int)
     @Update
     suspend fun updateTask(task: TaskEntity)
-
-    @Transaction
-    suspend fun updateTasksWithNewPositions(tasks: List<TaskEntity>) {
-        tasks.forEach { task ->
-            Log.d(tag, "Updating task '${task.name}'. task ID: ${task.id}, position: ${task.position}" )
-            updateTaskPosition(task.id, task.position)
-        }
-    }
-
-    @Transaction
-    suspend fun updateTasksWithNewIds(tasks: List<TaskEntity>) {
-        tasks.forEach { task ->
-            Log.d(tag, "Updating task '${task.name}'. task ID: ${task.id}" )
-            updateTaskId(task.id)
-        }
-    }
-
-    @Query("UPDATE ${DbConstants.TASKS_TABLE} SET id = :newId")
-    suspend fun updateTaskId(newId: Int)
 
     @Query("SELECT name FROM ${DbConstants.TASKS_TABLE} WHERE id = :taskId LIMIT 1")
     suspend fun getTaskName(taskId: Int): String?
 
-    @Query("UPDATE ${DbConstants.TASKS_TABLE} SET position = :newPosition WHERE id = :taskId")
-    suspend fun updateTaskPosition(taskId: Int, newPosition: Int)
-
-    @Update
-    suspend fun updateAllTasks(tasks: List<TaskEntity>)
-
     @Delete
     suspend fun deleteTask(task: TaskEntity)
 
-    @Query("SELECT * FROM ${DbConstants.TASKS_TABLE} WHERE id = :taskId")
-    suspend fun getTaskById(taskId: Int): TaskEntity?
+    // Query to get the count of tasks with a position greater than the specified one
+    @Query("SELECT COUNT(*) FROM ${DbConstants.TASKS_TABLE}  WHERE position > :currentPosition")
+    suspend fun getTasksCountWithPositionGreaterThan(currentPosition: Int): Int
 
-    @Query("SELECT * FROM ${DbConstants.TASKS_TABLE} WHERE id = (SELECT MIN(id) FROM ${DbConstants.TASKS_TABLE})")
-    suspend fun getFirstTask(): TaskEntity?
-
-    @Query("SELECT * FROM ${DbConstants.TASKS_TABLE} WHERE id = (SELECT MAX(id) FROM ${DbConstants.TASKS_TABLE})")
-    suspend fun getLastTask(): TaskEntity?
+    // Query to get the task at the specified position
+    @Query("SELECT * FROM ${DbConstants.TASKS_TABLE}  WHERE position = :position LIMIT 1")
+    suspend fun getTaskAtPosition(position: Int): TaskEntity?
 
     @Transaction
-    suspend fun safeInsertTaskWithDate(task: TaskEntity, taskDate: LocalDate): Long {
+    suspend fun safeInsertTask(task: TaskEntity): Long {
+        Log.d(tag, "Inserting new task: ${task.name}")
         return try {
-            // Insert task entity
+            // Insert the task entity
             val taskId = insertTask(task)
+            Log.d(tag, "Task inserted. New Task Id=$taskId and position:${task.position}")
 
-            // Insert task date entity if task insertion is successful
-            val taskDatesEntity = TaskDatesEntity(taskId = taskId.toInt(), taskDate = taskDate)
-            insertTaskDate(taskDatesEntity)
+            // If the task is non-recurring, insert it into TaskDatesEntity
+            if (task.isRecurring != true) {
+                val nonRecurringTaskEntity = NonRecurringTaskEntity(
+                    taskId = taskId.toInt(),
+                    taskDate = task.startDate ?: LocalDate.now(),
+                )
+                insertInNonRecurringTaskEntity(nonRecurringTaskEntity)
+                Log.d(tag, "Inserted non-recurring task for date: ${nonRecurringTaskEntity.taskDate}")
+            }
 
-            // Return the taskId as confirmation of success
             taskId
         } catch (e: SQLiteConstraintException) {
-            Log.e("AppDao", "Task insertion failed: ${e.message}")
+            Log.e(tag, "Task insertion failed: ${e.message}")
             -1L  // Return -1 to indicate failure
         }
     }
+
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertTask(task: TaskEntity): Long
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
-    suspend fun insertTaskDate(taskDatesEntity: TaskDatesEntity)
+    suspend fun insertInNonRecurringTaskEntity(nonRecurringTaskEntity: NonRecurringTaskEntity)
 
 
     @Query("DELETE FROM ${DbConstants.TASKS_TABLE}")
     suspend fun deleteAllTasks() // Deletes all tasks from the tasks table
 
-    @Query("UPDATE ${DbConstants.TASKS_TABLE} SET position = position + 1 WHERE position >= :position")
-    suspend fun incrementPositionsBelow(position: Int)
 
-    // Region: Methods related to task completion
+    // ------------------ Methods related to task completion ------------------
 
     // Insert or update completion status
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -160,4 +138,5 @@ interface AppDao {
 
     @Query("SELECT * FROM ${DbConstants.TASK_COMPLETIONS_TABLE} WHERE taskId = :taskId")
     suspend fun getTaskCompletionsByTaskId(taskId: Int): List<TaskCompletionEntity>
+
 }

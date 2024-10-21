@@ -25,9 +25,8 @@ fun RoutineTurboATheme(
     val customColorsPalette = if (isDarkTheme) DarkCustomColorsPalette
         else LightCustomColorsPalette
 
-    // here is the important point, where you will expose custom objects
     CompositionLocalProvider(
-        LocalCustomColorsPalette provides customColorsPalette // our custom palette
+        LocalCustomColors provides customColorsPalette //  custom palette
     ) {
         MaterialTheme(
             colorScheme = colorScheme, // the MaterialTheme still uses the "normal" palette

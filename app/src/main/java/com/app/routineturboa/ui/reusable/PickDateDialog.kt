@@ -24,69 +24,71 @@ import java.time.ZoneOffset
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PickDateDialog(
-    isShowPickDateDialog: MutableState<Boolean>,
-    selectedDate: LocalDate,
-    onDateChange: (LocalDate) -> Unit
+    selectedDate: LocalDate?,
+    onDateChange: (LocalDate) -> Unit,
+    onCancel: () -> Unit,
 ) {
     val tag = "PickDateDialog"
 
-    if (isShowPickDateDialog.value) {
-        Log.d(tag, "PickDateDialog starts...")
-        val initialDateMillis = selectedDate.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
-        val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = initialDateMillis
+    Log.d(tag, "PickDateDialog starts...")
+
+    val initialDateMillis = selectedDate?.atStartOfDay(ZoneOffset.UTC)?.toInstant()
+        ?.toEpochMilli()
+
+    val datePickerState = rememberDatePickerState(
+        initialSelectedDateMillis = initialDateMillis
+    )
+
+    DatePickerDialog(
+        onDismissRequest = onCancel,
+        confirmButton = {
+            ElevatedButton(
+                onClick = {
+                    Log.d(tag, "clicked on DatePicker")
+                    val millis = datePickerState.selectedDateMillis
+                    if (millis != null) {
+                        Log.d(tag, "$millis")
+                        val datePicked = Instant.ofEpochMilli(millis)
+                            .atZone(ZoneId.systemDefault())
+                            .toLocalDate()
+                        onDateChange(datePicked)
+                    } else {
+                        Log.d(tag, "null.")
+                    }
+                },
+                modifier = Modifier
+                    .padding(end = 8.dp)
+                    .size(width = 100.dp, height = 48.dp),
+                elevation = ButtonDefaults.elevatedButtonElevation(
+                    defaultElevation = 6.dp,
+                    pressedElevation = 8.dp,
+                    disabledElevation = 0.dp
+                )
+            ) {
+                Text("OK",
+                    color = MaterialTheme.colorScheme.onPrimary
+                )
+            }
+        },
+        dismissButton = {
+            ElevatedButton(onClick = onCancel,
+                modifier = Modifier
+                    .padding(end = 8.dp)
+                    .size(width = 100.dp, height = 48.dp)) {
+                Text("Cancel", color = MaterialTheme.colorScheme.onSecondary.copy(alpha = 0.5f))
+            }
+        },
+        properties = DialogProperties(
+            dismissOnClickOutside = true,
+            dismissOnBackPress = true,
+            usePlatformDefaultWidth = false
+        ),
+    ) {
+        DatePicker(
+            state = datePickerState,
         )
-        DatePickerDialog(
-            onDismissRequest = { isShowPickDateDialog.value = false },
-            confirmButton = {
-                ElevatedButton(
-                    onClick = {
-                        Log.d(tag, "clicked on DatePicker")
-                        val millis = datePickerState.selectedDateMillis
-                        if (millis != null) {
-                            Log.d(tag, "$millis")
-                            val datePicked = Instant.ofEpochMilli(millis)
-                                .atZone(ZoneId.systemDefault())
-                                .toLocalDate()
-                            onDateChange(datePicked)
-                        } else {
-                            Log.d(tag, "null.")
-                        }
-                        isShowPickDateDialog.value = false
-                    },
-                    modifier = Modifier
-                        .padding(end = 8.dp)
-                        .size(width = 100.dp, height = 48.dp),
-                    elevation = ButtonDefaults.elevatedButtonElevation(
-                        defaultElevation = 6.dp,
-                        pressedElevation = 8.dp,
-                        disabledElevation = 0.dp
-                    )
-                ) {
-                    Text("OK",
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-                }
-            },
-            dismissButton = {
-                ElevatedButton(onClick = { isShowPickDateDialog.value = false },
-                    modifier = Modifier
-                        .padding(end = 8.dp)
-                        .size(width = 100.dp, height = 48.dp)) {
-                    Text("Cancel", color = MaterialTheme.colorScheme.onSecondary.copy(alpha = 0.5f))
-                }
-            },
-            properties = DialogProperties(
-                dismissOnClickOutside = true,
-                dismissOnBackPress = true,
-                usePlatformDefaultWidth = false
-            ),
-        ) {
-            DatePicker(
-                state = datePickerState,
-            )
-        }
     }
+
 }
 
 

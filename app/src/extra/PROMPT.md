@@ -48,8 +48,8 @@ Here's the organization of files and modules in Android version:
 |   |   |   |-- AppData.kt
 |   |   |   |-- TaskCompletionEntity.kt
 |   |   |   |-- TaskCompletionHistory.kt
-|   |   |   |-- TaskDateEntity.kt
-|   |   |   |-- TaskEntity.kt
+|   |   |   |-- TaskDatesEntity.kt // for non-recurring tasks
+|   |   |   |-- TaskEntity.kt  // Now contains creation date, recurring info
 |   |-- reminders/
 |   |   |-- NotificationHelper.kt
 |   |   |-- ReminderManager.kt
@@ -63,42 +63,43 @@ Here's the organization of files and modules in Android version:
 |   |   |   |-- MainScreen.kt
 |   |   |   |-- TasksLazyColumn.kt
 |   |   |-- models/
-|   |   |   |-- TaskEventsToFunctions.kt
 |   |   |   |-- TaskFormData.kt
+|   |   |   |-- TaskOperationEvents.kt
 |   |   |   |-- TasksUiState.kt
+|   |   |   |-- TaskUiEvents.kt
 |   |   |-- reusable/
 |   |   |   |-- AlpabhetIcon.kt
 |   |   |   |-- AnimatedAlpha.kt
 |   |   |   |-- CircularProgressIndicator.kt
 |   |   |   |-- CustomTextField.kt
 |   |   |   |-- DottedLine.kt
+|   |   |   |-- PickDateDialog.kt
 |   |   |   |-- SignInAndSyncButtons.kt
 |   |   |   |-- TaskCardPlaceholder.kt
 |   |   |   |-- dropdowns/
 |   |   |   |   |-- SelectTaskTypeDropdown.kt
 |   |   |   |   |-- ShowMainTasksDropdown.kt
 |   |   |-- scaffold/
-|   |   |   |-- BottomNavBar.kt
-|   |   |   |-- MainDrawer.kt
-|   |   |   |-- MainTopBar.kt
+|   |   |   |-- AppBottomBar.kt
+|   |   |   |-- AppDrawer.kt
+|   |   |   |-- AppTopBar.kt
 |   |   |-- tasks/
 |   |   |   |-- ParentItemCard.kt
 |   |   |   |-- childItems/
-|   |   |   |   |-- ExtraTaskDetails.kt
 |   |   |   |   |-- HourColumn.kt
 |   |   |   |   |-- InLineQuickEdit.kt
-|   |   |   |   |-- MainTaskDetails.kt
+|   |   |   |   |-- TaskName.kt
+|   |   |   |   |-- TaskTimings.kt
 |   |   |   |-- controls/
 |   |   |   |   |-- OptionsMenu.kt
 |   |   |   |-- dialogs/
 |   |   |   |   |-- AddTaskDialog.kt
 |   |   |   |   |-- FullEditDialog.kt
-|   |   |   |   |-- PickDateDialog.kt
 |   |   |   |   |-- TaskCompletionDialog.kt
 |   |   |   |   |-- TaskDetailsDialog.kt
 |   |   |-- theme/
 |   |   |   |-- Color.kt
-|   |   |   |-- CustomColorsPallete.kt
+|   |   |   |-- LocalCustomColors.kt
 |   |   |   |-- Theme.kt
 |   |   |   |-- Type.kt
 |   |-- utils/
@@ -112,6 +113,7 @@ Here's the organization of files and modules in Android version:
 |   |   |-- TimeUtils.kt
 |   |-- viewmodel/
 |   |   |-- TasksViewModel.kt
+
 
 
 

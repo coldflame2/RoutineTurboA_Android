@@ -22,7 +22,7 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun CustomTextField(
     modifier: Modifier = Modifier,
-    value: String,
+    value: String?,
     onValueChange: (String) -> Unit,
     label: String?,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
@@ -43,39 +43,41 @@ fun CustomTextField(
         else MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
 
     if (label != null) {
-        TextField(
-            value = value,
-            onValueChange = onValueChange,
-            label = if (label.isNotEmpty()) {
-                { Text(label) }
-            } else {
-                {}
-            },
+        if (value != null) {
+            TextField(
+                value = value,
+                onValueChange = onValueChange,
+                label = if (label.isNotEmpty()) {
+                    { Text(label) }
+                } else {
+                    {}
+                },
 
-            placeholder = { Text(placeholder) },
-            leadingIcon = when {
-                leadingIcon != null -> { { Icon(leadingIcon, contentDescription = null) } }
-                leadingIconResId != null -> { { Icon(painterResource(id = leadingIconResId), contentDescription = null) } }
-                else -> null
-            },
-            enabled = enabled,
-            modifier = modifier
-                .shadow(
-                    elevation = if (isFocused) 8.dp else 2.dp,
-                    shape = RoundedCornerShape(2.dp)
-                )
-                .onFocusChanged { focusState ->
-                    isFocused = focusState.isFocused
-                }
-                .then(modifier),
-            shape = RoundedCornerShape(5.dp),
-            colors = TextFieldDefaults.colors(
-                focusedContainerColor = backgroundColor,
-                unfocusedContainerColor = backgroundColor,
-                disabledContainerColor = MaterialTheme.colorScheme.surface,
-            ),
-            singleLine = singleLine,
-            keyboardOptions = keyboardOptions
-        )
+                placeholder = { Text(placeholder) },
+                leadingIcon = when {
+                    leadingIcon != null -> { { Icon(leadingIcon, contentDescription = null) } }
+                    leadingIconResId != null -> { { Icon(painterResource(id = leadingIconResId), contentDescription = null) } }
+                    else -> null
+                },
+                enabled = enabled,
+                modifier = modifier
+                    .shadow(
+                        elevation = if (isFocused) 8.dp else 2.dp,
+                        shape = RoundedCornerShape(2.dp)
+                    )
+                    .onFocusChanged { focusState ->
+                        isFocused = focusState.isFocused
+                    }
+                    .then(modifier),
+                shape = RoundedCornerShape(5.dp),
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = backgroundColor,
+                    unfocusedContainerColor = backgroundColor,
+                    disabledContainerColor = MaterialTheme.colorScheme.surface,
+                ),
+                singleLine = singleLine,
+                keyboardOptions = keyboardOptions
+            )
+        }
     }
 }

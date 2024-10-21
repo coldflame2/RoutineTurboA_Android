@@ -2,6 +2,7 @@
 |   |-- MainActivity.kt
 |   |-- RoutineTurboApp.kt
 |   |-- data/
+|   |   |-- DbConstants.kt
 |   |   |-- onedrive/
 |   |   |   |-- downloadFromOneDrive.kt
 |   |   |   |-- MsalApp.kt
@@ -14,7 +15,7 @@
 |   |   |   |-- AppData.kt
 |   |   |   |-- TaskCompletionEntity.kt
 |   |   |   |-- TaskCompletionHistory.kt
-|   |   |   |-- TaskDateEntity.kt
+|   |   |   |-- TaskDatesEntity.kt
 |   |   |   |-- TaskEntity.kt
 |   |-- reminders/
 |   |   |-- NotificationHelper.kt
@@ -29,42 +30,43 @@
 |   |   |   |-- MainScreen.kt
 |   |   |   |-- TasksLazyColumn.kt
 |   |   |-- models/
-|   |   |   |-- TaskEventsToFunctions.kt
 |   |   |   |-- TaskFormData.kt
+|   |   |   |-- TaskOperationEvents.kt
 |   |   |   |-- TasksUiState.kt
+|   |   |   |-- TaskUiEvents.kt
 |   |   |-- reusable/
 |   |   |   |-- AlpabhetIcon.kt
 |   |   |   |-- AnimatedAlpha.kt
 |   |   |   |-- CircularProgressIndicator.kt
 |   |   |   |-- CustomTextField.kt
 |   |   |   |-- DottedLine.kt
+|   |   |   |-- PickDateDialog.kt
 |   |   |   |-- SignInAndSyncButtons.kt
 |   |   |   |-- TaskCardPlaceholder.kt
 |   |   |   |-- dropdowns/
 |   |   |   |   |-- SelectTaskTypeDropdown.kt
 |   |   |   |   |-- ShowMainTasksDropdown.kt
 |   |   |-- scaffold/
-|   |   |   |-- BottomNavBar.kt
-|   |   |   |-- MainDrawer.kt
-|   |   |   |-- MainTopBar.kt
+|   |   |   |-- AppBottomBar.kt
+|   |   |   |-- AppDrawer.kt
+|   |   |   |-- AppTopBar.kt
 |   |   |-- tasks/
 |   |   |   |-- ParentItemCard.kt
 |   |   |   |-- childItems/
-|   |   |   |   |-- ExtraTaskDetails.kt
 |   |   |   |   |-- HourColumn.kt
 |   |   |   |   |-- InLineQuickEdit.kt
-|   |   |   |   |-- MainTaskDetails.kt
+|   |   |   |   |-- TaskName.kt
+|   |   |   |   |-- TaskTimings.kt
 |   |   |   |-- controls/
 |   |   |   |   |-- OptionsMenu.kt
 |   |   |   |-- dialogs/
 |   |   |   |   |-- AddTaskDialog.kt
 |   |   |   |   |-- FullEditDialog.kt
-|   |   |   |   |-- PickDateDialog.kt
 |   |   |   |   |-- TaskCompletionDialog.kt
 |   |   |   |   |-- TaskDetailsDialog.kt
 |   |   |-- theme/
 |   |   |   |-- Color.kt
-|   |   |   |-- CustomColorsPallete.kt
+|   |   |   |-- LocalCustomColors.kt
 |   |   |   |-- Theme.kt
 |   |   |   |-- Type.kt
 |   |-- utils/

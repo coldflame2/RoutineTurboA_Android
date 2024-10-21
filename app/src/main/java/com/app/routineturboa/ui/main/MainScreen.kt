@@ -13,21 +13,18 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import com.app.routineturboa.RoutineTurboApp
+import com.app.routineturboa.shared.EventsHandler
 
 import com.app.routineturboa.viewmodel.TasksViewModel
-import com.app.routineturboa.ui.models.TaskEventsToFunctions
 
 // Composable
-import com.app.routineturboa.ui.scaffold.MainBottomBar
-import com.app.routineturboa.ui.scaffold.MainDrawer
-import com.app.routineturboa.ui.scaffold.MainTopBar
+import com.app.routineturboa.ui.scaffold.AppBottomBar
+import com.app.routineturboa.ui.scaffold.AppDrawer
+import com.app.routineturboa.ui.scaffold.AppTopBar
 import com.app.routineturboa.ui.reusable.PickDateDialog
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 @RequiresApi(Build.VERSION_CODES.S)
 @Composable
@@ -36,55 +33,28 @@ fun MainScreen(
     showExactAlarmDialog: MutableState<Boolean>
 ) {
     val tag = "MainScreen"
-    Log.d(tag, "MainScreen starts...")
-
     val context = LocalContext.current
-
-    // Access ReminderManager from the Application context via RoutineTurboApp
-    val app = context.applicationContext as RoutineTurboApp
-    val reminderManager = app.reminderManager
-    val tasksByDate by tasksViewModel.tasksByDate.collectAsState()
-    val tasksCompleted by tasksViewModel.taskCompletions.collectAsState()
-    val tasksUiState by tasksViewModel.tasksUiState.collectAsState()
-
-    val selectedDate = tasksUiState.selectedDate
-
-    val taskEventsToFunctions = TaskEventsToFunctions(
-        onAnyTaskClick = tasksViewModel::onAnyTaskClick,
-        onAnyTaskLongPress = tasksViewModel::onAnyTaskLongPress,
-
-        onShowAddNewClick = tasksViewModel::onAddNewClick,
-        onShowQuickEditClick = tasksViewModel::onQuickEditClick,
-        onShowFullEditClick = tasksViewModel::onFullEditClick,
-        onShowTaskDetails = tasksViewModel::onShowTaskDetails,
-        onShowCompletedTasks = tasksViewModel::onShowCompletedTasks,
-
-        onCancelClick = tasksViewModel::onCancelEdit,
-
-        onNewTaskSaveClick = tasksViewModel::onConfirmNewTaskClick,
-        onConfirmEdit = tasksViewModel::onConfirmEdit,
-        onDeleteClick = tasksViewModel::onDeleteTask,
-
-        onDateChange = tasksViewModel::onDateChange
-    )
 
     val drawerState = rememberDrawerState(DrawerValue.Closed)
 
+    val app = remember { context.applicationContext as RoutineTurboApp }
+    val reminderManager = app.reminderManager
 
-    // State to show/hide the DatePickerDialog
-    val isShowPickDateDialog = remember { mutableStateOf(false) }
+    val tasksByDate by tasksViewModel.tasksByDate.collectAsState()
+    val tasksCompleted by tasksViewModel.taskCompletions.collectAsState()
 
-    // Formatting the current date for display in the TopAppBar title
-    val dateFormatter = DateTimeFormatter.ofPattern("MMMM d, yyyy", Locale.getDefault())
-    val currentDate = selectedDate.format(dateFormatter)
+    val uiStates by tasksViewModel.uiStates.collectAsState()
 
-    // trigger exact alarm permission check
+    val eventsHandler = remember { EventsHandler(tasksViewModel) }
+    val stateChangeEventsHandling = eventsHandler.stateChangeEventsHandling()
+    val dataOperationEventsHandling = eventsHandler.dataOperationEventsHandling()
+
+    val tasksBasedOnState by tasksViewModel.tasksBasedOnState.collectAsState()
+
+    val selectedDate by tasksViewModel.selectedDate.collectAsState()
+
     LaunchedEffect(Unit) {
-        // Check if exact alarm permission is required
-        if (!reminderManager.canScheduleExactAlarms()) {
-            // Trigger the exact alarm permission dialog
-            showExactAlarmDialog.value = true
-        }
+        Log.d(tag, "MainScreen starts...")
     }
 
     ModalNavigationDrawer(
@@ -92,37 +62,47 @@ fun MainScreen(
         scrimColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.2f),
         drawerState = drawerState,
         drawerContent = {
-            MainDrawer(
-                drawerState,
-                tasksViewModel,
-                reminderManager,
-                showExactAlarmDialog,
-                taskEventsToFunctions.onShowCompletedTasks
+            AppDrawer(
+                drawerState = drawerState,
+                tasksViewModel= tasksViewModel,
+                reminderManager = reminderManager,
+                showExactAlarmDialog = showExactAlarmDialog,
+                clickedTask = tasksBasedOnState.clickedTask,
+                selectedDate = selectedDate,
+                onShowCompletedTasks = stateChangeEventsHandling.onShowCompletedTasksClick,
+                uiStates = uiStates
             )
         }
     ) {
         Scaffold(
             topBar = {
-                MainTopBar(
+                AppTopBar(
                     drawerState = drawerState,
                     selectedDate = selectedDate,
-                    onDatePickerClick = { isShowPickDateDialog.value = true },
+                    onDatePickerClick =  stateChangeEventsHandling.onShowDatePickerClick,
                 )
             },
-            bottomBar = { MainBottomBar(taskEventsToFunctions.onShowAddNewClick) }
+            bottomBar = { AppBottomBar(stateChangeEventsHandling.onShowAddNewTaskClick) }
         ) { paddingValues ->  // These paddingValues are applied along the edges inside a box.
 
             // Show DatePickerDialog when showDatePickerDialog is true
-            if (isShowPickDateDialog.value) {
-                PickDateDialog(isShowPickDateDialog, selectedDate, taskEventsToFunctions.onDateChange)
+            if (uiStates.isShowingDatePicker) {
+                PickDateDialog(
+                    selectedDate,
+                    stateChangeEventsHandling.onDateChangeClick,
+                    stateChangeEventsHandling.onCancelClick
+                )
             }
 
             TasksLazyColumn(
                 paddingValues = paddingValues,
                 tasks = tasksByDate,
                 tasksCompleted = tasksCompleted,
-                tasksUiState = tasksUiState,
-                taskEventsToFunctions = taskEventsToFunctions
+                selectedDate = selectedDate,
+                tasksBasedOnState = tasksBasedOnState,
+                uiStates = uiStates,
+                stateChangeEvents = stateChangeEventsHandling,
+                dataOperationEvents = dataOperationEventsHandling
             )
         }
     }

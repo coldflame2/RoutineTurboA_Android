@@ -11,6 +11,8 @@ import com.app.routineturboa.data.repository.AppRepository
 import com.app.routineturboa.reminders.receivers.ReminderReceiver
 import kotlinx.coroutines.flow.first
 import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
@@ -34,11 +36,11 @@ class ReminderManager @Inject constructor(
      * @return True if all reminders are scheduled successfully, false if permission is missing.
      */
     @RequiresApi(Build.VERSION_CODES.S)
-    suspend fun scheduleAllReminders(): Boolean {
+    suspend fun scheduleAllReminders(selectedDate: LocalDate): Boolean {
         Log.d(TAG, "Scheduling reminders for all tasks...")
 
-        val tasks = appRepository.tasks.first()
-        Log.d(TAG, "Number of tasks to schedule: ${tasks.size}")
+        val tasks = appRepository.getTasksForDate(selectedDate).first()
+        Log.d(TAG, "Number of tasks to schedule: ${tasks.size} for date: $selectedDate")
 
         var permissionMissing = false
 
@@ -46,8 +48,11 @@ class ReminderManager @Inject constructor(
             // Simulate a delay to test timing behavior
             kotlinx.coroutines.delay(100) // Delay 500ms per task for testing
 
-            val reminderTime = task.reminder
+            val taskReminder = task.reminder
+
             try {
+                val reminderTime = LocalDateTime.of(selectedDate, taskReminder)
+
                 val reminderTimeMillis = reminderTime
                     .atZone(ZoneId.systemDefault())
                     .toInstant()
@@ -74,7 +79,7 @@ class ReminderManager @Inject constructor(
                     Log.d(TAG, "Reminder for task ${task.id} canceled (past time: $reminderTimeFormatted, current time: $currentTimeFormatted).")
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to parse reminder time for task ${task.id}: $reminderTime", e)
+                Log.e(TAG, "Failed to parse reminder time for task ${task.id}: $taskReminder", e)
             }
         }
         return !permissionMissing
@@ -103,8 +108,7 @@ class ReminderManager @Inject constructor(
 
         // If the PendingIntent exists, we don't need to reschedule the alarm
         if (existingIntent != null) {
-            Log.d(TAG, "Alarm already scheduled for task $taskId. Skipping rescheduling.")
-            return true
+            Log.d(TAG, "Alarm already scheduled for task $taskId. Rescheduling.")
         }
 
         // Create an intent that will be broadcast when the alarm triggers

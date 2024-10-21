@@ -16,14 +16,14 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import java.time.LocalDateTime
+import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
 
 @Composable
-fun TaskTimings (
-    startTime: LocalDateTime,
-    endTime: LocalDateTime,
+fun OptionalTaskTimings (
+    startTime: LocalTime?,
+    endTime: LocalTime?,
     duration: Int,
 ) {
     Row(
@@ -41,13 +41,13 @@ fun TaskTimings (
                 append("")
 
                 withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
-                    append(startTime.format(DateTimeFormatter.ofPattern("hh:mm a")))
+                    append(startTime?.format(DateTimeFormatter.ofPattern("hh:mm a")) ?: "--")
                 }
 
                 append(" to ")
 
                 withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
-                    append(endTime.format(DateTimeFormatter.ofPattern("hh:mm a")))
+                    append(endTime?.format(DateTimeFormatter.ofPattern("hh:mm a"))) ?: "--"
                 }
 
                 append(" | ")

@@ -32,6 +32,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,18 +48,20 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.app.routineturboa.data.room.TaskEntity
-import com.app.routineturboa.ui.models.TaskEventsToFunctions
-import com.app.routineturboa.ui.tasks.childItems.TaskTimings
+import com.app.routineturboa.shared.DataOperationEvents
+import com.app.routineturboa.shared.StateChangeEvents
+import com.app.routineturboa.shared.TasksBasedOnState
+import com.app.routineturboa.shared.UiStates
+import com.app.routineturboa.ui.tasks.childItems.OptionalTaskTimings
 import com.app.routineturboa.ui.tasks.childItems.HourColumn
-import com.app.routineturboa.ui.tasks.childItems.TaskName
 import com.app.routineturboa.ui.tasks.childItems.InLineQuickEdit
 import com.app.routineturboa.ui.tasks.controls.OptionsMenu
 import com.app.routineturboa.ui.tasks.dialogs.TaskDetailsDialog
-import com.app.routineturboa.ui.theme.LocalCustomColorsPalette
-import com.app.routineturboa.ui.models.TasksUiState
 import com.app.routineturboa.ui.reusable.AlphabetIcon
+import com.app.routineturboa.ui.theme.LocalCustomColors
 import com.app.routineturboa.utils.TaskTypes
-import java.time.LocalDateTime
+import kotlinx.coroutines.launch
+import java.time.LocalTime
 
 @RequiresApi(Build.VERSION_CODES.S)
 @Composable
@@ -66,49 +69,61 @@ import java.time.LocalDateTime
 fun ParentTaskItem(
     task: TaskEntity,
     mainTasks: List<TaskEntity>,
-    tasksUiState: TasksUiState,
-    taskEventsToFunctions: TaskEventsToFunctions,
+    tasksBasedOnState: TasksBasedOnState,
+    uiStates: UiStates,
+    stateChangeEvents: StateChangeEvents,
+    dataOperationEvents: DataOperationEvents,
 ) {
     val density = LocalDensity.current
+    val coroutineScope = rememberCoroutineScope()
     var isShowContextMenu by remember { mutableStateOf(false) }
     var longPressOffset by remember { mutableStateOf(Offset.Zero) }
 
     val isTaskWithinCurrentTimeRange = remember { mutableStateOf(false) }  // Set in Launched Effect
 
-    val isThisTaskClicked = (tasksUiState.clickedTaskId == task.id)
-    val isThisTaskQuickEditing = tasksUiState.inEditTaskId == task.id
-    val isThisTaskFullEditing = tasksUiState.isFullEditing && tasksUiState.inEditTaskId == task.id
-    val isThisTaskShowDetails = (tasksUiState.isShowingDetails) && (tasksUiState.showingDetailsTaskId == task.id)
+    val isThisTaskClicked = (tasksBasedOnState.clickedTask?.id == task.id)
+    val isThisTaskQuickEditing = (tasksBasedOnState.inEditTask?.id == task.id)
+    val isThisTaskFullEditing = uiStates.isFullEditing && (tasksBasedOnState.inEditTask?.id == task.id)
+    val isThisTaskShowDetails = (uiStates.isShowingDetails) && (tasksBasedOnState.showingDetailsTask?.id == task.id)
 
-    val isAnotherTaskEditing = tasksUiState.isQuickEditing && tasksUiState.inEditTaskId != task.id
+    val isAnotherTaskEditing = uiStates.isQuickEditing && (tasksBasedOnState.inEditTask?.id != task.id)
 
     var taskTypeFirstLetter = ' ' // Initialize Empty
-    if (task.type.isNotEmpty()) { taskTypeFirstLetter = task.type[0] }  // Get first letter of task type
+    if (task.type?.isNotEmpty() == true) {
+        taskTypeFirstLetter = task.type[0] // Get first letter of task type
+    }
+
+    val customColors = LocalCustomColors.current
 
     val cardBgColor = when {
-        isAnotherTaskEditing -> LocalCustomColorsPalette.current.gray400.copy(alpha = 0.1f)
-        task.type == TaskTypes.MAIN -> LocalCustomColorsPalette.current.mainTaskColor.copy(alpha = 0.5f)
-        task.type == TaskTypes.BASICS -> LocalCustomColorsPalette.current.basicsTaskColor.copy(alpha = 0.5f)
-        task.type == TaskTypes.HELPER -> LocalCustomColorsPalette.current.helperTaskColor.copy(alpha = 0.5f)
-        task.type == TaskTypes.QUICK -> LocalCustomColorsPalette.current.quickTaskColor.copy(alpha = 0.5f)
+        isAnotherTaskEditing -> customColors.gray100
+        task.type == TaskTypes.MAIN -> customColors.mainTaskColor
+        task.type == TaskTypes.BASICS -> customColors.basicsTaskColor
+        task.type == TaskTypes.HELPER -> customColors.helperTaskColor
+        task.type == TaskTypes.QUICK -> customColors.quickTaskColor
         else -> MaterialTheme.colorScheme.surface.copy(alpha = 1f)
     }
 
     val cardHeight: Dp by animateDpAsState(
-        targetValue = if (isThisTaskQuickEditing) { 120.dp } // inlineQuick Editing
-        else {  // regular task view
+        targetValue = if (isThisTaskQuickEditing) {
+            120.dp // Inline Quick Editing
+        } else {
+            // Regular task view
             when (task.type) {
-                TaskTypes.MAIN, TaskTypes.HELPER, TaskTypes.BASICS -> (1.dp * task.duration).coerceAtLeast(55.dp)
+                TaskTypes.MAIN, TaskTypes.HELPER, TaskTypes.BASICS -> {
+                    task.duration?.let { (1.dp * it).coerceAtLeast(55.dp) } ?: 55.dp
+                }
                 TaskTypes.QUICK -> 40.dp
                 else -> 55.dp
             }
         },
         animationSpec = spring(
-            stiffness = Spring.StiffnessMedium,  // slower or faster animations
-            dampingRatio = Spring.DampingRatioLowBouncy  // Control how bouncy or smooth it is
+            stiffness = Spring.StiffnessMedium, // Slower or faster animations
+            dampingRatio = Spring.DampingRatioLowBouncy // Control how bouncy or smooth it is
         ),
         label = "card height animation",
     )
+
 
     val cardBorder = when {
         isTaskWithinCurrentTimeRange.value -> null
@@ -127,10 +142,15 @@ fun ParentTaskItem(
         else -> PaddingValues(0.dp, 0.dp, 0.dp, 0.dp)
     }
 
-    LaunchedEffect (Unit) {
-        val currentTime = LocalDateTime.now()
-        isTaskWithinCurrentTimeRange.value = (task.startTime <= currentTime && currentTime < task.endTime)
+    LaunchedEffect(Unit) {
+        val currentTime = LocalTime.now()
+        isTaskWithinCurrentTimeRange.value = task.startTime?.let { start ->
+            task.endTime?.let { end ->
+                start <= currentTime && currentTime < end
+            }
+        } ?: false // Default to false if either startTime or endTime is null
     }
+
 
     Box(
         modifier = Modifier
@@ -140,9 +160,9 @@ fun ParentTaskItem(
                     onLongPress = { offset ->
                         longPressOffset = offset
                         isShowContextMenu = true
-                        taskEventsToFunctions.onAnyTaskLongPress(task.id)
+                        stateChangeEvents.onTaskLongPress(task)
                     },
-                    onTap = { taskEventsToFunctions.onAnyTaskClick(task.id) }
+                    onTap = { stateChangeEvents.onTaskClick(task) }
                 )
             }
     ) {
@@ -167,11 +187,17 @@ fun ParentTaskItem(
                     InLineQuickEdit(
                         mainTasks = mainTasks,
                         task = task,
-                        onCancel = taskEventsToFunctions.onCancelClick,
                         isFullEditing = isThisTaskFullEditing,
-                        onFullEditClick = {id->taskEventsToFunctions.onShowFullEditClick(id)},
-                        onConfirmEdit = {id, editedFormData->
-                            taskEventsToFunctions.onConfirmEdit(id, editedFormData)
+                        onCancelClick = stateChangeEvents.onCancelClick,
+                        onShowFullEditClick = { id ->
+                            coroutineScope.launch {
+                                stateChangeEvents.onShowFullEditClick(task)
+                            }
+                        },
+                        onUpdateTaskConfirmClick = { id, editedFormData->
+                            coroutineScope.launch {
+                                dataOperationEvents.onUpdateTaskConfirmClick(task, editedFormData)
+                            }
                         }
                     )
                 }
@@ -179,7 +205,7 @@ fun ParentTaskItem(
                 else if (isThisTaskShowDetails) {
                     TaskDetailsDialog(
                         task = task,
-                        onDismiss = taskEventsToFunctions.onCancelClick
+                        onDismiss = stateChangeEvents.onCancelClick
                     )
                 }
 
@@ -223,7 +249,7 @@ fun ParentTaskItem(
 
                             // Show Task Details Icon
                             IconButton(
-                                onClick = { taskEventsToFunctions.onShowTaskDetails(task.id) },
+                                onClick = { stateChangeEvents.onShowTaskDetailsClick(task) },
                                 modifier = Modifier
                                     .size(18.dp)
                             ) {
@@ -231,15 +257,19 @@ fun ParentTaskItem(
                                     imageVector = Icons.AutoMirrored.Sharp.LibraryBooks,
                                     contentDescription = "Show Task Details",
                                     tint = if (isThisTaskClicked) MaterialTheme.colorScheme.surfaceTint.copy(alpha = 1f)
-                                    else MaterialTheme.colorScheme.surfaceTint.copy(alpha = 0.4f)
+                                    else MaterialTheme.colorScheme.surfaceTint.copy(alpha = 1f)
                                 )
                             }
 
                             Spacer(modifier = Modifier.width(15.dp))
 
-                            // Edit Task Icon
+                            // Quick Edit Task Icon
                             IconButton(
-                                onClick = { taskEventsToFunctions.onShowQuickEditClick(task.id) },
+                                onClick = {
+                                    coroutineScope.launch {
+                                        stateChangeEvents.onShowQuickEditClick(task)
+                                    }
+                                },
                                 modifier = Modifier
                                     .alpha(0.7f)
                                     .size(16.dp)
@@ -247,8 +277,8 @@ fun ParentTaskItem(
                                 Icon(
                                     imageVector = Icons.Default.Edit,
                                     contentDescription = "Edit Task",
-                                    tint = if (isThisTaskClicked) MaterialTheme.colorScheme.surfaceTint.copy(alpha = 1f)
-                                    else MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.4f)
+                                    tint = if (isThisTaskClicked) customColors.editIconColor
+                                    else customColors.gray300.copy(alpha = 0.8f)
                                 )
                             }
                         }
@@ -258,28 +288,24 @@ fun ParentTaskItem(
                          */
                         if (cardHeight > 60.dp) {
                             Spacer(modifier = Modifier.height(10.dp))
-                            TaskTimings(
+                            OptionalTaskTimings(
                                 startTime = task.startTime,
                                 endTime = task.endTime,
-                                duration = task.duration,
+                                duration = task.duration ?: 0,
                             )
                         }
                     }
-
-
-
-
-
-
                 }
-
             }
+            // Add an underline/bottom border if this task is clicked
+
         }
+
 
         // This has to be inside the parent box for dropdown menu to position correctly
         if (isShowContextMenu) {
             OptionsMenu(
-                onViewClick = { taskEventsToFunctions.onShowTaskDetails},
+                onViewClick = { stateChangeEvents.onShowTaskDetailsClick},
                 onDismissRequest = { isShowContextMenu = false },
                 offset = DpOffset(
                     x = with(density) { longPressOffset.x.toDp() + 10.dp },
@@ -287,14 +313,24 @@ fun ParentTaskItem(
                 ),
                 onEditClick = {
                     isShowContextMenu = false
-                    taskEventsToFunctions.onShowFullEditClick
+                    stateChangeEvents.onShowFullEditClick
                 },
                 onDeleteClick = {
                     isShowContextMenu = false
-                    taskEventsToFunctions.onDeleteClick
-
+                    dataOperationEvents.onDeleteTaskConfirmClick
                 }
             )
         }
     }
+
+    Spacer(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(3.dp) // Thickness of the line
+            .padding(horizontal = 0.dp) // Optional padding for the line
+            .background(
+                if (!isThisTaskClicked) Color.Transparent
+                else MaterialTheme.colorScheme.primary
+            ) // Color of the line
+    )
 }

@@ -22,9 +22,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.automirrored.outlined.MenuOpen
-import androidx.compose.material.icons.automirrored.outlined.ReadMore
+import androidx.compose.material.icons.automirrored.filled.MenuOpen
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddTask
 import androidx.compose.material.icons.filled.Alarm
@@ -53,20 +51,27 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.app.routineturboa.R
+import com.app.routineturboa.data.room.TaskEntity
 import com.app.routineturboa.reminders.ReminderManager
+import com.app.routineturboa.shared.UiStates
 import com.app.routineturboa.ui.reusable.SignInAndSyncButtons
 import com.app.routineturboa.ui.reusable.SmoothCircularProgressIndicator
 import com.app.routineturboa.viewmodel.TasksViewModel
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 
 @RequiresApi(Build.VERSION_CODES.S)
 @Composable
-fun MainDrawer(
+fun AppDrawer(
     drawerState: DrawerState,
     tasksViewModel: TasksViewModel,
     reminderManager: ReminderManager,
     showExactAlarmDialog: MutableState<Boolean>,
-    onShowCompletedTasks: () -> Unit
+    onShowCompletedTasks: () -> Unit,
+    uiStates: UiStates,
+    clickedTask: TaskEntity?,
+    selectedDate: LocalDate
 ) {
     val tag = "MainDrawer"
     val context = LocalContext.current
@@ -78,9 +83,7 @@ fun MainDrawer(
     val screenHeight = configuration.screenHeightDp.dp
 
     ModalDrawerSheet(
-        drawerContainerColor = MaterialTheme.colorScheme.surface,
-        drawerContentColor = MaterialTheme.colorScheme.onSurface,
-        drawerTonalElevation = 1.dp,
+        drawerTonalElevation = 1.dp,  // translucent primary color overlay
         drawerShape = RectangleShape,
         modifier = Modifier
             .width(screenWidth * 0.7f)
@@ -97,7 +100,6 @@ fun MainDrawer(
             // region: Header with App Name
             Surface(
                 color = MaterialTheme.colorScheme.secondary,
-                modifier = Modifier.shadow(5.dp)
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -119,13 +121,12 @@ fun MainDrawer(
                     Text(
                         text = appName,
                         style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSecondary
                     )
 
                     Spacer(modifier = Modifier.weight(1f))
 
                     Icon(
-                        Icons.AutoMirrored.Outlined.ArrowBack,
+                        Icons.AutoMirrored.Default.MenuOpen,
                         contentDescription = null,
                         modifier = Modifier
                             .size(24.dp)
@@ -138,12 +139,13 @@ fun MainDrawer(
 
             SignInAndSyncButtons(tasksViewModel)
 
+            // test reminder
             DrawerItemTemplate(
                 "Test Reminder",
                 Icons.Default.DeveloperMode,
                 drawerState
             ) {
-                val clickedTaskId = tasksViewModel.tasksUiState.value.clickedTaskId
+                val clickedTaskId = clickedTask?.id
                 if (clickedTaskId != null) {
                     coroutineScope.launch {
                         val clickedTaskName = tasksViewModel.getTaskName(clickedTaskId)
@@ -158,20 +160,21 @@ fun MainDrawer(
             ScheduleRemindersButton(
                 drawerState,
                 reminderManager,
+                selectedDate,
                 showExactAlarmDialog,
                 context
             )
 
-            DrawerItemTemplate("Insert Default Tasks", Icons.Default.AddTask, drawerState) {
+            DrawerItemTemplate("Insert Basic Tasks", Icons.Default.AddTask, drawerState) {
                 coroutineScope.launch {
-                    tasksViewModel.insertDefaultTasks()
+                    tasksViewModel.insertBasicTasks()
 
                 }
             }
 
-            DrawerItemTemplate("Insert Demo Tasks", Icons.Default.Add, drawerState) {
+            DrawerItemTemplate("Insert Sample Tasks", Icons.Default.Add, drawerState) {
                 coroutineScope.launch {
-                    tasksViewModel.insertDemoTasks(context)
+                    tasksViewModel.insertSampleTasks()
                 }
             }
 
@@ -187,7 +190,18 @@ fun MainDrawer(
                     tasksViewModel.loadTaskCompletions()
                     onShowCompletedTasks()
                 }
+            }
 
+            DrawerItemTemplate(
+                text = "Log tasks",
+                icon = Icons.Default.DeveloperMode,
+                drawerState = drawerState
+            ) {
+                coroutineScope.launch {
+                    val tasks = tasksViewModel.tasksByDate.first() // This will get the current value of allTasks and then stop observing
+                    Log.d(tag, "***************\n")
+                    Log.d(tag, "$tasks")
+                }
             }
         }
     }
@@ -233,6 +247,7 @@ fun DrawerItemTemplate(
 fun ScheduleRemindersButton(
     drawerState: DrawerState,
     reminderManager: ReminderManager,
+    selectedDate: LocalDate?,
     showExactAlarmDialog: MutableState<Boolean>,
     context: Context
 ) {
@@ -246,7 +261,9 @@ fun ScheduleRemindersButton(
             .clickable {
                 coroutineScope.launch {
                     isLoading.value = true // Show loading spinner
-                    val success = reminderManager.scheduleAllReminders()
+                    val success = reminderManager.scheduleAllReminders(
+                        selectedDate ?: LocalDate.now()
+                    )
 
                     if (!success) {
                         Log.e(

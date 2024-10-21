@@ -25,27 +25,38 @@ object TimeUtils {
         return LocalDateTime.parse(inputIsoStr, inputFormatter)
     }
 
-    /**
-     * String (various time formats) to LocalDateTime
-     * A default date is added to input string
-     */
-    fun strToDateTime(inputString: String): LocalDateTime {
+    fun strToDateTimeWithDate(date: LocalDate, timeString: String): LocalDateTime {
+        // Define the formatter for parsing the time string
+        val timeFormatter = DateTimeFormatter.ofPattern("hh:mm a")
+
+        // Parse the time string to a LocalTime
+        val time = LocalTime.parse(timeString, timeFormatter)
+
+        // Combine the given date with the parsed time to create a LocalDateTime
+        return LocalDateTime.of(date, time)
+    }
+
+    fun strToDateTime(
+        inputString: String,
+        date: LocalDate? = LocalDate.now(),
+        defaultDateTime: LocalDateTime = LocalDateTime.now() // Default value if parsing fails
+    ): LocalDateTime {
         val inputStringTrimmed = inputString.trim().uppercase()
 
         for (eachFormat in possibleFormats) {
             try {
                 val inputLocalTime = LocalTime.parse(inputStringTrimmed, eachFormat)
-                val inputLocalDateTime = LocalDateTime.of(LocalDate.now(), inputLocalTime)
-                return inputLocalDateTime
-
+                return LocalDateTime.of(date, inputLocalTime)
             } catch (e: DateTimeParseException) {
-                Log.e("TimeUtils", "Error parsing time string: $inputString")
+                Log.e("TimeUtils", "Error parsing time string: $inputString using format: $eachFormat")
             }
         }
 
-        // If we've exhausted all formatters without success, throw an exception
-        throw IllegalArgumentException("Error parsing time string: $inputString")
+        // If all parsing attempts fail, return the specified default LocalDateTime
+        Log.w("TimeUtils", "Parsing Failed. Returning default LocalDateTime: $defaultDateTime")
+        return defaultDateTime
     }
+
 
     fun dateTimeToString(dateTime: LocalDateTime): String {
         val dateTimeFormatter = DateTimeFormatter.ofPattern("hh:mm a")

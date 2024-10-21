@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.AlertDialog
@@ -21,7 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import com.app.routineturboa.data.room.TaskEntity
-import com.app.routineturboa.utils.TimeUtils.dateTimeToString
+import com.app.routineturboa.utils.Converters.timeToString
 
 @Composable
 fun TaskDetailsDialog(
@@ -57,6 +59,8 @@ fun TaskDetailsDialog(
             Surface(
                 modifier = Modifier
                     .fillMaxWidth(0.9f)
+                    .padding(top = 10.dp)
+                    .verticalScroll(rememberScrollState())
             ) {
                 Column(
                     verticalArrangement = Arrangement.spacedBy(15.dp),
@@ -73,7 +77,7 @@ fun TaskDetailsDialog(
                                 color = MaterialTheme.colorScheme.onPrimary
                             )
                             Text(
-                                text = dateTimeToString( task.startTime),
+                                text = timeToString(task.startTime).toString(),
                                 style = MaterialTheme.typography.titleSmall
                             )
                         }
@@ -86,11 +90,10 @@ fun TaskDetailsDialog(
                                 color = MaterialTheme.colorScheme.onPrimary
                             )
                             Text(
-                                text = dateTimeToString( task.endTime),
+                                text = timeToString( task.endTime).toString(),
                                 style = MaterialTheme.typography.titleSmall
                             )
                         }
-
                     }
 
                     Column {
@@ -100,7 +103,7 @@ fun TaskDetailsDialog(
                             color = MaterialTheme.colorScheme.onPrimary
                         )
                         Text(
-                            text = task.notes.takeIf { it.isNotBlank() } ?: "None",
+                            text = task.notes ?: "None",
                             style = MaterialTheme.typography.titleSmall
                         )
                     }
@@ -113,7 +116,7 @@ fun TaskDetailsDialog(
                             color = MaterialTheme.colorScheme.onPrimary
                         )
                         Text(
-                            text = dateTimeToString(task.reminder),
+                            text = timeToString(task.reminder).toString(),
                             style = MaterialTheme.typography.titleSmall
                         )
                     }
@@ -126,7 +129,7 @@ fun TaskDetailsDialog(
                             color = MaterialTheme.colorScheme.onPrimary
                         )
                         Text(
-                            text = task.type,
+                            text = task.type?: "None",
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }
@@ -147,6 +150,14 @@ fun TaskDetailsDialog(
                             text = "Position: ${task.position}",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    Column {
+                        Text(
+                            text = task.toString(),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onPrimary
                         )
                     }
                 }

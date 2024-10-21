@@ -8,6 +8,7 @@ import com.app.routineturboa.data.DbConstants
 import com.app.routineturboa.utils.Converters
 import java.time.LocalDate
 
+// Only for non-recurring tasks
 @Entity(
     tableName = DbConstants.TASK_DATES_TABLE,
     foreignKeys = [ForeignKey(
@@ -17,8 +18,9 @@ import java.time.LocalDate
         onDelete = ForeignKey.CASCADE)]
 )
 @TypeConverters(Converters::class)
-data class TaskDatesEntity(
+data class NonRecurringTaskEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0, // Default value set for auto-increment
     val taskId: Int, // Foreign key to TaskEntity
-    val taskDate: LocalDate // The specific date for this task
+    val taskDate: LocalDate, // The specific date for this task
+    val isException: Boolean = false // True if this date is an exception (e.g., skipped or extra occurrence)
 )

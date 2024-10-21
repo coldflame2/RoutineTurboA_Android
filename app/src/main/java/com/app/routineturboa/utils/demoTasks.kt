@@ -1,240 +1,376 @@
 package com.app.routineturboa.utils
 
-import android.content.Context
 import com.app.routineturboa.data.room.TaskEntity
-import com.app.routineturboa.utils.TimeUtils.strToDateTime
+import com.app.routineturboa.utils.Converters.uiStringToTime
+import java.time.Duration
+import java.time.LocalDate
 
-fun getDemoTasks(context: Context): List<TaskEntity> {
+fun getSampleTasksList(
+    selectedDate: LocalDate = LocalDate.now()
+): List<TaskEntity> {
     return listOf(
+
         TaskEntity(
             position = 1,
-            name = "Sleep/Wake up",
+            name = "Sleep-Wake up",
             notes = "",
             duration = 359,
-            startTime = strToDateTime("00:01 AM"),
-            endTime = strToDateTime("06:00 AM"),
-            reminder = strToDateTime("06:00 AM"),
-            type = TaskTypes.BASICS
+            startTime = uiStringToTime("12:01:01 AM"),
+            endTime = uiStringToTime("06:00:01 AM"),
+            reminder = uiStringToTime("06:00:01 AM"),
+            type = TaskTypes.BASICS,
+            startDate = selectedDate,
+            isRecurring = true,
+            recurrenceType = "DAILY",
+            recurrenceInterval = 1,
+            recurrenceEndDate = selectedDate.plusDays(365)
         ),
         TaskEntity(
             position = 2,
             name = "Morning Ritual",
             notes = "Listen to the tapes, get ready for the day",
             duration = 5,
-            startTime = strToDateTime("06:00 AM"),
-            endTime = strToDateTime("06:05 AM"),
-            reminder = strToDateTime("06:00 AM"),
-            type = TaskTypes.MAIN
+            startTime = uiStringToTime("06:00:01 AM"),
+            endTime = uiStringToTime("06:05:01 AM"),
+            reminder = uiStringToTime("06:00:01 AM"),
+            type = TaskTypes.MAIN,
+            startDate = selectedDate,
+            isRecurring = true,
+            recurrenceType = "DAILY",
+            recurrenceInterval = 1,
+            recurrenceEndDate = selectedDate.plusDays(365)
         ),
         TaskEntity(
             position = 3,
             name = "Freshen up",
             notes = "",
             duration = 20,
-            startTime = strToDateTime("06:05 AM"),
-            endTime = strToDateTime("06:25 AM"),
-            reminder = strToDateTime("06:05 AM"),
-            type = TaskTypes.BASICS
+            startTime = uiStringToTime("06:05:01 AM"),
+            endTime = uiStringToTime("06:25:01 AM"),
+            reminder = uiStringToTime("06:05:01 AM"),
+            type = TaskTypes.BASICS,
+            startDate = selectedDate,
+            isRecurring = true,
+            recurrenceType = "DAILY",
+            recurrenceInterval = 1,
+            recurrenceEndDate = selectedDate.plusDays(365)
         ),
         TaskEntity(
             position = 4,
             name = "Ready for running",
             notes = "",
             duration = 10,
-            startTime = strToDateTime("06:25 AM"),
-            endTime = strToDateTime("06:35 AM"),
-            reminder = strToDateTime("06:25 AM"),
-            type = TaskTypes.BASICS
+            startTime = uiStringToTime("06:25:01 AM"),
+            endTime = uiStringToTime("06:35:01 AM"),
+            reminder = uiStringToTime("06:25:01 AM"),
+            type = TaskTypes.BASICS,
+            startDate = selectedDate,
+            isRecurring = true,
+            recurrenceType = "DAILY",
+            recurrenceInterval = 1,
+            recurrenceEndDate = selectedDate.plusDays(365)
         ),
         TaskEntity(
             position = 5,
             name = "Running",
             notes = "",
             duration = 40,
-            startTime = strToDateTime("06:35 AM"),
-            endTime = strToDateTime("07:15 AM"),
-            reminder = strToDateTime("06:35 AM"),
-            type = TaskTypes.MAIN
+            startTime = uiStringToTime("06:35:01 AM"),
+            endTime = uiStringToTime("07:15:01 AM"),
+            reminder = uiStringToTime("06:35:01 AM"),
+            type = TaskTypes.MAIN,
+            startDate = selectedDate,
+            isRecurring = true,
+            recurrenceType = "DAILY",
+            recurrenceInterval = 1,
+            recurrenceEndDate = selectedDate.plusDays(365)
         ),
         TaskEntity(
             position = 6,
             name = "Freshen up",
             notes = "",
             duration = 15,
-            startTime = strToDateTime("07:15 AM"),
-            endTime = strToDateTime("07:30 AM"),
-            reminder = strToDateTime("07:15 AM"),
-            type = TaskTypes.BASICS
+            startTime = uiStringToTime("07:15:01 AM"),
+            endTime = uiStringToTime("07:30:01 AM"),
+            reminder = uiStringToTime("07:15:01 AM"),
+            type = TaskTypes.BASICS,
+            startDate = selectedDate,
+            isRecurring = true,
+            recurrenceType = "DAILY",
+            recurrenceInterval = 1,
+            recurrenceEndDate = selectedDate.plusDays(365)
         ),
         TaskEntity(
             position = 7,
             name = "Check emails and stuff",
             notes = "",
             duration = 30,
-            startTime = strToDateTime("07:30 AM"),
-            endTime = strToDateTime("08:00 AM"),
-            reminder = strToDateTime("07:30 AM"),
-            type = TaskTypes.BASICS
+            startTime = uiStringToTime("07:30:01 AM"),
+            endTime = uiStringToTime("08:00:01 AM"),
+            reminder = uiStringToTime("07:30:01 AM"),
+            type = TaskTypes.BASICS,
+            startDate = selectedDate,
+            isRecurring = true,
+            recurrenceType = "DAILY",
+            recurrenceInterval = 1,
+            recurrenceEndDate = selectedDate.plusDays(365)
         ),
         TaskEntity(
             position = 8,
             name = "Work",
             notes = "",
             duration = 90,
-            startTime = strToDateTime("08:00 AM"),
-            endTime = strToDateTime("09:30 AM"),
-            reminder = strToDateTime("08:00 AM"),
-            type = TaskTypes.MAIN
+            startTime = uiStringToTime("08:00:01 AM"),
+            endTime = uiStringToTime("09:30:01 AM"),
+            reminder = uiStringToTime("08:00:01 AM"),
+            type = TaskTypes.MAIN,
+            startDate = selectedDate,
+            isRecurring = true,
+            recurrenceType = "DAILY",
+            recurrenceInterval = 1,
+            recurrenceEndDate = selectedDate.plusDays(365)
         ),
         TaskEntity(
             position = 9,
             name = "Breakfast",
             notes = "",
             duration = 30,
-            startTime = strToDateTime("09:30 AM"),
-            endTime = strToDateTime("10:00 AM"),
-            reminder = strToDateTime("09:30 AM"),
-            type = TaskTypes.BASICS
+            startTime = uiStringToTime("09:30:01 AM"),
+            endTime = uiStringToTime("10:00:01 AM"),
+            reminder = uiStringToTime("09:30:01 AM"),
+            type = TaskTypes.BASICS,
+            startDate = selectedDate,
+            isRecurring = true,
+            recurrenceType = "DAILY",
+            recurrenceInterval = 1,
+            recurrenceEndDate = selectedDate.plusDays(365)
         ),
         TaskEntity(
             position = 10,
             name = "Work",
             notes = "",
             duration = 90,
-            startTime = strToDateTime("10:00 AM"),
-            endTime = strToDateTime("11:30 AM"),
-            reminder = strToDateTime("10:00 AM"),
-            type = TaskTypes.MAIN
+            startTime = uiStringToTime("10:00:01 AM"),
+            endTime = uiStringToTime("11:30:01 AM"),
+            reminder = uiStringToTime("10:00:01 AM"),
+            type = TaskTypes.MAIN,
+            startDate = selectedDate,
+            isRecurring = true,
+            recurrenceType = "DAILY",
+            recurrenceInterval = 1,
+            recurrenceEndDate = selectedDate.plusDays(365)
         ),
         TaskEntity(
             position = 11,
             name = "Break",
             notes = "",
             duration = 30,
-            startTime = strToDateTime("11:30 AM"),
-            endTime = strToDateTime("12:00 PM"),
-            reminder = strToDateTime("11:30 AM"),
-            type = TaskTypes.BASICS
+            startTime = uiStringToTime("11:30:01 AM"),
+            endTime = uiStringToTime("12:00 PM"),
+            reminder = uiStringToTime("11:30:01 AM"),
+            type = TaskTypes.BASICS,
+            startDate = selectedDate,
+            isRecurring = true,
+            recurrenceType = "DAILY",
+            recurrenceInterval = 1,
+            recurrenceEndDate = selectedDate.plusDays(365)
         ),
         TaskEntity(
             position = 12,
             name = "Work",
             notes = "",
             duration = 90,
-            startTime = strToDateTime("12:00 PM"),
-            endTime = strToDateTime("01:30 PM"),
-            reminder = strToDateTime("12:00 PM"),
-            type = TaskTypes.MAIN
+            startTime = uiStringToTime("12:00 PM"),
+            endTime = uiStringToTime("01:30 PM"),
+            reminder = uiStringToTime("12:00 PM"),
+            type = TaskTypes.MAIN,
+            startDate = selectedDate,
+            isRecurring = true,
+            recurrenceType = "DAILY",
+            recurrenceInterval = 1,
+            recurrenceEndDate = selectedDate.plusDays(365)
         ),
         TaskEntity(
             position = 13,
             name = "Break",
             notes = "",
             duration = 30,
-            startTime = strToDateTime("01:30 PM"),
-            endTime = strToDateTime("02:00 PM"),
-            reminder = strToDateTime("01:30 PM"),
-            type = TaskTypes.BASICS
+            startTime = uiStringToTime("01:30 PM"),
+            endTime = uiStringToTime("02:00 PM"),
+            reminder = uiStringToTime("01:30 PM"),
+            type = TaskTypes.BASICS,
+            startDate = selectedDate,
+            isRecurring = true,
+            recurrenceType = "DAILY",
+            recurrenceInterval = 1,
+            recurrenceEndDate = selectedDate.plusDays(365)
         ),
         TaskEntity(
             position = 14,
             name = "Lunch and Rest",
             notes = "",
             duration = 60,
-            startTime = strToDateTime("02:00 PM"),
-            endTime = strToDateTime("03:00 PM"),
-            reminder = strToDateTime("02:00 PM"),
-            type = TaskTypes.BASICS
+            startTime = uiStringToTime("02:00 PM"),
+            endTime = uiStringToTime("03:00 PM"),
+            reminder = uiStringToTime("02:00 PM"),
+            type = TaskTypes.BASICS,
+            startDate = selectedDate,
+            isRecurring = true,
+            recurrenceType = "DAILY",
+            recurrenceInterval = 1,
+            recurrenceEndDate = selectedDate.plusDays(365)
         ),
         TaskEntity(
             position = 15,
             name = "Creative Work",
             notes = "",
             duration = 60,
-            startTime = strToDateTime("03:00 PM"),
-            endTime = strToDateTime("04:00 PM"),
-            reminder = strToDateTime("03:00 PM"),
-            type = TaskTypes.UNDEFINED
+            startTime = uiStringToTime("03:00 PM"),
+            endTime = uiStringToTime("04:00 PM"),
+            reminder = uiStringToTime("03:00 PM"),
+            type = TaskTypes.MAIN,
+            startDate = selectedDate,
+            isRecurring = true,
+            recurrenceType = "DAILY",
+            recurrenceInterval = 1,
+            recurrenceEndDate = selectedDate.plusDays(365)
         ),
         TaskEntity(
             position = 16,
             name = "Work",
             notes = "",
             duration = 90,
-            startTime = strToDateTime("04:00 PM"),
-            endTime = strToDateTime("05:30 PM"),
-            reminder = strToDateTime("04:00 PM"),
-            type = TaskTypes.MAIN
+            startTime = uiStringToTime("04:00 PM"),
+            endTime = uiStringToTime("05:30 PM"),
+            reminder = uiStringToTime("04:00 PM"),
+            type = TaskTypes.MAIN,
+            startDate = selectedDate,
+            isRecurring = true,
+            recurrenceType = "DAILY",
+            recurrenceInterval = 1,
+            recurrenceEndDate = selectedDate.plusDays(365)
         ),
         TaskEntity(
             position = 17,
             name = "Tea",
             notes = "",
             duration = 30,
-            startTime = strToDateTime("05:30 PM"),
-            endTime = strToDateTime("05:50 PM"),
-            reminder = strToDateTime("05:30 PM"),
-            type = TaskTypes.BASICS
+            startTime = uiStringToTime("05:30 PM"),
+            endTime = uiStringToTime("05:50 PM"),
+            reminder = uiStringToTime("05:30 PM"),
+            type = TaskTypes.BASICS,
+            startDate = selectedDate,
+            isRecurring = true,
+            recurrenceType = "DAILY",
+            recurrenceInterval = 1,
+            recurrenceEndDate = selectedDate.plusDays(365)
         ),
         TaskEntity(
             position = 18,
             name = "Leisure",
             notes = "",
             duration = 60,
-            startTime = strToDateTime("05:50 PM"),
-            endTime = strToDateTime("07:00 PM"),
-            reminder = strToDateTime("05:50 PM"),
-            type = TaskTypes.BASICS
+            startTime = uiStringToTime("05:50 PM"),
+            endTime = uiStringToTime("07:00 PM"),
+            reminder = uiStringToTime("05:50 PM"),
+            type = TaskTypes.BASICS,
+            startDate = selectedDate,
+            isRecurring = true,
+            recurrenceType = "DAILY",
+            recurrenceInterval = 1,
+            recurrenceEndDate = selectedDate.plusDays(365)
         ),
         TaskEntity(
             position = 19,
             name = "Work",
             notes = "",
             duration = 120,
-            startTime = strToDateTime("07:00 PM"),
-            endTime = strToDateTime("09:00 PM"),
-            reminder = strToDateTime("07:00 PM"),
-            type = TaskTypes.MAIN
+            startTime = uiStringToTime("07:00 PM"),
+            endTime = uiStringToTime("09:00 PM"),
+            reminder = uiStringToTime("07:00 PM"),
+            type = TaskTypes.MAIN,
+            startDate = selectedDate,
+            isRecurring = true,
+            recurrenceType = "DAILY",
+            recurrenceInterval = 1,
+            recurrenceEndDate = selectedDate.plusDays(365)
         ),
         TaskEntity(
             position = 20,
             name = "Dinner",
             notes = "",
             duration = 30,
-            startTime = strToDateTime("09:00 PM"),
-            endTime = strToDateTime("09:30 PM"),
-            reminder = strToDateTime("09:00 PM"),
-            type = TaskTypes.BASICS
+            startTime = uiStringToTime("09:00 PM"),
+            endTime = uiStringToTime("09:30 PM"),
+            reminder = uiStringToTime("09:00 PM"),
+            type = TaskTypes.BASICS,
+            startDate = selectedDate,
+            isRecurring = true,
+            recurrenceType = "DAILY",
+            recurrenceInterval = 1,
+            recurrenceEndDate = selectedDate.plusDays(365)
         ),
         TaskEntity(
             position = 21,
             name = "Night Rituals",
             notes = "",
             duration = 30,
-            startTime = strToDateTime("09:30 PM"),
-            endTime = strToDateTime("10:00 PM"),
-            reminder = strToDateTime("09:30 PM"),
-            type = TaskTypes.BASICS
+            startTime = uiStringToTime("09:30 PM"),
+            endTime = uiStringToTime("10:00 PM"),
+            reminder = uiStringToTime("09:30 PM"),
+            type = TaskTypes.BASICS,
+            startDate = selectedDate,
+            isRecurring = true,
+            recurrenceType = "DAILY",
+            recurrenceInterval = 1,
+            recurrenceEndDate = selectedDate.plusDays(365)
         ),
         TaskEntity(
             position = 22,
             name = "Read and Sleep",
             notes = "",
             duration = 30,
-            startTime = strToDateTime("10:00 PM"),
-            endTime = strToDateTime("10:30 PM"),
-            reminder = strToDateTime("10:00 PM"),
-            type = TaskTypes.BASICS
+            startTime = uiStringToTime("10:00 PM"),
+            endTime = uiStringToTime("10:30 PM"),
+            reminder = uiStringToTime("10:00 PM"),
+            type = TaskTypes.BASICS,
+            startDate = selectedDate,
+            isRecurring = true,
+            recurrenceType = "DAILY",
+            recurrenceInterval = 1,
+            recurrenceEndDate = selectedDate.plusDays(365)
         ),
         TaskEntity(
             position = 23,
+            name = "Special for Today",
+            notes = "",
+            duration = 15,
+            startTime = uiStringToTime("10:30:01 PM"),
+            endTime = uiStringToTime("10:45 PM"),
+            reminder = uiStringToTime("10:30 PM"),
+            type = TaskTypes.BASICS,
+            startDate = selectedDate,
+            isRecurring = false
+        ),
+        TaskEntity(
+            position = 24,
             name = "End of day",
             notes = "",
-            duration = 30,
-            startTime = strToDateTime("10:30 PM"),
-            endTime = strToDateTime("11:59 PM"),
-            reminder = strToDateTime("10:30 PM"),
-            type = TaskTypes.BASICS
+            duration = Duration.between(
+                uiStringToTime("10:45 PM"), uiStringToTime("11:59 PM")
+            )
+            .toMinutes()
+            .toInt(),
+            startTime = uiStringToTime("10:45 PM"),
+            endTime = uiStringToTime("11:59 PM"),
+            reminder = uiStringToTime("10:45 PM"),
+            type = TaskTypes.BASICS,
+            startDate = selectedDate,
+            isRecurring = true,
+            recurrenceType = "DAILY",
+            recurrenceInterval = 1,
+            recurrenceEndDate = selectedDate.plusDays(365)
         )
+
     )
 }

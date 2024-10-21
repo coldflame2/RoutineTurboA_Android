@@ -50,9 +50,8 @@ import com.app.routineturboa.ui.models.TaskFormData
 import com.app.routineturboa.ui.reusable.CustomTextField
 import com.app.routineturboa.ui.reusable.dropdowns.SelectTaskTypeDropdown
 import com.app.routineturboa.ui.reusable.dropdowns.ShowMainTasksDropdown
-import com.app.routineturboa.ui.theme.LocalCustomColorsPalette
-import com.app.routineturboa.utils.TimeUtils.dateTimeToString
-import com.app.routineturboa.utils.TimeUtils.strToDateTime
+import com.app.routineturboa.utils.Converters.timeToString
+import com.app.routineturboa.utils.Converters.stringToTime
 import kotlinx.coroutines.launch
 
 @RequiresApi(Build.VERSION_CODES.S)
@@ -75,15 +74,15 @@ fun FullEditDialog(
     var notes by remember { mutableStateOf(task.notes) }
     var startTime by remember { mutableStateOf(task.startTime) }
     var endTime by remember { mutableStateOf(task.endTime) }
-    var duration by remember { mutableIntStateOf(task.duration) }
+    var duration by remember { mutableIntStateOf(task.duration?: 1) }
     var reminder by remember { mutableStateOf(task.reminder) }
-    var position by remember { mutableIntStateOf(task.position) }
+    var position by remember { mutableIntStateOf(task.position?: 1) }
     var taskType by remember { mutableStateOf(task.type) }
 
     // Convert state variables to  string for display
-    var startTimeString by remember {mutableStateOf(dateTimeToString(startTime))}
-    var endTimeString by remember {mutableStateOf(dateTimeToString(endTime))}
-    var reminderString by remember {mutableStateOf(dateTimeToString(reminder))}
+    var startTimeString by remember {mutableStateOf(timeToString(startTime))}
+    var endTimeString by remember {mutableStateOf(timeToString(endTime))}
+    var reminderString by remember {mutableStateOf(timeToString(reminder))}
     var durationString by remember {mutableStateOf(duration.toString())}
     val idFormatted by remember {mutableStateOf(id.toString())}
     var positionString by remember {mutableStateOf(position.toString())}
@@ -166,7 +165,7 @@ fun FullEditDialog(
                     LaunchedEffect (durationString){
                         if (durationString.isNotEmpty()) {
                             try {
-                                endTimeString = dateTimeToString(startTime.plusMinutes(durationString.toLong()))
+                                endTimeString = timeToString(startTime?.plusMinutes(durationString.toLong()))
                             } catch (e: NumberFormatException) {
                                 Toast.makeText(context, "Invalid duration format", Toast.LENGTH_SHORT).show()
                             }
@@ -206,7 +205,7 @@ fun FullEditDialog(
                 )
 
                 SelectTaskTypeDropdown(
-                    taskType,
+                    taskType?: "",
                     onTaskTypeSelected = { newType -> taskType = newType }
                 )
 
@@ -250,7 +249,7 @@ fun FullEditDialog(
 
                         onClick = { onCancel() },
                         colors = ButtonDefaults.buttonColors(
-                            LocalCustomColorsPalette.current.gray200,
+                            MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
                         )
 
                     ) {
@@ -265,18 +264,18 @@ fun FullEditDialog(
                             .size(120.dp, 50.dp),
                         elevation = FloatingActionButtonDefaults.elevation(10.dp),
                         onClick = {
-                            Log.d("EditTaskScreen", "Save Button clicked...")
+                            Log.d(tag, "Save Button clicked...")
                             coroutineScope.launch {
                                 try {
-                                    startTime = strToDateTime(startTimeString)
-                                    endTime = strToDateTime(endTimeString)
-                                    reminder = strToDateTime(reminderString)
+                                    startTime = stringToTime(startTimeString)
+                                    endTime = stringToTime(endTimeString)
+                                    reminder = stringToTime(reminderString)
                                     duration = durationString.toInt()
                                     id = idFormatted.toInt()
                                     position = positionString.toInt()
 
                                 } catch (e: Exception) {
-                                    Log.e("EditTaskScreen", "Error: $e")
+                                    Log.e(tag, "Error: $e")
                                     Toast.makeText(context, "Error saving task: ${e.message}", Toast.LENGTH_LONG).show()
                                 }
 

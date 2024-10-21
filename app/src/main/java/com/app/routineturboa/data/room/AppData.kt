@@ -9,8 +9,8 @@ import com.app.routineturboa.utils.Converters
     entities = [
         TaskEntity::class,
         TaskCompletionEntity::class,
-        TaskDatesEntity::class],
-    version = 3,
+        NonRecurringTaskEntity::class],
+    version = 1,
     exportSchema = false
 )
 @TypeConverters(Converters::class)

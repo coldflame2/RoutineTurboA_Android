@@ -16,11 +16,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.app.routineturboa.ui.reusable.AnimatedAlphaUtils
-import java.time.LocalDateTime
+import com.app.routineturboa.ui.theme.LocalCustomColors
+import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
 @Composable
@@ -28,26 +30,34 @@ fun HourColumn(
     isThisTaskClicked: Boolean,
     isCurrentTask: Boolean,
     cardHeight: Dp,
-    startTime: LocalDateTime
+    startTime: LocalTime?
 ) {
-    val formattedStartTime = startTime.format(DateTimeFormatter.ofPattern("hh:mm a"))
-    val startTimeHourString = formattedStartTime.substring(0, 2)
-    val startTimeMinuteString = formattedStartTime.substring(3, 5)
-    val startTimeAinAm = formattedStartTime.substring(6, 7)
-    val startTimeMinAm = formattedStartTime.substring(7, 8)
+    val formattedStartTime = startTime?.format(DateTimeFormatter.ofPattern("hh:mm a"))
+    val startTimeHourString = formattedStartTime?.substring(0, 2)
+    val startTimeMinuteString = formattedStartTime?.substring(3, 5)
+    val startTimeAinAm = formattedStartTime?.substring(6, 7)
+    val startTimeMinAm = formattedStartTime?.substring(7, 8)
 
     val infiniteTransition = rememberInfiniteTransition(label = "BorderAnimation")
     val animatedAlpha = AnimatedAlphaUtils.animatedAlpha(
         transition = infiniteTransition,
-        initialValue = 0.2f,
-        targetValue = 0.9f,
-        duration = 400,
+        initialValue = 0f,
+        targetValue = 1f,
+        duration = 1000,
     )
 
+    val customColors = LocalCustomColors.current
+
+    val fontWeight = when {
+        isThisTaskClicked -> MaterialTheme.typography.bodyLarge.copy(
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold)
+
+        else -> MaterialTheme.typography.bodyLarge.copy(
+                fontSize = 11.sp)
+    }
+
     val backgroundColor = when {
-        isThisTaskClicked -> {
-            MaterialTheme.colorScheme.primary.copy(alpha = 1f)
-        }
         isCurrentTask -> {
             MaterialTheme.colorScheme.primary.copy(alpha = animatedAlpha)
         }
@@ -76,13 +86,13 @@ fun HourColumn(
                 verticalArrangement = Arrangement.spacedBy((-12).dp),
             ) {
                 Text(
-                    text = startTimeHourString,
-                    style = MaterialTheme.typography.bodyLarge.copy(fontSize = 11.sp),
+                    text = startTimeHourString ?: "--",
+                    style = fontWeight,
                 )
 
                 Text(
-                    text = startTimeMinuteString,
-                    style = MaterialTheme.typography.bodyLarge.copy(fontSize = 11.sp),
+                    text = startTimeMinuteString ?: "--",
+                    style = fontWeight,
                 )
             }
 
@@ -94,18 +104,12 @@ fun HourColumn(
                 verticalArrangement = Arrangement.spacedBy((-15).dp), // Adjust to control space between A/P and M
             ) {
                 Text(
-                    text = startTimeAinAm, // A or P
-                    style = MaterialTheme.typography.bodyLarge.copy(
-                        fontSize = 10.sp,
-                        color = MaterialTheme.colorScheme.onSecondary
-                    ),
+                    text = startTimeAinAm ?: "--", // A or P
+                    style = fontWeight,
                 )
                 Text(
-                    text = startTimeMinAm, // M
-                    style = MaterialTheme.typography.bodyLarge.copy(
-                        fontSize = 10.sp,
-                        color = MaterialTheme.colorScheme.onSecondary
-                    ),
+                    text = startTimeMinAm ?: "--", // M
+                    style = fontWeight,
                 )
             }
         }

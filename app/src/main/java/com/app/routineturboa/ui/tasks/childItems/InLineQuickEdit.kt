@@ -17,7 +17,8 @@ import androidx.compose.ui.unit.dp
 import com.app.routineturboa.data.room.TaskEntity
 import com.app.routineturboa.ui.models.TaskFormData
 import com.app.routineturboa.ui.tasks.dialogs.FullEditDialog
-import com.app.routineturboa.utils.TimeUtils.dateTimeToString
+import com.app.routineturboa.utils.Converters.timeToString
+import java.time.LocalTime
 
 @RequiresApi(Build.VERSION_CODES.S)
 @Composable
@@ -25,9 +26,9 @@ fun InLineQuickEdit(
     mainTasks: List<TaskEntity>?,
     task: TaskEntity,
     isFullEditing: Boolean,
-    onFullEditClick: (Int) -> Unit,
-    onConfirmEdit: (Int, TaskFormData) -> Unit,
-    onCancel: () -> Unit,
+    onShowFullEditClick: (Int) -> Unit,
+    onUpdateTaskConfirmClick: (Int, TaskFormData) -> Unit,
+    onCancelClick: () -> Unit,
 ) {
     val tag = "QuickEditScreen"
     val context = LocalContext.current
@@ -37,15 +38,15 @@ fun InLineQuickEdit(
     var editedName by remember { mutableStateOf(task.name) }
     var durationString by remember { mutableStateOf(task.duration.toString()) }
     var endTime by remember { mutableStateOf(task.endTime) }
-    var endTimeString by remember { mutableStateOf(dateTimeToString(endTime)) }
+    var endTimeString by remember { mutableStateOf(timeToString(endTime)) }
 
     // Update endTime when durationString changes
     LaunchedEffect(durationString) {
         if (durationString.isNotEmpty()) {
             try {
                 val durationMinutes = durationString.toLong()
-                endTime = startTime.plusMinutes(durationMinutes)
-                endTimeString = dateTimeToString(endTime)
+                endTime = startTime?.plusMinutes(durationMinutes) ?: LocalTime.now()
+                endTimeString = timeToString(endTime)
             } catch (e: NumberFormatException) {
                 Toast.makeText(context, "Invalid duration format", Toast.LENGTH_SHORT).show()
             }
@@ -149,7 +150,7 @@ fun InLineQuickEdit(
         ) {
             // Full-Screen Edit Button
             Button(
-                onClick = { onFullEditClick(task.id) },
+                onClick = { onShowFullEditClick(task.id) },
                 modifier = Modifier.fillMaxHeight(),
                 shape = RoundedCornerShape(15.dp),
                 contentPadding = PaddingValues(5.dp)
@@ -165,7 +166,7 @@ fun InLineQuickEdit(
                 onClick = {
                     try {
                         val durationMinutes = durationString.toInt()
-                        val newEndTime = startTime.plusMinutes(durationMinutes.toLong())
+                        val newEndTime = startTime?.plusMinutes(durationMinutes.toLong())
 
                         val updatedTaskFormData = TaskFormData(
                             name = editedName,
@@ -179,7 +180,7 @@ fun InLineQuickEdit(
                             mainTaskId = task.mainTaskId
                         )
 
-                        onConfirmEdit(task.id, updatedTaskFormData)
+                        onUpdateTaskConfirmClick(task.id, updatedTaskFormData)
 
                     } catch (e: Exception) {
                         Log.e(tag, "Error: $e")
@@ -209,9 +210,9 @@ fun InLineQuickEdit(
                 mainTasks = mainTasks ?: emptyList(),
                 task = task,
                 onConfirmEdit = { taskId, updatedTaskFormData ->
-                    onConfirmEdit(taskId, updatedTaskFormData)
+                    onUpdateTaskConfirmClick(taskId, updatedTaskFormData)
                 },
-                onCancel = onCancel
+                onCancel = onCancelClick
             )
         }
     }
