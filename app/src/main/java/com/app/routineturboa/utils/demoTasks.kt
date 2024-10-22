@@ -1,7 +1,8 @@
 package com.app.routineturboa.utils
 
 import com.app.routineturboa.data.room.TaskEntity
-import com.app.routineturboa.utils.Converters.uiStringToTime
+import com.app.routineturboa.data.dbutils.Converters.uiStringToTime
+import com.app.routineturboa.data.dbutils.RecurrenceType
 import java.time.Duration
 import java.time.LocalDate
 
@@ -21,7 +22,7 @@ fun getSampleTasksList(
             type = TaskTypes.BASICS,
             startDate = selectedDate,
             isRecurring = true,
-            recurrenceType = "DAILY",
+            recurrenceType = RecurrenceType.DAILY,
             recurrenceInterval = 1,
             recurrenceEndDate = selectedDate.plusDays(365)
         ),
@@ -36,7 +37,7 @@ fun getSampleTasksList(
             type = TaskTypes.MAIN,
             startDate = selectedDate,
             isRecurring = true,
-            recurrenceType = "DAILY",
+            recurrenceType = RecurrenceType.DAILY,
             recurrenceInterval = 1,
             recurrenceEndDate = selectedDate.plusDays(365)
         ),
@@ -51,7 +52,7 @@ fun getSampleTasksList(
             type = TaskTypes.BASICS,
             startDate = selectedDate,
             isRecurring = true,
-            recurrenceType = "DAILY",
+            recurrenceType = RecurrenceType.DAILY,
             recurrenceInterval = 1,
             recurrenceEndDate = selectedDate.plusDays(365)
         ),
@@ -66,7 +67,7 @@ fun getSampleTasksList(
             type = TaskTypes.BASICS,
             startDate = selectedDate,
             isRecurring = true,
-            recurrenceType = "DAILY",
+            recurrenceType = RecurrenceType.DAILY,
             recurrenceInterval = 1,
             recurrenceEndDate = selectedDate.plusDays(365)
         ),
@@ -81,7 +82,7 @@ fun getSampleTasksList(
             type = TaskTypes.MAIN,
             startDate = selectedDate,
             isRecurring = true,
-            recurrenceType = "DAILY",
+            recurrenceType = RecurrenceType.DAILY,
             recurrenceInterval = 1,
             recurrenceEndDate = selectedDate.plusDays(365)
         ),
@@ -96,7 +97,7 @@ fun getSampleTasksList(
             type = TaskTypes.BASICS,
             startDate = selectedDate,
             isRecurring = true,
-            recurrenceType = "DAILY",
+            recurrenceType = RecurrenceType.DAILY,
             recurrenceInterval = 1,
             recurrenceEndDate = selectedDate.plusDays(365)
         ),
@@ -111,7 +112,7 @@ fun getSampleTasksList(
             type = TaskTypes.BASICS,
             startDate = selectedDate,
             isRecurring = true,
-            recurrenceType = "DAILY",
+            recurrenceType = RecurrenceType.DAILY,
             recurrenceInterval = 1,
             recurrenceEndDate = selectedDate.plusDays(365)
         ),
@@ -126,7 +127,7 @@ fun getSampleTasksList(
             type = TaskTypes.MAIN,
             startDate = selectedDate,
             isRecurring = true,
-            recurrenceType = "DAILY",
+            recurrenceType = RecurrenceType.DAILY,
             recurrenceInterval = 1,
             recurrenceEndDate = selectedDate.plusDays(365)
         ),
@@ -141,7 +142,7 @@ fun getSampleTasksList(
             type = TaskTypes.BASICS,
             startDate = selectedDate,
             isRecurring = true,
-            recurrenceType = "DAILY",
+            recurrenceType = RecurrenceType.DAILY,
             recurrenceInterval = 1,
             recurrenceEndDate = selectedDate.plusDays(365)
         ),
@@ -156,7 +157,7 @@ fun getSampleTasksList(
             type = TaskTypes.MAIN,
             startDate = selectedDate,
             isRecurring = true,
-            recurrenceType = "DAILY",
+            recurrenceType = RecurrenceType.DAILY,
             recurrenceInterval = 1,
             recurrenceEndDate = selectedDate.plusDays(365)
         ),
@@ -171,7 +172,7 @@ fun getSampleTasksList(
             type = TaskTypes.BASICS,
             startDate = selectedDate,
             isRecurring = true,
-            recurrenceType = "DAILY",
+            recurrenceType = RecurrenceType.DAILY,
             recurrenceInterval = 1,
             recurrenceEndDate = selectedDate.plusDays(365)
         ),
@@ -186,7 +187,7 @@ fun getSampleTasksList(
             type = TaskTypes.MAIN,
             startDate = selectedDate,
             isRecurring = true,
-            recurrenceType = "DAILY",
+            recurrenceType = RecurrenceType.DAILY,
             recurrenceInterval = 1,
             recurrenceEndDate = selectedDate.plusDays(365)
         ),
@@ -201,7 +202,7 @@ fun getSampleTasksList(
             type = TaskTypes.BASICS,
             startDate = selectedDate,
             isRecurring = true,
-            recurrenceType = "DAILY",
+            recurrenceType = RecurrenceType.DAILY,
             recurrenceInterval = 1,
             recurrenceEndDate = selectedDate.plusDays(365)
         ),
@@ -216,7 +217,7 @@ fun getSampleTasksList(
             type = TaskTypes.BASICS,
             startDate = selectedDate,
             isRecurring = true,
-            recurrenceType = "DAILY",
+            recurrenceType = RecurrenceType.DAILY,
             recurrenceInterval = 1,
             recurrenceEndDate = selectedDate.plusDays(365)
         ),
@@ -231,7 +232,7 @@ fun getSampleTasksList(
             type = TaskTypes.MAIN,
             startDate = selectedDate,
             isRecurring = true,
-            recurrenceType = "DAILY",
+            recurrenceType = RecurrenceType.DAILY,
             recurrenceInterval = 1,
             recurrenceEndDate = selectedDate.plusDays(365)
         ),
@@ -246,7 +247,7 @@ fun getSampleTasksList(
             type = TaskTypes.MAIN,
             startDate = selectedDate,
             isRecurring = true,
-            recurrenceType = "DAILY",
+            recurrenceType = RecurrenceType.DAILY,
             recurrenceInterval = 1,
             recurrenceEndDate = selectedDate.plusDays(365)
         ),
@@ -261,7 +262,7 @@ fun getSampleTasksList(
             type = TaskTypes.BASICS,
             startDate = selectedDate,
             isRecurring = true,
-            recurrenceType = "DAILY",
+            recurrenceType = RecurrenceType.DAILY,
             recurrenceInterval = 1,
             recurrenceEndDate = selectedDate.plusDays(365)
         ),
@@ -276,7 +277,7 @@ fun getSampleTasksList(
             type = TaskTypes.BASICS,
             startDate = selectedDate,
             isRecurring = true,
-            recurrenceType = "DAILY",
+            recurrenceType = RecurrenceType.DAILY,
             recurrenceInterval = 1,
             recurrenceEndDate = selectedDate.plusDays(365)
         ),
@@ -291,7 +292,7 @@ fun getSampleTasksList(
             type = TaskTypes.MAIN,
             startDate = selectedDate,
             isRecurring = true,
-            recurrenceType = "DAILY",
+            recurrenceType = RecurrenceType.DAILY,
             recurrenceInterval = 1,
             recurrenceEndDate = selectedDate.plusDays(365)
         ),
@@ -306,7 +307,7 @@ fun getSampleTasksList(
             type = TaskTypes.BASICS,
             startDate = selectedDate,
             isRecurring = true,
-            recurrenceType = "DAILY",
+            recurrenceType = RecurrenceType.DAILY,
             recurrenceInterval = 1,
             recurrenceEndDate = selectedDate.plusDays(365)
         ),
@@ -321,7 +322,7 @@ fun getSampleTasksList(
             type = TaskTypes.BASICS,
             startDate = selectedDate,
             isRecurring = true,
-            recurrenceType = "DAILY",
+            recurrenceType = RecurrenceType.DAILY,
             recurrenceInterval = 1,
             recurrenceEndDate = selectedDate.plusDays(365)
         ),
@@ -336,7 +337,7 @@ fun getSampleTasksList(
             type = TaskTypes.BASICS,
             startDate = selectedDate,
             isRecurring = true,
-            recurrenceType = "DAILY",
+            recurrenceType = RecurrenceType.DAILY,
             recurrenceInterval = 1,
             recurrenceEndDate = selectedDate.plusDays(365)
         ),
@@ -367,7 +368,7 @@ fun getSampleTasksList(
             type = TaskTypes.BASICS,
             startDate = selectedDate,
             isRecurring = true,
-            recurrenceType = "DAILY",
+            recurrenceType = RecurrenceType.DAILY,
             recurrenceInterval = 1,
             recurrenceEndDate = selectedDate.plusDays(365)
         )

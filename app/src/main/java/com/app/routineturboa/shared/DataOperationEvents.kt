@@ -6,7 +6,9 @@ import com.app.routineturboa.ui.models.TaskFormData
 
 data class DataOperationEvents(
     val onNewTaskConfirmClick: suspend(
-        clickedTask: TaskEntity, newTaskFormData: TaskFormData
+        newTaskFormData: TaskFormData,
+        clickedTask: TaskEntity,
+        taskBelowClickedTask: TaskEntity
     ) -> Result<TaskOperationResult>,
 
     val onUpdateTaskConfirmClick: suspend (

@@ -1,6 +1,5 @@
-package com.app.routineturboa.utils
+package com.app.routineturboa.data.dbutils
 
-import android.util.Log
 import androidx.room.TypeConverter
 import java.time.LocalDate
 import java.time.LocalTime
@@ -47,6 +46,16 @@ object Converters {
         return timeString?.let {
             LocalTime.parse(it, timeFormatter)
         }
+    }
+
+    @TypeConverter
+    fun fromRecurrenceType(value: RecurrenceType?): String? {
+        return value?.name
+    }
+
+    @TypeConverter
+    fun toRecurrenceType(value: String?): RecurrenceType? {
+        return value?.let { RecurrenceType.valueOf(it) }
     }
 
     // ------------------- Additional Utility converter functions -----------------

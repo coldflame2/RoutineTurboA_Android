@@ -99,7 +99,7 @@ fun AppDrawer(
         ) {
             // region: Header with App Name
             Surface(
-                color = MaterialTheme.colorScheme.secondary,
+                color = MaterialTheme.colorScheme.primary.copy(alpha=0.8f),
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,

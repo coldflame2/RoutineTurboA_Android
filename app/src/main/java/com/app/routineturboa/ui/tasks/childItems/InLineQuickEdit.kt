@@ -17,7 +17,7 @@ import androidx.compose.ui.unit.dp
 import com.app.routineturboa.data.room.TaskEntity
 import com.app.routineturboa.ui.models.TaskFormData
 import com.app.routineturboa.ui.tasks.dialogs.FullEditDialog
-import com.app.routineturboa.utils.Converters.timeToString
+import com.app.routineturboa.data.dbutils.Converters.timeToString
 import java.time.LocalTime
 
 @RequiresApi(Build.VERSION_CODES.S)

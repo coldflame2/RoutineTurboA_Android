@@ -3,12 +3,11 @@ package com.app.routineturboa.data.room
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import androidx.room.TypeConverters
-import com.app.routineturboa.data.DbConstants
-import com.app.routineturboa.utils.Converters
+import com.app.routineturboa.data.dbutils.DbConstants
+import com.app.routineturboa.data.dbutils.RecurrenceType
+import com.app.routineturboa.data.dbutils.Converters
 import com.app.routineturboa.utils.TaskTypes
-import kotlinx.coroutines.CoroutineStart
 import java.time.LocalDate
-import java.time.LocalDateTime
 import java.time.LocalTime
 
 @Entity(tableName = DbConstants.TASKS_TABLE)
@@ -29,7 +28,7 @@ data class TaskEntity(
 
     // Recurrence fields
     val isRecurring: Boolean? = false,
-    val recurrenceType: String? = null, // e.g., "DAILY", "WEEKLY", "MONTHLY"
+    val recurrenceType: RecurrenceType? = null, // Use Enum here
     val recurrenceInterval: Int? = null, // Number of units between occurrences
     val recurrenceEndDate: LocalDate? = null // Optional end date
 )

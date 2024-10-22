@@ -23,7 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import com.app.routineturboa.data.room.TaskEntity
-import com.app.routineturboa.utils.Converters.timeToString
+import com.app.routineturboa.data.dbutils.Converters.timeToString
 
 @Composable
 fun TaskDetailsDialog(

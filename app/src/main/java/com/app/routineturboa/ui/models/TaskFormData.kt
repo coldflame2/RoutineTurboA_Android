@@ -1,5 +1,6 @@
 package com.app.routineturboa.ui.models
 
+import com.app.routineturboa.data.dbutils.RecurrenceType
 import com.app.routineturboa.utils.TaskTypes
 import java.time.LocalDateTime
 import java.time.LocalDate
@@ -19,7 +20,7 @@ data class TaskFormData(
     // Recurrence-related fields
     val startDate: LocalDate? = null,
     val isRecurring: Boolean = false,
-    val recurrenceType: String? = null, // e.g., "DAILY", "WEEKLY", "MONTHLY"
+    val recurrenceType: RecurrenceType? = null, // e.g., "DAILY", "WEEKLY", "MONTHLY"
     val recurrenceInterval: Int? = null, // Number of units between occurrences
     val recurrenceEndDate: LocalDate? = null // Optional end date for the recurrence
 )

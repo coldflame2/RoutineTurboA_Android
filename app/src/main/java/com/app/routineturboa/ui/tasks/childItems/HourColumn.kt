@@ -50,8 +50,7 @@ fun HourColumn(
 
     val fontWeight = when {
         isThisTaskClicked -> MaterialTheme.typography.bodyLarge.copy(
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold)
+                            fontSize = 11.sp)
 
         else -> MaterialTheme.typography.bodyLarge.copy(
                 fontSize = 11.sp)

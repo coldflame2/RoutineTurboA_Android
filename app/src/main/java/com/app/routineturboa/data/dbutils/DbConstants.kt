@@ -1,4 +1,4 @@
-package com.app.routineturboa.data
+package com.app.routineturboa.data.dbutils
 
 object DbConstants {
     const val TASKS_TABLE = "tasks"

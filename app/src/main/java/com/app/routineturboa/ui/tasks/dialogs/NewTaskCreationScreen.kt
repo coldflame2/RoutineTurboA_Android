@@ -35,57 +35,53 @@ import com.app.routineturboa.data.room.TaskEntity
 import com.app.routineturboa.ui.models.TaskFormData
 import com.app.routineturboa.ui.reusable.CustomTextField
 import com.app.routineturboa.ui.reusable.dropdowns.SelectTaskTypeDropdown
-import com.app.routineturboa.utils.Converters.timeToString
-import com.app.routineturboa.utils.Converters.stringToTime
+import com.app.routineturboa.data.dbutils.Converters.timeToString
+import com.app.routineturboa.data.dbutils.Converters.stringToTime
+import com.app.routineturboa.data.dbutils.RecurrenceType
+import com.app.routineturboa.ui.reusable.dropdowns.ShowMainTasksDropdown
+import com.app.routineturboa.utils.TaskTypes
 import java.time.LocalDate
 import java.time.LocalTime
-
 
 @Composable
 fun NewTaskCreationScreen(
     clickedTask: TaskEntity,
     selectedDate: LocalDate?,
-    taskBelowClickedTask: TaskEntity? = null,
     mainTasks: List<TaskEntity>,
-    onConfirm: (TaskEntity, TaskFormData) -> Unit,
+    onConfirm: (TaskFormData) -> Unit,
     onCancel: () -> Unit,
 ) {
     val tag = "NewTaskCreationScreen"
     Log.d(tag,
-        "Showing NewTaskCreationScreen. \n" +
-                "clickedTask: $clickedTask \n" +
-                "selectedDate: $selectedDate \n" +
-                "taskBelowClickedTask: $taskBelowClickedTask \n"
+    "Showing NewTaskCreationScreen." +
+        "clickedTask: $clickedTask" +
+        "selectedDate: $selectedDate"
     )
-
     val context = LocalContext.current
-    val clickedTaskEndTime = clickedTask.endTime
-    val clickedTaskID = clickedTask.id
-    val clickedTaskPosition = clickedTask.position
 
-    // State variables for task details
-    val id by remember { mutableIntStateOf(clickedTaskID + 1) }
-    var startTime by remember { mutableStateOf(clickedTaskEndTime) }
-    var endTime by remember {
-        mutableStateOf(startTime?.plusMinutes(1L) ?: LocalTime.now())
-    }
+    // region: State variables for new task details
     var taskName by remember { mutableStateOf("") }
+    val clickedTaskEndTime = clickedTask.endTime
+    var startTime by remember { mutableStateOf(clickedTaskEndTime) }
+    val defaultDuration = 1L
+    val newEndTime = startTime?.plusMinutes(defaultDuration) ?: LocalTime.now()
+    var endTime by remember { mutableStateOf(newEndTime)}
     var notes by remember { mutableStateOf("") }
-    var duration by remember { mutableLongStateOf(1L) }
+    var duration by remember { mutableLongStateOf(defaultDuration) }
     var reminder by remember { mutableStateOf(startTime) }
-    var taskType by remember { mutableStateOf("") }
-    val taskPosition by remember {
-        mutableIntStateOf(clickedTaskPosition?.plus(1)?:1)
-    }
+    var taskType by remember { mutableStateOf(TaskTypes.UNDEFINED) }
+    val taskPosition by remember {mutableIntStateOf(clickedTask.position?.plus(1) ?: 2)}
 
     // Recurrence-related state variables
     var isRecurring by remember { mutableStateOf(false) }
-    var recurrenceType by remember { mutableStateOf("DAILY") }
+    var recurrenceType by remember { mutableStateOf(RecurrenceType.DAILY) } // Default to 'DAILY'
     var recurrenceInterval by remember { mutableIntStateOf(1) }
     var recurrenceEndDate by remember { mutableStateOf<LocalDate?>(null) }
 
     // State for linked main task if this is a helper task
-    val linkedMainTaskIdIfHelper by remember { mutableStateOf<Int?>(null) }
+    var linkedMainTaskIdIfHelper by remember { mutableStateOf<Int?>(null) }
+
+    // endregion
 
     // Dialog UI
     Dialog(
@@ -103,7 +99,7 @@ fun NewTaskCreationScreen(
             ) {
                 Text("Add New Task", style = MaterialTheme.typography.titleLarge)
 
-                // Task name input
+                // region: Task name input
                 CustomTextField(
                     value = taskName,
                     onValueChange = { taskName = it },
@@ -112,8 +108,9 @@ fun NewTaskCreationScreen(
                     leadingIcon = Icons.Default.AddTask,
                     modifier = Modifier.fillMaxWidth()
                 )
+                // endregion
 
-                // Task times and reminders
+                // region: Start Time and reminders
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -135,8 +132,9 @@ fun NewTaskCreationScreen(
                         modifier = Modifier.weight(1f)
                     )
                 }
+                // endregion
 
-                // Duration and End Time
+                // region: Duration and End Time
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -168,22 +166,26 @@ fun NewTaskCreationScreen(
                         modifier = Modifier.weight(1f)
                     )
                 }
+                // endregion
 
-                // Notes input
-                CustomTextField(
-                    value = notes,
-                    onValueChange = { notes = it },
-                    label = "Notes",
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                // Task type dropdown
+                // region: Task type dropdown
                 SelectTaskTypeDropdown(
                     selectedTaskType = taskType,
                     onTaskTypeSelected = { taskType = it }
                 )
 
-                // Recurrence checkbox
+                // Show the main task dropdown only if task type is "HelperTask"
+                if (taskType == TaskTypes.HELPER) {
+                    ShowMainTasksDropdown(
+                        mainTasks = mainTasks,
+                        selectedMainTaskId = linkedMainTaskIdIfHelper,
+                        onTaskSelected = { taskId -> linkedMainTaskIdIfHelper = taskId }
+                    )
+                }
+
+                // endregion
+
+                // region: Recurrence checkbox
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
@@ -194,8 +196,9 @@ fun NewTaskCreationScreen(
                         onCheckedChange = { isRecurring = it }
                     )
                 }
+                // endregion
 
-                // If recurring, show recurrence fields
+                // region: If recurring, show recurrence fields
                 if (isRecurring) {
                     // Recurrence type and interval
                     Row(
@@ -203,8 +206,16 @@ fun NewTaskCreationScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         CustomTextField(
-                            value = recurrenceType,
-                            onValueChange = { recurrenceType = it },
+                            value = recurrenceType.name, // Convert the enum value to a string
+                            onValueChange = {
+                                val newType = try {
+                                    // Convert input to uppercase and find the matching enum
+                                    RecurrenceType.valueOf(it.uppercase())
+                                } catch (e: IllegalArgumentException) {
+                                    RecurrenceType.DAILY // Default to DAILY if input is invalid
+                                }
+                                recurrenceType = newType
+                            },
                             label = "Recurrence Type",
                             placeholder = "e.g., DAILY, WEEKLY",
                             modifier = Modifier.weight(1f)
@@ -219,6 +230,7 @@ fun NewTaskCreationScreen(
                         )
                     }
 
+
                     // Recurrence end date
                     CustomTextField(
                         value = recurrenceEndDate?.toString() ?: "",
@@ -228,6 +240,25 @@ fun NewTaskCreationScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
+
+                // endregion
+
+                // Notes input
+                CustomTextField(
+                    value = notes,
+                    onValueChange = { notes = it },
+                    label = "Notes",
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                CustomTextField(
+                    value = taskPosition.toString(),
+                    onValueChange = { },
+                    label = "Position (Don't Change) (Only for dev)",
+                    placeholder = "Internal purposes. Don't change.",
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = false
+                )
 
                 // Add/Cancel buttons
                 Row(
@@ -249,11 +280,11 @@ fun NewTaskCreationScreen(
                             mainTaskId = linkedMainTaskIdIfHelper,
                             startDate = selectedDate,
                             isRecurring = isRecurring,
-                            recurrenceType = recurrenceType.takeIf { isRecurring },
+                            recurrenceType = recurrenceType.takeIf { isRecurring }, // Set only if recurring
                             recurrenceInterval = recurrenceInterval.takeIf { isRecurring },
                             recurrenceEndDate = recurrenceEndDate.takeIf { isRecurring }
                         )
-                        onConfirm(clickedTask, newTaskFormData)
+                        onConfirm(newTaskFormData)
                     }) { Text("Add Task") }
                 }
             }

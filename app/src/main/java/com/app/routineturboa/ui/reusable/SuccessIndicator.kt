@@ -1,52 +1,64 @@
 package com.app.routineturboa.ui.reusable
 
-import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.app.routineturboa.data.repository.TaskOperationResult
+import com.app.routineturboa.ui.theme.LocalCustomColors
 import kotlinx.coroutines.delay
 
 @Composable
-fun SuccessIndicator(confirmationResult:  MutableState<Result<TaskOperationResult>?>) {
+fun SuccessIndicator(
+    onReset: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     var isVisible by remember { mutableStateOf(false) }
-
-    // Animate scale when isVisible changes
-    val scale by animateFloatAsState(targetValue = if (isVisible) 1f else 0f)
+    val customColors = LocalCustomColors.current
 
     // Automatically show the indicator after a slight delay for a cute effect
     LaunchedEffect(Unit) {
         delay(300) // Delay before showing for cuteness
         isVisible = true
+
+        // Reset the visibility after some time (e.g., 2 seconds)
+        delay(2000)
+        isVisible = false
+        onReset()
     }
 
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = Modifier
-            .size(100.dp)
-            .scale(scale) // Scale animation for "popping" effect
-            .background(Color(0xFF4CAF50), shape = CircleShape) // Green background
+    AnimatedVisibility(
+        visible = isVisible,
+        enter = scaleIn(initialScale = 0f),
+        exit = scaleOut(targetScale = 0f)
     ) {
-        Text(
-            text = "✓",
-            style = MaterialTheme.typography.headlineMedium,
-            color = Color.White
-        )
-    }
-
-    // Optionally, reset the visibility after some time (e.g., 2 seconds)
-    LaunchedEffect(isVisible) {
-        if (isVisible) {
-            delay(2000)
-            isVisible = false
-            confirmationResult.value = null
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(40.dp)
+                .background(customColors.successIndicatorColor, shape = CircleShape)
+        ) {
+            Text(
+                text = "✓",
+                style = MaterialTheme.typography.headlineMedium,
+                color = Color.White
+            )
         }
     }
 }
+
+

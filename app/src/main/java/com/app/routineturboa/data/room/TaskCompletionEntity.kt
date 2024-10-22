@@ -4,7 +4,7 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import androidx.room.ForeignKey
 import androidx.room.Index
-import com.app.routineturboa.data.DbConstants
+import com.app.routineturboa.data.dbutils.DbConstants
 import java.time.LocalDate
 
 @Entity(

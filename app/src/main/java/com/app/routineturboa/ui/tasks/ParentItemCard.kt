@@ -6,7 +6,6 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,6 +28,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableIntState
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -47,6 +48,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.app.routineturboa.data.repository.TaskOperationResult
 import com.app.routineturboa.data.room.TaskEntity
 import com.app.routineturboa.shared.DataOperationEvents
 import com.app.routineturboa.shared.StateChangeEvents
@@ -73,7 +75,10 @@ fun ParentTaskItem(
     uiStates: UiStates,
     stateChangeEvents: StateChangeEvents,
     dataOperationEvents: DataOperationEvents,
+    newTaskAdditionResult:  MutableState<Result<TaskOperationResult>?>,
+    newlyAddedTaskId: MutableIntState,
 ) {
+    val tag = "ParentTaskItem"
     val density = LocalDensity.current
     val coroutineScope = rememberCoroutineScope()
     var isShowContextMenu by remember { mutableStateOf(false) }
@@ -88,33 +93,39 @@ fun ParentTaskItem(
 
     val isAnotherTaskEditing = uiStates.isQuickEditing && (tasksBasedOnState.inEditTask?.id != task.id)
 
+    val isThisTaskNewlyAdded = newlyAddedTaskId.intValue != -1 && newlyAddedTaskId.intValue == task.id
+
     var taskTypeFirstLetter = ' ' // Initialize Empty
     if (task.type?.isNotEmpty() == true) {
         taskTypeFirstLetter = task.type[0] // Get first letter of task type
     }
 
+    // region: colors, height, border, padding
     val customColors = LocalCustomColors.current
 
-    val cardBgColor = when {
+    val cardBgColor = remember { when {
         isAnotherTaskEditing -> customColors.gray100
         task.type == TaskTypes.MAIN -> customColors.mainTaskColor
         task.type == TaskTypes.BASICS -> customColors.basicsTaskColor
         task.type == TaskTypes.HELPER -> customColors.helperTaskColor
         task.type == TaskTypes.QUICK -> customColors.quickTaskColor
-        else -> MaterialTheme.colorScheme.surface.copy(alpha = 1f)
-    }
+        task.type == TaskTypes.UNDEFINED -> customColors.undefinedTaskColor
+        else -> customColors.gray300
+    }}
 
     val cardHeight: Dp by animateDpAsState(
         targetValue = if (isThisTaskQuickEditing) {
             120.dp // Inline Quick Editing
         } else {
-            // Regular task view
-            when (task.type) {
-                TaskTypes.MAIN, TaskTypes.HELPER, TaskTypes.BASICS -> {
-                    task.duration?.let { (1.dp * it).coerceAtLeast(55.dp) } ?: 55.dp
+            remember {
+                // Regular task view
+                when (task.type) {
+                    TaskTypes.MAIN, TaskTypes.HELPER, TaskTypes.BASICS -> {
+                        task.duration?.let { (1.dp * it).coerceAtLeast(55.dp) } ?: 55.dp
+                    }
+                    TaskTypes.QUICK -> 40.dp
+                    else -> 55.dp
                 }
-                TaskTypes.QUICK -> 40.dp
-                else -> 55.dp
             }
         },
         animationSpec = spring(
@@ -124,15 +135,15 @@ fun ParentTaskItem(
         label = "card height animation",
     )
 
-
-    val cardBorder = when {
+    val secondaryContainer = MaterialTheme.colorScheme.secondaryContainer
+    val cardBorder =  remember {when {
         isTaskWithinCurrentTimeRange.value -> null
-        isThisTaskQuickEditing -> BorderStroke(1.dp, MaterialTheme.colorScheme.secondaryContainer)
+        isThisTaskQuickEditing -> BorderStroke(1.dp, secondaryContainer)
         isThisTaskClicked -> null
         else -> null
-    }
+    }}
 
-    val outsideCardPadding = when {
+    val outsideCardPadding = remember { when {
         // Space outside the card (NOT inside within the content)
         isThisTaskQuickEditing -> PaddingValues(0.dp, 10.dp, 0.dp, 10.dp)
         task.type == TaskTypes.MAIN -> PaddingValues(0.dp, 0.dp, 0.dp, 0.dp)
@@ -140,8 +151,11 @@ fun ParentTaskItem(
         task.type == TaskTypes.HELPER -> PaddingValues(0.dp, 0.dp, 0.dp, 0.dp)
         task.type == TaskTypes.BASICS -> PaddingValues(0.dp, 0.dp, 0.dp, 0.dp)
         else -> PaddingValues(0.dp, 0.dp, 0.dp, 0.dp)
-    }
+    }}
 
+    // endregion
+
+    // get task within current time range
     LaunchedEffect(Unit) {
         val currentTime = LocalTime.now()
         isTaskWithinCurrentTimeRange.value = task.startTime?.let { start ->
@@ -150,7 +164,6 @@ fun ParentTaskItem(
             }
         } ?: false // Default to false if either startTime or endTime is null
     }
-
 
     Box(
         modifier = Modifier
@@ -167,60 +180,68 @@ fun ParentTaskItem(
             }
     ) {
         Card(
+            // region: card properties
             modifier = Modifier
                 .padding(outsideCardPadding)
                 .height(cardHeight) // animated height
                 .alpha(if (isAnotherTaskEditing) 0.3f else 1f),
-            colors = CardDefaults.cardColors(containerColor = cardBgColor),
+            colors = CardDefaults.cardColors(containerColor = cardBgColor.copy(alpha=0.6f)),
             shape = RectangleShape,
             border = cardBorder
+            // endregion
+
         ) {
             Row {
                 HourColumn(
+                    // region: arguments
                     isThisTaskClicked = isThisTaskClicked,
                     isCurrentTask = isTaskWithinCurrentTimeRange.value,
                     cardHeight = cardHeight,
                     startTime = task.startTime
+                    //endregion
                 )
 
                 if (isThisTaskQuickEditing) {
-                    InLineQuickEdit(
-                        mainTasks = mainTasks,
-                        task = task,
-                        isFullEditing = isThisTaskFullEditing,
-                        onCancelClick = stateChangeEvents.onCancelClick,
-                        onShowFullEditClick = { id ->
-                            coroutineScope.launch {
-                                stateChangeEvents.onShowFullEditClick(task)
+                        InLineQuickEdit(
+                            mainTasks = mainTasks,
+                            task = task,
+                            isFullEditing = isThisTaskFullEditing,
+                            onCancelClick = stateChangeEvents.onCancelClick,
+                            onShowFullEditClick = { id ->
+                                coroutineScope.launch {
+                                    stateChangeEvents.onShowFullEditClick(task)
+                                }
+                            },
+                            onUpdateTaskConfirmClick = { id, editedFormData ->
+                                coroutineScope.launch {
+                                    dataOperationEvents.onUpdateTaskConfirmClick(
+                                        task,
+                                        editedFormData
+                                    )
+                                }
                             }
-                        },
-                        onUpdateTaskConfirmClick = { id, editedFormData->
-                            coroutineScope.launch {
-                                dataOperationEvents.onUpdateTaskConfirmClick(task, editedFormData)
-                            }
-                        }
-                    )
-                }
+                        )
+                    }
 
                 else if (isThisTaskShowDetails) {
-                    TaskDetailsDialog(
-                        task = task,
-                        onDismiss = stateChangeEvents.onCancelClick
-                    )
-                }
+                        TaskDetailsDialog(
+                            task = task,
+                            onDismiss = stateChangeEvents.onCancelClick
+                        )
+                    }
 
+                // The main view for Task
                 else {
-                    // View for Task Details
-                    Column{
+                    Column {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // Task Type Icon
+                            // region: TaskType-Alphabet-Icon and TaskName and Position
                             AlphabetIcon(
                                 letter = taskTypeFirstLetter,
                                 modifier = Modifier.padding(top = 8.dp),
-                                backgroundColor = cardBgColor,
+                                backgroundColor = if (isThisTaskNewlyAdded) Color.Yellow else cardBgColor,
                             )
 
                             // taskName
@@ -234,7 +255,20 @@ fun ParentTaskItem(
                                     .padding(start = 8.dp, top = 8.dp)
                             )
 
-                            // Task Duration
+                            // Position
+                            Text(
+                                text = task.position.toString(),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                style = MaterialTheme.typography.titleMedium.copy(fontSize = 8.sp),
+                                modifier = Modifier
+                                    .weight(0.25f)
+                                    .padding(start = 8.dp, top = 8.dp)
+                            )
+
+                            // endregion
+
+                            // region: Task Duration and details icon
                             Text(
                                 text = "${task.duration} min",
                                 maxLines = 1,
@@ -247,7 +281,7 @@ fun ParentTaskItem(
                                     .weight(0.09f)
                             )
 
-                            // Show Task Details Icon
+                            // Task Details Icon
                             IconButton(
                                 onClick = { stateChangeEvents.onShowTaskDetailsClick(task) },
                                 modifier = Modifier
@@ -256,14 +290,17 @@ fun ParentTaskItem(
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Sharp.LibraryBooks,
                                     contentDescription = "Show Task Details",
-                                    tint = if (isThisTaskClicked) MaterialTheme.colorScheme.surfaceTint.copy(alpha = 1f)
+                                    tint = if (isThisTaskClicked) MaterialTheme.colorScheme.surfaceTint.copy(
+                                        alpha = 1f
+                                    )
                                     else MaterialTheme.colorScheme.surfaceTint.copy(alpha = 1f)
                                 )
                             }
+                            // endregion
 
                             Spacer(modifier = Modifier.width(15.dp))
 
-                            // Quick Edit Task Icon
+                            // region: Quick Edit Task Icon
                             IconButton(
                                 onClick = {
                                     coroutineScope.launch {
@@ -281,11 +318,10 @@ fun ParentTaskItem(
                                     else customColors.gray300.copy(alpha = 0.8f)
                                 )
                             }
+                            //endregion
                         }
 
-                        /**
-                         * Below MainTaskDetails (visible only if enough card height)
-                         */
+                        // OptionalTaskTimings (visible only if enough card height)
                         if (cardHeight > 60.dp) {
                             Spacer(modifier = Modifier.height(10.dp))
                             OptionalTaskTimings(
@@ -297,10 +333,7 @@ fun ParentTaskItem(
                     }
                 }
             }
-            // Add an underline/bottom border if this task is clicked
-
-        }
-
+        } //TaskCard
 
         // This has to be inside the parent box for dropdown menu to position correctly
         if (isShowContextMenu) {
@@ -322,15 +355,4 @@ fun ParentTaskItem(
             )
         }
     }
-
-    Spacer(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(3.dp) // Thickness of the line
-            .padding(horizontal = 0.dp) // Optional padding for the line
-            .background(
-                if (!isThisTaskClicked) Color.Transparent
-                else MaterialTheme.colorScheme.primary
-            ) // Color of the line
-    )
 }

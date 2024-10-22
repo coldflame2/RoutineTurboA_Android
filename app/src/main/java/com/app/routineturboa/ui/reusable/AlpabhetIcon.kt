@@ -10,10 +10,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.BaselineShift
@@ -21,6 +25,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
+
+
 
 @Composable
 fun AlphabetIcon(
@@ -31,21 +38,18 @@ fun AlphabetIcon(
     size: TextUnit = 10.sp
 ) {
     val boxSize = with(LocalDensity.current) { size.toDp() * 2 }
+
     Spacer(modifier = Modifier.width(5.dp))
+
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
             .size(boxSize)
             .border(1.dp,
-                MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.5f),
+                Color.Blue.copy(alpha = 0.5f),
                 CircleShape)
             .background(
-                Brush.radialGradient(
-                    colors = listOf(
-                        Color.Blue.copy(alpha = 0.1f),
-                        backgroundColor.copy(alpha = 1f)
-                    )
-                ),
+                backgroundColor.copy(alpha = 1f),
                 shape = CircleShape
             )
     ) {

@@ -27,8 +27,8 @@ fun AppTopBar(
 
     TopAppBar(
         colors = TopAppBarDefaults.largeTopAppBarColors(
-            containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
-            titleContentColor = MaterialTheme.colorScheme.onPrimary,
+            containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+            titleContentColor = MaterialTheme.colorScheme.onSurface,
         ),
 
         title = { Text(text = currentDate?: "{Set Date}") },

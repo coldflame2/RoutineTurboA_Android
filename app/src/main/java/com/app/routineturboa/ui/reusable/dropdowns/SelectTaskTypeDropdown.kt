@@ -28,16 +28,16 @@ fun SelectTaskTypeDropdown(
         modifier = Modifier.fillMaxWidth(),
     ) {
         TextField(
+            label = { Text("Task Type") },
             readOnly = true,
             value = selectedTaskType,
             onValueChange = {},
-            label = { Text("Task Type") },
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor(),
             trailingIcon = {
                 ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded.value)
             },
-            modifier = Modifier
-                .fillMaxWidth()
-                .menuAnchor()
         )
 
         ExposedDropdownMenu(

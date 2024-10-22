@@ -96,7 +96,7 @@ fun MainScreen(
 
             TasksLazyColumn(
                 paddingValues = paddingValues,
-                tasks = tasksByDate,
+                tasksByDate = tasksByDate,
                 tasksCompleted = tasksCompleted,
                 selectedDate = selectedDate,
                 tasksBasedOnState = tasksBasedOnState,

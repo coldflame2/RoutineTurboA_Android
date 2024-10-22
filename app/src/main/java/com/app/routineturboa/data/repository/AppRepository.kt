@@ -9,13 +9,15 @@ import com.app.routineturboa.data.room.TaskCompletionEntity
 import com.app.routineturboa.data.room.TaskEntity
 import com.app.routineturboa.data.room.TaskCompletionHistory
 import com.app.routineturboa.data.room.NonRecurringTaskEntity
-import com.app.routineturboa.utils.Converters.stringToTime
+import com.app.routineturboa.data.dbutils.Converters.stringToTime
+import com.app.routineturboa.data.dbutils.RecurrenceType
 import com.microsoft.identity.client.IAuthenticationResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.withContext
 import java.time.Duration
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 
@@ -27,7 +29,7 @@ class AppRepository @Inject constructor(
     // Flow to observe all tasks
     val allTasks: Flow<List<TaskEntity>> = appDao.getAllTasks()
 
-    // region:-------------------- Retrieval of Tasks by date  -------------------
+    // region:----------------- TasksByDate StateFlow -----------------
 
      // Get tasks filtered by the selected date
      fun getTasksForDate(date: LocalDate): Flow<List<TaskEntity>> {
@@ -65,9 +67,11 @@ class AppRepository @Inject constructor(
 
         val recurrenceInterval = taskEntity.recurrenceInterval ?: 1
         val periodBetween = when (taskEntity.recurrenceType) {
-            "DAILY" -> ChronoUnit.DAYS.between(startDate, date)
-            "WEEKLY" -> ChronoUnit.WEEKS.between(startDate, date)
-            "MONTHLY" -> ChronoUnit.MONTHS.between(startDate, date)
+            RecurrenceType.CUSTOM -> ChronoUnit.DAYS.between(startDate, date)
+            RecurrenceType.DAILY -> ChronoUnit.DAYS.between(startDate, date)
+            RecurrenceType.WEEKLY  -> ChronoUnit.WEEKS.between(startDate, date)
+            RecurrenceType.MONTHLY -> ChronoUnit.MONTHS.between(startDate, date)
+            RecurrenceType.YEARLY -> ChronoUnit.YEARS.between(startDate, date)
             else -> return false
         }
 
@@ -93,49 +97,54 @@ class AppRepository @Inject constructor(
     // endregion
 
 
-    // region: ----------------- Database Operations (Add, update, Delete) --------------- //
+    // region: ------------- Database Operations (Add, update, Delete) ------------- //
 
     suspend fun beginNewTaskOperations(
-        clickedTask: TaskEntity, newTask: TaskEntity
+        newTaskBeforeInsertion: TaskEntity,
+        clickedTask: TaskEntity,
+        originalTaskBelow: TaskEntity,
     ): Result<TaskOperationResult> {
         Log.d(tag, "Starting the transaction for new Task operations in Repository...")
 
         return try {
             runAsTransaction {
-                // log every original detail, clickedTask: ID and name and position. New task: name and position.
-                // Task below: name and ID and position.
                 Log.d(tag, "Original clickedTask: ID=${clickedTask.id}, Name=${clickedTask.name}, Position=${clickedTask.position}")
-                Log.d(tag, "Original newTask: Name=${newTask.name}, Position=${newTask.position}")
+                Log.d(tag, "newTask: Name=${newTaskBeforeInsertion.name}, Position=${newTaskBeforeInsertion.position}. ID not yet generated.")
 
-                val positionOfTaskBelowClickedTask = clickedTask.position?.plus(1)
-                val taskBelowClickedTask = positionOfTaskBelowClickedTask?.let { getTaskAtPosition(it) }
-
-                Log.d(tag, "Original task Below Clicked Task: Name: ${taskBelowClickedTask?.name}, ID: ${taskBelowClickedTask?.id}, Position: ${taskBelowClickedTask?.position}")
-
-                // Step 1: Insert the new task
-                Log.d(tag, "Inserting the new task with position ${newTask.position}")
-                val newTaskId = appDao.safeInsertTask(newTask)
-                Log.d(tag, "Inserted new task with ID $newTaskId")
-
-                // Step 2: Update shifted task (initially below clickedTask, now below newTask)
-                Log.d(tag, "Updating the task below the new task")
-                if (taskBelowClickedTask != null) {
-                    updateShiftedTaskAfterNewTask(taskBelowClickedTask, newTask)
+                // Step 1: Increment Positions starting from TaskToShift-Before-Insertion
+                val originalTaskBelowPosition = originalTaskBelow.position
+                if (originalTaskBelowPosition != null) {
+                    incrementTasksPositionBelow(originalTaskBelowPosition)
                 }
 
+                // log positions of all
+                val allTaskPositions = appDao.getAllTaskNamesAndPositions()
+                Log.d(tag, "Task positions after incrementing: $allTaskPositions.")
 
-                // Step 4: Increment positions of tasks starting from position after the updated task
-                if (positionOfTaskBelowClickedTask != null) {
-                    Log.d(tag, "Incrementing positions of tasks starting from position $positionOfTaskBelowClickedTask")
-                    incrementTasksPositionBelow(positionOfTaskBelowClickedTask)
-                    Log.d(tag, "Incremented positions of tasks below position $positionOfTaskBelowClickedTask")
+
+                // Now the originalTaskBelow and all other tasks below have been updated
+
+                // Step 2: Insert the new task (already has provided position clickedTask.position+1)
+                Log.d(tag, "Inserting the new task at position ${newTaskBeforeInsertion.position}")
+                val newTaskId = appDao.safeInsertTask(newTaskBeforeInsertion)
+                Log.d(tag, "Inserted new task. newTaskId:$newTaskId")
+
+                // step 3: Update Incremented-TaskBelow-After-Insertion
+                val originalTaskBelowId = originalTaskBelow.id
+                val newTaskBelowAfterInsertion =  getTaskEntityById(originalTaskBelowId)
+                Log.d(tag, "newTaskBelowAfterInsertion: ID: ${newTaskBelowAfterInsertion?.id}. Name:${newTaskBelowAfterInsertion?.name}. Position: ${newTaskBelowAfterInsertion?.position}")
+
+                newTaskBeforeInsertion.endTime?.let {
+                    if (newTaskBelowAfterInsertion != null) {
+                        updateTaskBelowAfterInsertion(newTaskBelowAfterInsertion, it)
+                    }
                 }
 
                 Log.d(tag, "Transaction Complete: Committing transaction")
 
                 // Return the custom data class wrapped in Result
                 Result.success(
-                    TaskOperationResult(success = true, newTaskId = newTaskId)
+                    TaskOperationResult(success = true, newTaskId = newTaskId.toInt())
                 )
             }
         } catch (e: Exception) {
@@ -144,52 +153,54 @@ class AppRepository @Inject constructor(
         }
     }
 
+    // Update Position, StarTime, Duration of Task-To-Shift
+    private suspend fun updateTaskBelowAfterInsertion(
+        taskToShift: TaskEntity, newTaskEndTime: LocalTime
+    ): TaskEntity {
+        Log.d(tag, "Updating the Shifted Task position, startTime, and duration.")
+
+        // newTaskEndTime will be the new startTime of the taskToShift
+        val newStartTimeTaskToShift = newTaskEndTime
+
+        if (
+            taskToShift.endTime != null &&
+            taskToShift.duration != null &&
+            taskToShift.position != null
+        ) {
+            val durationDifference = taskToShift.endTime.until(
+                newStartTimeTaskToShift, ChronoUnit.MINUTES
+            )
+            val newDuration = (taskToShift.duration - durationDifference).toInt()
+            val updatedTaskBelow = taskToShift.copy(
+                startTime = newTaskEndTime,
+                duration = newDuration,
+            )
+
+            // Update taskBelow in the database
+            appDao.updateTask(updatedTaskBelow)
+
+            Log.d(tag, "Updated taskBelow: startTime=${updatedTaskBelow.startTime}, duration=${updatedTaskBelow.duration}, position=${updatedTaskBelow.position}")
+
+            return updatedTaskBelow
+        } else {
+            Log.e(tag, "Invalid duration calculated for task below.")
+            throw Exception("Invalid duration calculated for task below.")
+        }
+    }
+
     // Increment the position of all tasks below the reference task.
-    private suspend fun incrementTasksPositionBelow(startingPosition: Int?) {
+    private suspend fun incrementTasksPositionBelow(startingPosition: Int) {
         try {
-            Log.d(tag, "Calling Dao's incrementPositionBelow method.")
-            if (startingPosition != null) {
-                appDao.incrementPositionsBelowWithLogging(startingPosition)
-            }
+            val startingTask = getTaskAtPosition(startingPosition)
+            Log.d(tag, "Calling Dao's incrementPositionBelow. startingTask:$startingTask." +
+                    "position: $startingPosition")
+            appDao.incrementPositionsBelow(startingPosition)
+
         } catch (e: Exception) {
             Log.e(tag, "Error incrementing task positions below reference task", e)
         }
     }
 
-    // Update the taskBelow duration and update its startTime with newTask's endTime and
-    private suspend fun updateShiftedTaskAfterNewTask(taskBelow: TaskEntity, newTask: TaskEntity) {
-        Log.d(tag, "Updating the Shifted Task position, startTime, and duration.")
-
-        // Update startTime of taskBelow to be the endTime of the new task
-        val updatedStartTime = newTask.endTime
-
-        // Calculate new duration for taskBelow
-        val originalDuration = taskBelow.duration
-        val newDuration = originalDuration?.let { duration ->
-            val durationDifference = updatedStartTime?.let {
-                taskBelow.endTime?.until(it, ChronoUnit.MINUTES)
-            }
-            durationDifference?.let { duration - it }
-        }
-            ?.toInt()
-
-        if (newDuration == null || newDuration <= 0) {
-            Log.e(tag, "Invalid duration calculated for task below.")
-            throw Exception("Invalid duration calculated for task below.")
-        }
-
-        // Update the taskBelow entity without changing its position
-        val updatedTaskBelow = taskBelow.copy(
-            startTime = updatedStartTime,
-            duration = newDuration,
-            endTime = taskBelow.endTime // EndTime remains the same unless recalculated
-        )
-
-        Log.d(tag, "Updated taskBelow: startTime=${updatedTaskBelow.startTime}, duration=${updatedTaskBelow.duration}, position=${updatedTaskBelow.position}")
-
-        // Update taskBelow in the database
-        appDao.updateTask(updatedTaskBelow)
-    }
 
     // Update a task and adjust the next task.
     suspend fun onEditUpdateTaskCurrentAndBelow(taskToEdit: TaskEntity) {
@@ -259,11 +270,16 @@ class AppRepository @Inject constructor(
     // endregion
 
 
-    // region:------------------------- Task Retrieval and filtering -------------------------
+    // region:------------ Task Retrieval and filtering ----------------
 
     // function to get the task at the specified position
     suspend fun getTaskAtPosition(position: Int): TaskEntity? {
         return appDao.getTaskAtPosition(position)
+    }
+
+    // Function to retrieve taskEntity based on taskID
+    suspend fun getTaskEntityById(taskId: Int): TaskEntity? {
+        return appDao.getTaskEntityById(taskId)
     }
 
     // Function to get the next task, also perform the `isTaskLast` check
@@ -331,6 +347,7 @@ class AppRepository @Inject constructor(
 
 
     // region: ------------------------- Task Utilities -------------------------
+
 
     private suspend fun updateTask(task: TaskEntity) {
         Log.d(tag, "Updating task: ${task.name} (id:${task.id})")

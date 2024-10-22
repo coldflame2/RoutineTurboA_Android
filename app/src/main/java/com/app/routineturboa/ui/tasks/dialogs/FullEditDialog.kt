@@ -50,8 +50,9 @@ import com.app.routineturboa.ui.models.TaskFormData
 import com.app.routineturboa.ui.reusable.CustomTextField
 import com.app.routineturboa.ui.reusable.dropdowns.SelectTaskTypeDropdown
 import com.app.routineturboa.ui.reusable.dropdowns.ShowMainTasksDropdown
-import com.app.routineturboa.utils.Converters.timeToString
-import com.app.routineturboa.utils.Converters.stringToTime
+import com.app.routineturboa.data.dbutils.Converters.timeToString
+import com.app.routineturboa.data.dbutils.Converters.stringToTime
+import com.app.routineturboa.utils.TaskTypes
 import kotlinx.coroutines.launch
 
 @RequiresApi(Build.VERSION_CODES.S)
@@ -66,7 +67,6 @@ fun FullEditDialog(
     val tag = "FullEditDialog"
 
     val context = LocalContext.current
-    var linkedMainTaskIdIfHelper by remember { mutableStateOf<Int?>(null) }
 
     // Actual data of task being edited as State variables
     var id by remember { mutableIntStateOf(task.id) }
@@ -86,6 +86,9 @@ fun FullEditDialog(
     var durationString by remember {mutableStateOf(duration.toString())}
     val idFormatted by remember {mutableStateOf(id.toString())}
     var positionString by remember {mutableStateOf(position.toString())}
+
+    // State for linked main task if this is a helper task
+    var linkedMainTaskIdIfHelper by remember { mutableStateOf<Int?>(null) }
 
     val coroutineScope = rememberCoroutineScope()
     var isReminderLinked by remember { mutableStateOf(true) }
@@ -210,7 +213,7 @@ fun FullEditDialog(
                 )
 
                 // Show the main task dropdown only if task type is "HelperTask"
-                if (taskType == "HelperTask") {
+                if (taskType == TaskTypes.HELPER) {
                     ShowMainTasksDropdown(
                         mainTasks = mainTasks,
                         selectedMainTaskId = linkedMainTaskIdIfHelper,

@@ -9,7 +9,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
-import com.app.routineturboa.data.DbConstants
+import com.app.routineturboa.data.dbutils.DbConstants
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
 
@@ -18,14 +18,8 @@ const val tag = "AppDao"
 @Dao
 interface AppDao {
 
-    @Transaction
-    suspend fun runTaskTransaction(block: suspend () -> Unit) {
-        return block()
-    }
-
     @Query("SELECT * FROM ${DbConstants.TASKS_TABLE} ORDER BY position ASC")
     fun getAllTasks(): Flow<List<TaskEntity>>
-
 
     @Query("""
         SELECT EXISTS(
@@ -35,34 +29,18 @@ interface AppDao {
     """)
     suspend fun isNonRecurringTaskOnThisDate(taskId: Int, date: LocalDate): Boolean
 
+    @Query("SELECT name, position FROM ${DbConstants.TASKS_TABLE} WHERE position IS NOT NULL")
+    fun getAllTaskNamesAndPositions(): List<TaskNameAndPosition>
 
-    @Transaction
-    suspend fun incrementPositionsBelowWithLogging(startingPosition: Int) {
-        // Log before updating
-        Log.d(tag, "Incrementing positions for tasks starting from position: $startingPosition")
-
-        try {
-            // Call the original DAO function
-            incrementPositionsBelow(startingPosition)
-
-            // Log success
-            Log.d(tag, "Positions incremented for tasks starting from position: $startingPosition")
-        } catch (e: Exception) {
-            // Log failure
-            Log.e(tag, "Failed to increment positions: ${e.message}")
-        }
-    }
 
     @Query("UPDATE ${DbConstants.TASKS_TABLE} SET position = position + 1 WHERE position >= :startingPosition")
     suspend fun incrementPositionsBelow(startingPosition: Int)
-    @Update
-    suspend fun updateTask(task: TaskEntity)
+
+    @Query("SELECT * FROM ${DbConstants.TASKS_TABLE} WHERE id = :taskId LIMIT 1")
+    suspend fun getTaskEntityById(taskId: Int): TaskEntity?
 
     @Query("SELECT name FROM ${DbConstants.TASKS_TABLE} WHERE id = :taskId LIMIT 1")
     suspend fun getTaskName(taskId: Int): String?
-
-    @Delete
-    suspend fun deleteTask(task: TaskEntity)
 
     // Query to get the count of tasks with a position greater than the specified one
     @Query("SELECT COUNT(*) FROM ${DbConstants.TASKS_TABLE}  WHERE position > :currentPosition")
@@ -97,19 +75,22 @@ interface AppDao {
         }
     }
 
-
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertTask(task: TaskEntity): Long
+
+    @Update
+    suspend fun updateTask(task: TaskEntity)
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertInNonRecurringTaskEntity(nonRecurringTaskEntity: NonRecurringTaskEntity)
 
+    @Delete
+    suspend fun deleteTask(task: TaskEntity)
 
     @Query("DELETE FROM ${DbConstants.TASKS_TABLE}")
     suspend fun deleteAllTasks() // Deletes all tasks from the tasks table
 
-
-    // ------------------ Methods related to task completion ------------------
+    // region: ------- Methods related to task completion -----------
 
     // Insert or update completion status
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -139,4 +120,15 @@ interface AppDao {
     @Query("SELECT * FROM ${DbConstants.TASK_COMPLETIONS_TABLE} WHERE taskId = :taskId")
     suspend fun getTaskCompletionsByTaskId(taskId: Int): List<TaskCompletionEntity>
 
+    // endregion
+
+    @Transaction
+    suspend fun runTaskTransaction(block: suspend () -> Unit) {
+        return block()
+    }
 }
+
+data class TaskNameAndPosition(
+    val name: String,
+    val position: Int
+)

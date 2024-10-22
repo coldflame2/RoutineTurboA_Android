@@ -1,7 +1,8 @@
 package com.app.routineturboa.utils
 
 import com.app.routineturboa.data.room.TaskEntity
-import com.app.routineturboa.utils.Converters.stringToTime
+import com.app.routineturboa.data.dbutils.Converters.stringToTime
+import com.app.routineturboa.data.dbutils.RecurrenceType
 import java.time.LocalDate
 
 fun getBasicTasksList(): List<TaskEntity> {
@@ -17,7 +18,7 @@ fun getBasicTasksList(): List<TaskEntity> {
             type = TaskTypes.BASICS,
             startDate = LocalDate.now(),
             isRecurring = true,
-            recurrenceType = "DAILY",
+            recurrenceType = RecurrenceType.DAILY,
             recurrenceInterval = 1,
             recurrenceEndDate = LocalDate.now().plusDays(365)
         ),
@@ -33,7 +34,7 @@ fun getBasicTasksList(): List<TaskEntity> {
             type = TaskTypes.BASICS,
             startDate = LocalDate.now(),
             isRecurring = true,
-            recurrenceType = "DAILY",
+            recurrenceType = RecurrenceType.DAILY,
             recurrenceInterval = 1,
             recurrenceEndDate = LocalDate.now().plusDays(365)
         )

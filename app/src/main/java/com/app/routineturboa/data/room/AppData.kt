@@ -3,7 +3,7 @@ package com.app.routineturboa.data.room
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
-import com.app.routineturboa.utils.Converters
+import com.app.routineturboa.data.dbutils.Converters
 
 @Database(
     entities = [
