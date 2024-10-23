@@ -7,6 +7,7 @@ import java.time.LocalDate
 import java.time.LocalTime
 
 data class TaskFormData(
+    val id: Int = 0,
     val name: String,
     val startTime: LocalTime?,
     val endTime: LocalTime?,

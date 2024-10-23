@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -39,6 +41,7 @@ import com.app.routineturboa.utils.TaskTypes
 import com.app.routineturboa.shared.StateChangeEvents
 import com.app.routineturboa.shared.TasksBasedOnState
 import com.app.routineturboa.shared.UiStates
+import com.app.routineturboa.ui.reusable.SimpleToast
 import com.app.routineturboa.ui.reusable.SuccessIndicator
 import com.app.routineturboa.ui.tasks.ParentTaskItem
 import com.app.routineturboa.ui.tasks.dialogs.NewTaskCreationScreen
@@ -61,6 +64,7 @@ fun TasksLazyColumn(
 ) {
     val tag = "TasksLazyColumn"
     val coroutineScope = rememberCoroutineScope()
+
     val newTaskAdditionResult = remember {
         mutableStateOf<Result<TaskOperationResult>?>(null)
     }
@@ -70,12 +74,6 @@ fun TasksLazyColumn(
 
     val clickedTask = tasksBasedOnState.clickedTask
     val taskBelowClickedTask = tasksBasedOnState.taskBelowClickedTask
-
-    val isAddNewTaskAllowed = remember(uiStates, tasksByDate) {
-        uiStates.isAddingNew &&
-        clickedTask != null &&
-        taskBelowClickedTask != null
-    }
 
     val newlyAddedTaskId = remember { mutableIntStateOf(-1) }
 
@@ -98,19 +96,6 @@ fun TasksLazyColumn(
                     newTaskAdditionResult = newTaskAdditionResult,
                     newlyAddedTaskId = newlyAddedTaskId
                 )
-
-                // region: Space at the bottom used as visible underline for clicked task
-                Spacer(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(3.dp) // Thickness of the line
-                        .padding(horizontal = 0.dp) // padding for the line
-                        .background(
-                            if (tasksBasedOnState.clickedTask?.id == task.id) Color.Blue.copy(alpha=0.6f)
-                            else Color.Transparent
-                        )
-                )
-                // endregion
             }
 
         }
@@ -130,39 +115,39 @@ fun TasksLazyColumn(
         }
     }
 
-// Show NewTaskCreationScreen
-    if (isAddNewTaskAllowed) {
-        val boxColor = Color.Black.copy(alpha = 0.3f)
-
-        // ensure again that clickedTask and taskBelowClickedTask are non-null
-        clickedTask?.let { nonNullClickedTask ->
-            taskBelowClickedTask?.let { nonNullTaskBelowClickedTask ->
-                Row(
-                    modifier = Modifier
-                        .background(boxColor)
-                        .padding(paddingValues) // Apply the padding here to avoid overlap
-                ) {
-                    NewTaskCreationScreen(
-                        clickedTask = nonNullClickedTask,
-                        selectedDate = selectedDate,
-                        mainTasks = mainTasks,
-                        onCancel = { stateChangeEvents.onCancelClick() },
-                        onConfirm = { newTaskFormData ->
-                            coroutineScope.launch {
-                                newTaskAdditionResult.value =
-                                    dataOperationEvents.onNewTaskConfirmClick(
-                                        newTaskFormData,
-                                        nonNullClickedTask,
-                                        nonNullTaskBelowClickedTask
-                                    )
-                            }
-                        },
-                    )
-                }
+    // Show NewTaskCreationScreen
+    if (uiStates.isAddingNew && clickedTask != null) {
+        Log.d(tag, "Adding new task")
+        Row(
+            modifier = Modifier
+                .padding(paddingValues) // Apply the padding here to avoid overlap
+        ) {
+            if (taskBelowClickedTask != null) {
+                NewTaskCreationScreen(
+                    clickedTask = clickedTask,
+                    selectedDate = selectedDate,
+                    mainTasks = mainTasks,
+                    onCancel = { stateChangeEvents.onCancelClick() },
+                    onConfirm = { newTaskFormData ->
+                        coroutineScope.launch {
+                            newTaskAdditionResult.value =
+                                dataOperationEvents.onNewTaskConfirmClick(
+                                    newTaskFormData,
+                                    clickedTask,
+                                    taskBelowClickedTask
+                                )
+                        }
+                    },
+                )
             }
+
+            else {
+                Log.d(tag, "No task below clicked task")
+                SimpleToast(message = "No task below clicked task")
+            }
+
         }
     }
-
 
     // set value for success indicator state
     if (newTaskAdditionResult.value?.isSuccess == true) {

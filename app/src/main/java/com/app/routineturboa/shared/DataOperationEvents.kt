@@ -12,7 +12,7 @@ data class DataOperationEvents(
     ) -> Result<TaskOperationResult>,
 
     val onUpdateTaskConfirmClick: suspend (
-        task: TaskEntity, updatedTaskFormData: TaskFormData
+        updatedTaskFormData: TaskFormData
     ) -> Unit,
 
     val onDeleteTaskConfirmClick: suspend (task: TaskEntity) -> Unit

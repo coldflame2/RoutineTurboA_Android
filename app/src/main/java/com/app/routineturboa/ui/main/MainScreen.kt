@@ -34,7 +34,6 @@ fun MainScreen(
 ) {
     val tag = "MainScreen"
     val context = LocalContext.current
-
     val drawerState = rememberDrawerState(DrawerValue.Closed)
 
     val app = remember { context.applicationContext as RoutineTurboApp }
@@ -44,14 +43,12 @@ fun MainScreen(
     val tasksCompleted by tasksViewModel.taskCompletions.collectAsState()
 
     val uiStates by tasksViewModel.uiStates.collectAsState()
+    val tasksBasedOnState by tasksViewModel.tasksBasedOnState.collectAsState()
+    val selectedDate by tasksViewModel.selectedDate.collectAsState()
 
     val eventsHandler = remember { EventsHandler(tasksViewModel) }
     val stateChangeEventsHandling = eventsHandler.stateChangeEventsHandling()
     val dataOperationEventsHandling = eventsHandler.dataOperationEventsHandling()
-
-    val tasksBasedOnState by tasksViewModel.tasksBasedOnState.collectAsState()
-
-    val selectedDate by tasksViewModel.selectedDate.collectAsState()
 
     LaunchedEffect(Unit) {
         Log.d(tag, "MainScreen starts...")
@@ -82,7 +79,14 @@ fun MainScreen(
                     onDatePickerClick =  stateChangeEventsHandling.onShowDatePickerClick,
                 )
             },
-            bottomBar = { AppBottomBar(stateChangeEventsHandling.onShowAddNewTaskClick) }
+
+            bottomBar = {
+                // Only show the bottom bar if uiStates.isQuickEditing is false
+                if (!uiStates.isQuickEditing) {
+                    AppBottomBar(stateChangeEventsHandling.onShowAddNewTaskClick)
+                }
+            }
+
         ) { paddingValues ->  // These paddingValues are applied along the edges inside a box.
 
             // Show DatePickerDialog when showDatePickerDialog is true

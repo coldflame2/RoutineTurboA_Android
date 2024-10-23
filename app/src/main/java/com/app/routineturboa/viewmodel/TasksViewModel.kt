@@ -26,7 +26,6 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import okhttp3.internal.concurrent.Task
 import java.time.LocalDate
 import javax.inject.Inject
 
@@ -77,128 +76,30 @@ class TasksViewModel @Inject constructor(
     // endregion
 
 
-    // region: ------------- On Database operations (Add, edit, and Delete) ----------------
-
-    // Confirm a new task and add it to the database
-    suspend fun onNewTaskConfirmClick(
-        newTaskFormData: TaskFormData,
-        clickedTask: TaskEntity,
-        taskBelowClickedTask: TaskEntity
-    ): Result<TaskOperationResult> {
-        Log.d(tag, "onNewTaskConfirmClick...")
-        Log.d(tag,
-        "clickedTask: ${clickedTask.name}. Id: ${clickedTask.id}. Position: ${clickedTask.position}")
-         Log.d(tag,
-             "NewTaskFormData: ${newTaskFormData.name}. Position: ${newTaskFormData.position}")
-
-        Log.d(tag,
-            "belowClickedTask: ${taskBelowClickedTask.name}. Id: ${taskBelowClickedTask.id}. Initial Position: ${taskBelowClickedTask.position}")
-
-        val newTaskEntity = createTaskEntityFromForm(newTaskFormData)
-        val result = repository.beginNewTaskOperations(newTaskEntity, clickedTask, taskBelowClickedTask)
-
-        // Set clickedTask as NewTask and other UI states updates
-        if (result.isSuccess) {
-            val taskOperationResult = result.getOrNull()
-            val newTaskId = taskOperationResult?.newTaskId
-            val newTask = newTaskId?.let { repository.getTaskEntityById(newTaskId) }
-
-            // update ui state
-            _uiStates.update { it.copy(
-                    isAddingNew = false,
-                    isFullEditing = false) }
-
-            _tasksBasedOnState.update{
-                it.copy (
-                    clickedTask = newTask,
-                    longPressedTask = null,
-                    taskBelowClickedTask = null,
-                    inEditTask = null,
-                    showingDetailsTask = null
-                )
-            }
-        }
-
-        // on result.failure: regular UiState and tasksBasedOnState updates
-        else {
-            // update ui state
-            _uiStates.update { it.copy(
-                isAddingNew = false,
-                isFullEditing = false) }
-
-            _tasksBasedOnState.update{
-                it.copy (
-                    clickedTask = clickedTask,
-                    longPressedTask = null,
-                    taskBelowClickedTask = null,
-                    inEditTask = null,
-                    showingDetailsTask = null
-                )
-            }
-        }
-
-        return result
-    }
-
-    // Confirm an edit for an existing task
-    suspend fun onUpdateTaskConfirmClick(task: TaskEntity, updatedTaskFormData: TaskFormData) {
-        Log.d(tag, "Confirm task edit clicked...")
-
-        val updatedTaskEntity = createTaskEntityFromForm(updatedTaskFormData)
-        repository.onEditUpdateTaskCurrentAndBelow(updatedTaskEntity)
-        _uiStates.update {
-            it.copy(
-                isQuickEditing = false,
-                isFullEditing = false,
-            )
-        }
-
-        _tasksBasedOnState.update {
-            it.copy(
-                inEditTask = null,
-            )
-        }
-    }
-
-    // Delete a task from the database
-    suspend fun onDeleteTaskConfirmClick(task: TaskEntity) {
-        Log.d(tag, "Confirm task delete clicked...")
-        task.let {
-            Log.d(tag, "Deleting task: ${task.name}")
-            repository.deleteTask(task)
-
-            _uiStates.update {
-                it.copy(
-                    isQuickEditing = false,
-                    isFullEditing = false
-                )
-            }
-        }
-    }
-
-    // endregion
-
-
     // region: ----------------------- Utility Methods -------------------------
 
     // Helper function to create a TaskEntity from TaskFormData
-    fun createTaskEntityFromForm(form: TaskFormData): TaskEntity {
-        Log.d(tag, "Creating TaskEntity from TaskFormData")
+    private fun createTaskEntityFromForm(
+        taskFormData: TaskFormData, // Default to taskFormData's ID if not provided
+        taskId: Int = taskFormData.id
+    ): TaskEntity {
+        Log.d(tag, "Creating TaskEntity from TaskFormData for task ${taskFormData.name}. Id:${taskFormData.id}")
         return TaskEntity(
-            position = form.position,
-            name = form.name,
-            notes = form.notes,
-            startTime = form.startTime,
-            endTime = form.endTime,
-            duration = form.duration,
-            reminder = form.reminder,
-            type = form.taskType,
-            mainTaskId = form.mainTaskId,
-            startDate = form.startDate,
-            isRecurring = form.isRecurring,
-            recurrenceType = form.recurrenceType,
-            recurrenceInterval = form.recurrenceInterval,
-            recurrenceEndDate = form.recurrenceEndDate
+            id = taskId,
+            position = taskFormData.position,
+            name = taskFormData.name,
+            notes = taskFormData.notes,
+            startTime = taskFormData.startTime,
+            endTime = taskFormData.endTime,
+            duration = taskFormData.duration,
+            reminder = taskFormData.reminder,
+            type = taskFormData.taskType,
+            mainTaskId = taskFormData.mainTaskId,
+            startDate = taskFormData.startDate,
+            isRecurring = taskFormData.isRecurring,
+            recurrenceType = taskFormData.recurrenceType,
+            recurrenceInterval = taskFormData.recurrenceInterval,
+            recurrenceEndDate = taskFormData.recurrenceEndDate
         )
     }
 
@@ -265,17 +166,126 @@ class TasksViewModel @Inject constructor(
     // endregion
 
 
+    // region: ------------- On Database operations (Add, edit, and Delete) ----------------
+
+    // Confirm a new task and add it to the database
+    suspend fun onNewTaskConfirmClick(
+        newTaskFormData: TaskFormData,
+        clickedTask: TaskEntity,
+        taskBelowClickedTask: TaskEntity
+    ): Result<TaskOperationResult> {
+        Log.d(tag, "onNewTaskConfirmClick...")
+        Log.d(tag,
+            "clickedTask: ${clickedTask.name}. Id: ${clickedTask.id}. Position: ${clickedTask.position}")
+        Log.d(tag,
+            "NewTaskFormData: ${newTaskFormData.name}. Position: ${newTaskFormData.position}")
+
+        Log.d(tag,
+            "belowClickedTask: ${taskBelowClickedTask.name}. Id: ${taskBelowClickedTask.id}. Initial Position: ${taskBelowClickedTask.position}")
+
+        val newTaskEntity = createTaskEntityFromForm(taskFormData = newTaskFormData)
+        val result = repository.beginNewTaskOperations(newTaskEntity, clickedTask, taskBelowClickedTask)
+
+        // Set clickedTask as NewTask and other UI states updates
+        if (result.isSuccess) {
+            val taskOperationResult = result.getOrNull()
+            val newTaskId = taskOperationResult?.newTaskId
+            val newTask = newTaskId?.let { repository.getTaskEntityById(newTaskId) }
+
+            // update ui state
+            _uiStates.update { it.copy(
+                isAddingNew = false,
+                isFullEditing = false) }
+
+            _tasksBasedOnState.update{
+                it.copy (
+                    clickedTask = newTask,
+                    longPressedTask = null,
+                    taskBelowClickedTask = null,
+                    inEditTask = null,
+                    showingDetailsTask = null
+                )
+            }
+        }
+
+        // on result.failure: regular UiState and tasksBasedOnState updates
+        else {
+            // update ui state
+            _uiStates.update { it.copy(
+                isAddingNew = false,
+                isFullEditing = false) }
+
+            _tasksBasedOnState.update{
+                it.copy (
+                    clickedTask = clickedTask,
+                    longPressedTask = null,
+                    taskBelowClickedTask = null,
+                    inEditTask = null,
+                    showingDetailsTask = null
+                )
+            }
+        }
+
+        return result
+    }
+
+    // Confirm an edit for an existing task
+    suspend fun onUpdateTaskConfirmClick(updatedTaskFormData: TaskFormData) {
+        Log.d(tag, "OnUpdateTaskConfirm Clicked during edit. Id: ${updatedTaskFormData.id}. Name: ${updatedTaskFormData.name}")
+
+        val updatedTaskEntity = createTaskEntityFromForm(taskFormData = updatedTaskFormData)
+        val result = repository.onEditUpdateTaskCurrentAndBelow(updatedTaskEntity)
+
+        Log.d(tag, "Id: ${updatedTaskEntity.id}")
+        if (result.isSuccess) {
+            val taskOperationResult = result.getOrNull()
+            val success = taskOperationResult?.success
+            val message = taskOperationResult?.message
+
+            Log.d(tag, "success: $success. Message: $message")
+        }
+
+        _uiStates.update {
+            it.copy(
+                isQuickEditing = false,
+                isFullEditing = false,
+            )
+        }
+
+        _tasksBasedOnState.update {
+            it.copy(
+                inEditTask = null,
+            )
+        }
+    }
+
+    // Delete a task from the database
+    suspend fun onDeleteTaskConfirmClick(task: TaskEntity) {
+        Log.d(tag, "Confirm task delete clicked...")
+        task.let {
+            Log.d(tag, "Deleting task: ${task.name}")
+            repository.deleteTask(task)
+
+            _uiStates.update {
+                it.copy(
+                    isQuickEditing = false,
+                    isFullEditing = false
+                )
+            }
+        }
+    }
+
+    // endregion
+
+
     // region: ----------------------- UI State Handling -------------------------
 
     // Handle task click events
     fun onTaskClick(taskClicked: TaskEntity) {
-        Log.d(tag, "Clicked on task: ${taskClicked.name}")
-
         // Some task in-edit
         if (uiStates.value.isQuickEditing) {
             // Task in-edit is same as task clicked
             if (taskClicked == tasksBasedOnState.value.inEditTask) {
-                Log.d(tag, "Clicked-task is same as in-edit task: ${taskClicked.name}")
                 return // no changes are needed
             }
 
@@ -328,18 +338,17 @@ class TasksViewModel @Inject constructor(
         val taskBelowPosition = clickedTaskPosition?.plus(1)
         val taskBelowClickedTask = taskBelowPosition?.let { getTaskAtPosition(it) }
 
-        if (taskBelowClickedTask != null) {
-            _uiStates.update { it.copy(isAddingNew = true) }
-            _tasksBasedOnState.update { it.copy(taskBelowClickedTask = taskBelowClickedTask) }
-        } else {
-            _uiStates.update { it.copy(isAddingNew = false) }
-            _tasksBasedOnState.update { it.copy(taskBelowClickedTask = null) }
-        }
+        _uiStates.update { it.copy(isAddingNew = true) }
+        _tasksBasedOnState.update { it.copy(taskBelowClickedTask = taskBelowClickedTask) }
     }
 
     // Show Quick Edit UI for a task
-    fun onQuickEditTask(task: TaskEntity) {
+    suspend fun onShowQuickEditClick(task: TaskEntity) {
         Log.d(tag, "Quick edit click for task: $task")
+        val clickedTaskPosition = _tasksBasedOnState.value.clickedTask?.position
+        val taskBelowPosition = clickedTaskPosition?.plus(1)
+        val taskBelowClickedTask = taskBelowPosition?.let { getTaskAtPosition(it) }
+
         _uiStates.update {
             it.copy(
                 isQuickEditing = true,
@@ -351,18 +360,35 @@ class TasksViewModel @Inject constructor(
             )
         }
 
-        _tasksBasedOnState.update { it.copy(inEditTask = task) }
+        _tasksBasedOnState.update { it.copy(
+            inEditTask = task,
+            clickedTask = task,
+            taskBelowClickedTask = taskBelowClickedTask,
+            )
+        }
     }
 
     // Show Full Edit UI for a task
-    suspend fun onFullEditClick(taskInEdit: TaskEntity) {
+    suspend fun onShowFullEditClick(taskInEdit: TaskEntity) {
         val clickedTaskPosition = _tasksBasedOnState.value.clickedTask?.position
         val taskBelowClickedTask = clickedTaskPosition?.let { getTaskAtPosition(it+1) }
 
         if (taskBelowClickedTask != null) {
             Log.d(tag, "FullEdit: Task below clicked task: $taskBelowClickedTask")
-            _uiStates.update { it.copy(isFullEditing = true, isQuickEditing = false) }
-            _tasksBasedOnState.update { it.copy(inEditTask = taskInEdit, taskBelowClickedTask = taskBelowClickedTask) }
+            _uiStates.update { it.copy(
+                isFullEditing = true,
+                isQuickEditing = false,
+                isShowingDetails = false,
+                isShowingCompletedTasks = false,
+                isAddingNew = false,
+                isShowingDatePicker = false
+            ) }
+
+            _tasksBasedOnState.update { it.copy(
+                inEditTask = taskInEdit,
+                taskBelowClickedTask = taskBelowClickedTask,
+                clickedTask = taskInEdit
+            ) }
         }
 
         else {
@@ -413,6 +439,16 @@ class TasksViewModel @Inject constructor(
                 isShowingCompletedTasks = false,
                 isAddingNew = false,
                 isShowingDatePicker = false
+            )
+        }
+
+        _tasksBasedOnState.update {
+            it.copy(
+                clickedTask = null,
+                longPressedTask = null,
+                taskBelowClickedTask = null,
+                inEditTask = null,
+                showingDetailsTask = null,
             )
         }
     }

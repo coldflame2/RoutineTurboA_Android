@@ -203,13 +203,15 @@ class AppRepository @Inject constructor(
 
 
     // Update a task and adjust the next task.
-    suspend fun onEditUpdateTaskCurrentAndBelow(taskToEdit: TaskEntity) {
-        try {
+    suspend fun onEditUpdateTaskCurrentAndBelow(taskToEdit: TaskEntity): Result<TaskOperationResult> {
+        return try {
             // If the current task is the last one, update only taskToEdit
             if (isTaskLast(taskToEdit)) {
                 Log.d(tag, "Current task is the last one, updating the task only.")
                 updateTask(taskToEdit)
-                return
+                return Result.success(
+                    TaskOperationResult(success = true, message = "Updated the last task only.")
+                )
             }
 
             // Get the task below the current task based on position
@@ -219,8 +221,12 @@ class AppRepository @Inject constructor(
             if (taskBelow == null) {
                 Log.d(tag, "No task below found, updating the task only.")
                 updateTask(taskToEdit)
+                Result.success(
+                    TaskOperationResult(success = true, message = "Updated the task only; no task below found.")
+                )
             } else {
-                // Calculate the duration between taskToEdit's end time and taskBelow end time
+                Log.d(tag, "Task below found, updating both tasks.")
+                // Calculate the duration between taskToEdit's end time and taskBelow's end time
                 val durationBetween = Duration.between(taskToEdit.endTime, taskBelow.endTime).toMinutes().toInt()
                 val updatedTaskBelow = taskBelow.copy(duration = durationBetween, startTime = taskToEdit.endTime)
 
@@ -229,11 +235,17 @@ class AppRepository @Inject constructor(
                     updateTask(taskToEdit)
                     updateTask(updatedTaskBelow)
                 }
+
+                Result.success(
+                    TaskOperationResult(success = true, message = "Updated both the task and the task below.")
+                )
             }
         } catch (e: Exception) {
             Log.e(tag, "Error updating task and adjusting next", e)
+            Result.failure(e)
         }
     }
+
 
     suspend fun resetWithDemoOrDefaultTasks(tasks: List<TaskEntity>): Result<Boolean> {
         return try {
@@ -371,7 +383,6 @@ class AppRepository @Inject constructor(
     }
 
     // endregion
-
 
 
     // region:---------------------- Task Completion and Others ---------------------

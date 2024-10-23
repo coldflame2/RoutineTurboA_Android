@@ -21,6 +21,8 @@ fun RoutineTurboATheme(
         else -> LightColorScheme
     }
 
+    val typography = Typography
+
     // logic for which custom palette to use
     val customColorsPalette = if (isDarkTheme) DarkCustomColorsPalette
         else LightCustomColorsPalette

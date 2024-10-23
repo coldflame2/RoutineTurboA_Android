@@ -2,7 +2,6 @@ package com.app.routineturboa.ui.tasks.childItems
 
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
@@ -30,7 +29,8 @@ fun HourColumn(
     isThisTaskClicked: Boolean,
     isCurrentTask: Boolean,
     cardHeight: Dp,
-    startTime: LocalTime?
+    startTime: LocalTime?,
+    topPadding: Dp
 ) {
     val formattedStartTime = startTime?.format(DateTimeFormatter.ofPattern("hh:mm a"))
     val startTimeHourString = formattedStartTime?.substring(0, 2)
@@ -38,7 +38,20 @@ fun HourColumn(
     val startTimeAinAm = formattedStartTime?.substring(6, 7)
     val startTimeMinAm = formattedStartTime?.substring(7, 8)
 
+    val customColors = LocalCustomColors.current
+
+    // region: Card background color and alpha, and fontWeight
+
+    val fontWeight = when {
+        isThisTaskClicked -> MaterialTheme.typography.bodyLarge.copy(
+                            fontSize = 11.sp, fontWeight = FontWeight.Thin)
+
+        else -> MaterialTheme.typography.bodyLarge.copy(
+                fontSize = 11.sp, fontWeight = FontWeight.Thin)
+    }
+
     val infiniteTransition = rememberInfiniteTransition(label = "BorderAnimation")
+
     val animatedAlpha = AnimatedAlphaUtils.animatedAlpha(
         transition = infiniteTransition,
         initialValue = 0f,
@@ -46,46 +59,45 @@ fun HourColumn(
         duration = 1000,
     )
 
-    val customColors = LocalCustomColors.current
-
-    val fontWeight = when {
-        isThisTaskClicked -> MaterialTheme.typography.bodyLarge.copy(
-                            fontSize = 11.sp)
-
-        else -> MaterialTheme.typography.bodyLarge.copy(
-                fontSize = 11.sp)
-    }
-
     val backgroundColor = when {
         isCurrentTask -> {
             MaterialTheme.colorScheme.primary.copy(alpha = animatedAlpha)
         }
+        isThisTaskClicked -> {
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
+        }
         else -> {
-            MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
         }
     }
 
+    // endregion
 
     Card (
-        shape = RectangleShape,
-        colors = CardDefaults.cardColors(containerColor = backgroundColor)
+        colors = CardDefaults.cardColors(containerColor = backgroundColor),
+        shape = RectangleShape
     ) {
         Row(
             modifier = Modifier
                 .height(cardHeight)
-                .width(50.dp)
+                .width(62.dp)
                 .padding(
-                    start = 15.dp,
-                    end = 13.dp,
-                    top = 0.dp,
+                    start = 4.dp,
+                    top = topPadding-1.dp,
                 )
         ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy((-12).dp),
+            // Hour Strings (eg. "06:00")
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy((-1).dp),
             ) {
                 Text(
                     text = startTimeHourString ?: "--",
+                    style = fontWeight,
+                )
+
+                Text(
+                    text = ":",
                     style = fontWeight,
                 )
 
@@ -98,9 +110,9 @@ fun HourColumn(
             Spacer(modifier = Modifier.width(1.dp))
 
             // AM/PM Strings
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy((-15).dp), // Adjust to control space between A/P and M
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy((-1).dp),
             ) {
                 Text(
                     text = startTimeAinAm ?: "--", // A or P
@@ -113,4 +125,6 @@ fun HourColumn(
             }
         }
     }
+
+
 }

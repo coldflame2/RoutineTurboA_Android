@@ -1,30 +1,39 @@
 package com.app.routineturboa.ui.tasks.dialogs
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BottomSheetScaffold
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
-import com.app.routineturboa.data.room.TaskEntity
 import com.app.routineturboa.data.dbutils.Converters.timeToString
+import com.app.routineturboa.data.room.TaskEntity
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TaskDetailsDialog(
     task: TaskEntity,
@@ -50,52 +59,85 @@ fun TaskDetailsDialog(
         },
         title = {
             Text(
-                text = "${task.name} [${task.duration} Mins]",
+                text = "${task.name} - ${task.duration} M",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
             )
         },
+
+        // Content of dialog
         text = {
             Surface(
                 modifier = Modifier
                     .fillMaxWidth(0.9f)
-                    .padding(top = 10.dp)
+                    .padding(top = 1.dp)
                     .verticalScroll(rememberScrollState())
             ) {
                 Column(
-                    verticalArrangement = Arrangement.spacedBy(15.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
                     modifier = Modifier.padding(top = 10.dp)
                 ) {
-                    // Time information
+                    // Complete TaskEntity view
+                    Text(
+                        text = task.toString(),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Start and End Time and Type
                     Row(
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
+
+                        // Start Time
                         Column {
-                            Text(
+                            Text( // header
                                 text = "Start",
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.onPrimary
-                            )
+                            ) // actual data
                             Text(
                                 text = timeToString(task.startTime).toString(),
-                                style = MaterialTheme.typography.titleSmall
+                                style = MaterialTheme.typography.labelSmall
                             )
                         }
 
-                        Spacer(modifier = Modifier.width(25.dp))
-                        Column {
+                        Spacer(modifier = Modifier.width(30.dp))
+
+                        // End Time
+                        Column { // header
                             Text(
                                 text = "End",
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.onPrimary
-                            )
+                            ) // actual data
                             Text(
                                 text = timeToString( task.endTime).toString(),
                                 style = MaterialTheme.typography.titleSmall
                             )
                         }
+
+                        Spacer(modifier = Modifier.width(30.dp))
+
+                        // Type
+                        Column {
+                            Text(
+                                text = "Type",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
+                            Text(
+                                text = task.type?: "None",
+                                style = MaterialTheme.typography.titleSmall
+                            )
+                        }
+
                     }
 
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Notes
                     Column {
                         Text(
                             text = "Notes",
@@ -107,6 +149,8 @@ fun TaskDetailsDialog(
                             style = MaterialTheme.typography.titleSmall
                         )
                     }
+
+                    Spacer(modifier = Modifier.height(10.dp))
 
                     // Reminder
                     Column {
@@ -121,48 +165,36 @@ fun TaskDetailsDialog(
                         )
                     }
 
-                    // Type
-                    Column {
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // RecurringType
+                    Column(
+                        modifier = Modifier.padding(top = 2.dp),
+                        verticalArrangement = Arrangement.spacedBy(5.dp)
+                    ) {
                         Text(
-                            text = "Type",
+                            text = "Recurring",
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onPrimary
                         )
                         Text(
-                            text = task.type?: "None",
+                            text = "isRecurring: ${task.isRecurring}.toString()",
                             style = MaterialTheme.typography.bodyMedium
                         )
-                    }
+                        Text(
+                            text = "recurrenceType: ${task.recurrenceType?.name.toString()}",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            text = "Recurrence-Start: ${(task.startDate.toString())}",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
 
-                    // Internal details
-                    Column {
-                        Text(
-                            text = "Internal Details",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onPrimary
-                        )
-                        Text(
-                            text = "ID: ${task.id}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = "Position: ${task.position}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
-                    Column {
-                        Text(
-                            text = task.toString(),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onPrimary
-                        )
                     }
                 }
             }
+
         },
-        modifier = Modifier.padding(0.dp)
+        modifier = Modifier.padding(1.dp)
     )
 }
