@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddTask
 import androidx.compose.material.icons.filled.Link
@@ -40,19 +39,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.app.routineturboa.R
-import com.app.routineturboa.data.room.TaskEntity
+import com.app.routineturboa.data.room.entities.TaskEntity
 import com.app.routineturboa.ui.models.TaskFormData
-import com.app.routineturboa.ui.reusable.CustomTextField
 import com.app.routineturboa.ui.reusable.dropdowns.SelectTaskTypeDropdown
 import com.app.routineturboa.ui.reusable.dropdowns.ShowMainTasksDropdown
 import com.app.routineturboa.data.dbutils.Converters.timeToString
 import com.app.routineturboa.data.dbutils.Converters.stringToTime
 import com.app.routineturboa.data.dbutils.RecurrenceType
+import com.app.routineturboa.ui.reusable.fields.CustomTextField
 import com.app.routineturboa.utils.TaskTypes
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -98,7 +96,10 @@ fun FullEditDialog(
 
     var isReminderLinked by remember { mutableStateOf(true) }
 
-
+    Dialog(
+        onDismissRequest = {onCancel()},
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
         Surface(
             modifier = Modifier
                 .fillMaxWidth(0.9f),
@@ -137,7 +138,7 @@ fun FullEditDialog(
                         leadingIcon = Icons.Sharp.Start,
                     )
 
-                    Icon (
+                    Icon(
                         imageVector = if (isReminderLinked) Icons.Default.Link
                         else Icons.Default.LinkOff,
                         contentDescription = "Link Reminder",
@@ -167,12 +168,17 @@ fun FullEditDialog(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    LaunchedEffect (durationString){
+                    LaunchedEffect(durationString) {
                         if (durationString.isNotEmpty()) {
                             try {
-                                endTimeString = timeToString(startTime?.plusMinutes(durationString.toLong()))
+                                endTimeString =
+                                    timeToString(startTime?.plusMinutes(durationString.toLong()))
                             } catch (e: NumberFormatException) {
-                                Toast.makeText(context, "Invalid duration format", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(
+                                    context,
+                                    "Invalid duration format",
+                                    Toast.LENGTH_SHORT
+                                ).show()
                             }
                         }
 
@@ -184,7 +190,6 @@ fun FullEditDialog(
                         label = "Duration",
                         placeholder = "Enter duration",
                         leadingIcon = Icons.Sharp.Timer,
-                        keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
                         modifier = Modifier.weight(1f),
                     )
 
@@ -210,8 +215,9 @@ fun FullEditDialog(
                 )
 
                 SelectTaskTypeDropdown(
-                    taskType?: "",
-                    onTaskTypeSelected = { newType -> taskType = newType }
+                    taskType ?: "",
+                    onTaskTypeSelected = { newType -> taskType = newType },
+                    taskTypeErrorMessage = null,
                 )
 
                 // Show the main task dropdown only if task type is "HelperTask"
@@ -234,7 +240,7 @@ fun FullEditDialog(
 
                 CustomTextField(
                     value = positionString,
-                    onValueChange = {positionString = it},
+                    onValueChange = { positionString = it },
                     label = "Position (Don't Change) (Only for dev)",
                     placeholder = "Internal purposes. Don't change.",
                     modifier = Modifier.fillMaxWidth(),
@@ -281,7 +287,11 @@ fun FullEditDialog(
 
                                 } catch (e: Exception) {
                                     Log.e(tag, "Error: $e")
-                                    Toast.makeText(context, "Error saving task: ${e.message}", Toast.LENGTH_LONG).show()
+                                    Toast.makeText(
+                                        context,
+                                        "Error saving task: ${e.message}",
+                                        Toast.LENGTH_LONG
+                                    ).show()
                                 }
 
                                 val updatedTaskFormData = TaskFormData(
@@ -318,5 +328,6 @@ fun FullEditDialog(
 
             }
         }
+    }
 
 }

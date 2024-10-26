@@ -1,4 +1,4 @@
-package com.app.routineturboa.ui.reusable
+package com.app.routineturboa.ui.reusable.animation
 
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode

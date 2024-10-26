@@ -73,4 +73,9 @@ object Converters {
         }
         return null  // if uiTimeString is null
     }
+
+    // Convert LocalTime to UI-friendly time string (e.g., "09:00 AM")
+    fun timeToUiString(time: LocalTime?): String? {
+        return time?.format(DateTimeFormatter.ofPattern("h:mm a", Locale.US))
+    }
 }

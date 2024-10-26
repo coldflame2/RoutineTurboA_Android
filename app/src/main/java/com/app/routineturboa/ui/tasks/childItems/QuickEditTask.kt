@@ -15,10 +15,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.app.routineturboa.data.room.TaskEntity
+import com.app.routineturboa.data.room.entities.TaskEntity
 import com.app.routineturboa.ui.models.TaskFormData
 import com.app.routineturboa.data.dbutils.Converters.timeToString
-import com.app.routineturboa.ui.reusable.QuickEditInputTextField
+import com.app.routineturboa.ui.reusable.fields.QuickEditInputTextField
 import com.app.routineturboa.ui.theme.LocalCustomColors
 
 @RequiresApi(Build.VERSION_CODES.S)

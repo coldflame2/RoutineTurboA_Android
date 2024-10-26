@@ -5,10 +5,10 @@ import android.database.sqlite.SQLiteDatabase
 import android.util.Log
 import com.app.routineturboa.data.onedrive.downloadFromOneDrive
 import com.app.routineturboa.data.room.AppDao
-import com.app.routineturboa.data.room.TaskCompletionEntity
-import com.app.routineturboa.data.room.TaskEntity
-import com.app.routineturboa.data.room.TaskCompletionHistory
-import com.app.routineturboa.data.room.NonRecurringTaskEntity
+import com.app.routineturboa.data.room.entities.TaskCompletionEntity
+import com.app.routineturboa.data.room.entities.TaskEntity
+import com.app.routineturboa.data.room.entities.TaskCompletionHistory
+import com.app.routineturboa.data.room.entities.NonRecurringTaskEntity
 import com.app.routineturboa.data.dbutils.Converters.stringToTime
 import com.app.routineturboa.data.dbutils.RecurrenceType
 import com.microsoft.identity.client.IAuthenticationResult
@@ -24,6 +24,7 @@ import javax.inject.Inject
 class AppRepository @Inject constructor(
     private val appDao: AppDao
 ) {
+
     private val tag = "AppRepository"
 
     // Flow to observe all tasks
@@ -103,7 +104,7 @@ class AppRepository @Inject constructor(
         newTaskBeforeInsertion: TaskEntity,
         clickedTask: TaskEntity,
         originalTaskBelow: TaskEntity,
-    ): Result<TaskOperationResult> {
+    ): Result<TaskCreationOutcome> {
         Log.d(tag, "Starting the transaction for new Task operations in Repository...")
 
         return try {
@@ -131,7 +132,7 @@ class AppRepository @Inject constructor(
 
                 // step 3: Update Incremented-TaskBelow-After-Insertion
                 val originalTaskBelowId = originalTaskBelow.id
-                val newTaskBelowAfterInsertion =  getTaskEntityById(originalTaskBelowId)
+                val newTaskBelowAfterInsertion =  getTaskById(originalTaskBelowId)
                 Log.d(tag, "newTaskBelowAfterInsertion: ID: ${newTaskBelowAfterInsertion?.id}. Name:${newTaskBelowAfterInsertion?.name}. Position: ${newTaskBelowAfterInsertion?.position}")
 
                 newTaskBeforeInsertion.endTime?.let {
@@ -144,12 +145,18 @@ class AppRepository @Inject constructor(
 
                 // Return the custom data class wrapped in Result
                 Result.success(
-                    TaskOperationResult(success = true, newTaskId = newTaskId.toInt())
+                    TaskCreationOutcome(success = true,
+                        newTaskId = newTaskId.toInt(),
+                        message = "Updated task below: $newTaskBelowAfterInsertion"
+                    )
                 )
             }
+
         } catch (e: Exception) {
             Log.e(tag, "Error in beginNewTaskOperations", e)
-            Result.failure(e)
+            Result.failure(
+                e
+            )
         }
     }
 
@@ -203,14 +210,14 @@ class AppRepository @Inject constructor(
 
 
     // Update a task and adjust the next task.
-    suspend fun onEditUpdateTaskCurrentAndBelow(taskToEdit: TaskEntity): Result<TaskOperationResult> {
+    suspend fun onEditUpdateTaskCurrentAndBelow(taskToEdit: TaskEntity): Result<TaskCreationOutcome> {
         return try {
             // If the current task is the last one, update only taskToEdit
             if (isTaskLast(taskToEdit)) {
                 Log.d(tag, "Current task is the last one, updating the task only.")
                 updateTask(taskToEdit)
                 return Result.success(
-                    TaskOperationResult(success = true, message = "Updated the last task only.")
+                    TaskCreationOutcome(success = true, message = "Updated the last task only.")
                 )
             }
 
@@ -222,7 +229,7 @@ class AppRepository @Inject constructor(
                 Log.d(tag, "No task below found, updating the task only.")
                 updateTask(taskToEdit)
                 Result.success(
-                    TaskOperationResult(success = true, message = "Updated the task only; no task below found.")
+                    TaskCreationOutcome(success = true, message = "Updated the task only; no task below found.")
                 )
             } else {
                 Log.d(tag, "Task below found, updating both tasks.")
@@ -237,7 +244,7 @@ class AppRepository @Inject constructor(
                 }
 
                 Result.success(
-                    TaskOperationResult(success = true, message = "Updated both the task and the task below.")
+                    TaskCreationOutcome(success = true, message = "Updated both the task and the task below.")
                 )
             }
         } catch (e: Exception) {
@@ -290,7 +297,7 @@ class AppRepository @Inject constructor(
     }
 
     // Function to retrieve taskEntity based on taskID
-    suspend fun getTaskEntityById(taskId: Int): TaskEntity? {
+    suspend fun getTaskById(taskId: Int): TaskEntity? {
         return appDao.getTaskEntityById(taskId)
     }
 
@@ -301,7 +308,7 @@ class AppRepository @Inject constructor(
     }
 
     // Function to check if a task is the last in the list
-    private suspend fun isTaskLast(task: TaskEntity): Boolean {
+    suspend fun isTaskLast(task: TaskEntity): Boolean {
         // Use the DAO to check if there's any task with a position greater than the current task
         return task.position?.let { appDao.getTasksCountWithPositionGreaterThan(it) } == 0
     }
@@ -310,6 +317,9 @@ class AppRepository @Inject constructor(
         return appDao.getTaskName(taskId)
     }
 
+    suspend fun getAllTasksList(): List<TaskEntity> {
+        return appDao.getAllTasksList()
+    }
     // endregion
 
 
@@ -339,7 +349,8 @@ class AppRepository @Inject constructor(
         val tasks = mutableListOf<TaskEntity>()
         val cursor = db.rawQuery("SELECT * FROM tasks_table", null)
         while (cursor.moveToNext()) {
-            tasks.add(TaskEntity(
+            tasks.add(
+                TaskEntity(
                 id = cursor.getInt(cursor.getColumnIndexOrThrow("id")),
                 name = cursor.getString(cursor.getColumnIndexOrThrow("name")),
                 notes = cursor.getString(cursor.getColumnIndexOrThrow("notes")),
@@ -349,7 +360,8 @@ class AppRepository @Inject constructor(
                 reminder = stringToTime(cursor.getString(cursor.getColumnIndexOrThrow("reminder")))!!,
                 type = cursor.getString(cursor.getColumnIndexOrThrow("type")),
                 position = cursor.getInt(cursor.getColumnIndexOrThrow("position"))
-            ))
+            )
+            )
         }
         cursor.close()
         return tasks

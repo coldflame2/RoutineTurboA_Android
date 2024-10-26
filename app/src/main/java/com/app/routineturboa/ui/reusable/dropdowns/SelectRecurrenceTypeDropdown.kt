@@ -1,11 +1,13 @@
 package com.app.routineturboa.ui.reusable.dropdowns
 
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.Icon
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -14,21 +16,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.painterResource
-import com.app.routineturboa.utils.TaskTypes
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.app.routineturboa.data.dbutils.RecurrenceType
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SelectTaskTypeDropdown(
-    selectedTaskType: String,
-    onTaskTypeSelected: (String) -> Unit,
-    leadingIcon: ImageVector? = null,
-    leadingIconResId: Int? = null,
-    taskTypeErrorMessage: String?
+fun SelectRecurrenceTypeDropdown(
+    selectedRecurrenceType: RecurrenceType,
+    onRecurrenceTypeSelected: (RecurrenceType) -> Unit
 ) {
     val expanded = remember { mutableStateOf(false) }
-    val allTaskTypes = TaskTypes.getAllTaskTypes()
+    val allRecurrenceTypes = RecurrenceType.entries.map { it.name } // Convert to list of strings
     val backgroundColor = MaterialTheme.colorScheme.surfaceTint
     val textColor = MaterialTheme.colorScheme.onSurfaceVariant
 
@@ -37,30 +37,14 @@ fun SelectTaskTypeDropdown(
         onExpandedChange = { expanded.value = it },
     ) {
         TextField(
-            label = { Text("Task Type") },
+            label = { Text("Recurrence Type") },
             readOnly = true,
-            value = selectedTaskType,
+            value = selectedRecurrenceType.name,
             onValueChange = {},
-            leadingIcon = when {
-                leadingIcon != null -> { { Icon(leadingIcon, contentDescription = null) } }
-                leadingIconResId != null -> { { Icon(painterResource(id = leadingIconResId), contentDescription = null) } }
-                else -> null
-            },
             modifier = Modifier
-                .fillMaxWidth()
                 .menuAnchor(),
             trailingIcon = {
                 ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded.value)
-            },
-            isError = (taskTypeErrorMessage != null),
-            supportingText = {
-                if (taskTypeErrorMessage != null) {
-                    Text(
-                        text = taskTypeErrorMessage,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
             },
             colors = TextFieldDefaults.colors(
                 // region: colors
@@ -114,17 +98,26 @@ fun SelectTaskTypeDropdown(
         ExposedDropdownMenu(
             expanded = expanded.value,
             onDismissRequest = { expanded.value = false },
-            modifier = Modifier.fillMaxWidth()
         ) {
-            allTaskTypes.forEach { taskType ->
+            allRecurrenceTypes.forEachIndexed { index, taskTypeName ->
                 DropdownMenuItem(
                     onClick = {
-                        onTaskTypeSelected(taskType) // Notify parent of the selection
+                        onRecurrenceTypeSelected(RecurrenceType.valueOf(taskTypeName)) // Convert string back to enum
                         expanded.value = false
                     },
-                    text = { Text(taskType) },
-                    modifier = Modifier.fillMaxWidth()
+                    text = {
+                        Text(
+                            taskTypeName,
+                            fontSize = 14.sp // Set smaller text size
+                        )
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
                 )
+                if (index < allRecurrenceTypes.size - 1) {
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp)) // Add a divider with padding
+                }
             }
         }
     }

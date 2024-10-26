@@ -6,6 +6,7 @@ import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
+import androidx.activity.addCallback
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
@@ -15,6 +16,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.core.view.WindowCompat
 import com.app.routineturboa.data.repository.AppRepository
 import com.app.routineturboa.reminders.ReminderManager
+import com.app.routineturboa.shared.ActiveOverlayComponent
 import com.app.routineturboa.ui.main.MainScreen
 import com.app.routineturboa.ui.theme.RoutineTurboATheme
 import com.app.routineturboa.utils.NotificationPermissionHandler
@@ -50,6 +52,12 @@ class MainActivity : ComponentActivity() {
                 NotificationPermissionHandler.HandlePermissionDialogs()
             }
         }
+
+        // Intercept the back press to prevent the app from closing
+        onBackPressedDispatcher.addCallback(this) {
+            // Custom back button behavior
+            handleBackPress()
+        }
     }
 
     @Composable
@@ -57,4 +65,21 @@ class MainActivity : ComponentActivity() {
         window.statusBarColor = MaterialTheme.colorScheme.primary.toArgb()
         window.navigationBarColor = MaterialTheme.colorScheme.primary.toArgb()
     }
+
+
+    private fun handleBackPress() {
+        Log.d(tag, "handleBackPress...")
+        val uiState = tasksViewModel.uiState.value
+
+        // If an overlay is active or task list visibility is false, reset to default state
+        if (uiState.activeOverlayComponent != ActiveOverlayComponent.None || !uiState.isBaseTasksLazyColumnVisible) {
+            tasksViewModel.setUiStateToDefault()
+        } else {
+            Log.d(tag, "Back button clicked with task list base view visible")
+            // Do nothing as the task list is the active base view
+        }
+    }
+
+
+
 }

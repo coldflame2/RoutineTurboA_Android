@@ -1,6 +1,6 @@
 package com.app.routineturboa.utils
 
-import com.app.routineturboa.data.room.TaskEntity
+import com.app.routineturboa.data.room.entities.TaskEntity
 import com.app.routineturboa.data.dbutils.Converters.uiStringToTime
 import com.app.routineturboa.data.dbutils.RecurrenceType
 import java.time.Duration

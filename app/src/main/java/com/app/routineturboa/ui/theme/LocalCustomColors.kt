@@ -47,7 +47,7 @@ val LightClickedTaskLineColor = Color(color = 0xFF5B77A0)
 
 val LightEditIconColor = Color(color = 0xFF02064B)
 val LightSuccessIndicatorColor = Color(color = 0xFF4CAF50)
-val LightTaskNameFontColor = Color(color = 0xFF4B4B4B)
+val LightTaskNameFontColor = Color(color = 0xFF201818)
 
 //</editor-fold>
 

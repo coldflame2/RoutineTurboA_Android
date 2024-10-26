@@ -1,4 +1,4 @@
-package com.app.routineturboa.data.room
+package com.app.routineturboa.data.room.entities
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey

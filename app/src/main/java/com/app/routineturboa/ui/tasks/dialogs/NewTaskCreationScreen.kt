@@ -1,76 +1,117 @@
 package com.app.routineturboa.ui.tasks.dialogs
 
 import android.util.Log
-import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Label
+import androidx.compose.material.icons.automirrored.sharp.Assignment
+import androidx.compose.material.icons.automirrored.sharp.Label
 import androidx.compose.material.icons.filled.AddTask
+import androidx.compose.material.icons.filled.Assignment
+import androidx.compose.material.icons.filled.Label
+import androidx.compose.material.icons.filled.MoreTime
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.TypeSpecimen
 import androidx.compose.material.icons.sharp.AddAlert
+import androidx.compose.material.icons.sharp.Assignment
 import androidx.compose.material.icons.sharp.Start
 import androidx.compose.material.icons.sharp.Timer
 import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
-import com.app.routineturboa.R
-import com.app.routineturboa.data.room.TaskEntity
-import com.app.routineturboa.ui.models.TaskFormData
-import com.app.routineturboa.ui.reusable.CustomTextField
-import com.app.routineturboa.ui.reusable.dropdowns.SelectTaskTypeDropdown
-import com.app.routineturboa.data.dbutils.Converters.timeToString
-import com.app.routineturboa.data.dbutils.Converters.stringToTime
 import com.app.routineturboa.data.dbutils.RecurrenceType
+import com.app.routineturboa.data.room.entities.TaskEntity
+import com.app.routineturboa.shared.StateChangeEvents
+import com.app.routineturboa.ui.models.TaskFormData
+import com.app.routineturboa.ui.reusable.dropdowns.SelectRecurrenceTypeDropdown
+import com.app.routineturboa.ui.reusable.fields.CustomTextField
+import com.app.routineturboa.ui.reusable.dropdowns.SelectTaskTypeDropdown
 import com.app.routineturboa.ui.reusable.dropdowns.ShowMainTasksDropdown
+import com.app.routineturboa.ui.reusable.pickers.TimePickerField
+import com.app.routineturboa.ui.tasks.childItems.HourColumn
+import com.app.routineturboa.ui.tasks.childItems.PrimaryTaskView
+import com.app.routineturboa.ui.theme.LocalCustomColors
 import com.app.routineturboa.utils.TaskTypes
 import java.time.LocalDate
 import java.time.LocalTime
 
 @Composable
 fun NewTaskCreationScreen(
-    clickedTask: TaskEntity,
+    paddingValues: PaddingValues,
+    clickedTask: TaskEntity?,
+    taskBelowClickedTask: TaskEntity?,
     selectedDate: LocalDate?,
     mainTasks: List<TaskEntity>,
-    onConfirm: (TaskFormData) -> Unit,
-    onCancel: () -> Unit,
+    stateChangeEvents: StateChangeEvents,
+    onConfirm: (TaskEntity, TaskEntity, TaskFormData) -> Unit,
 ) {
     val tag = "NewTaskCreationScreen"
-    Log.d(tag,
-    "Showing NewTaskCreationScreen." +
-        "clickedTask: $clickedTask" +
-        "selectedDate: $selectedDate"
-    )
+    val coroutineScope = rememberCoroutineScope()
+    val scrollState = rememberScrollState()
+
+    val nonNullClickedTask = clickedTask ?: return
+    val nonNullTaskBelowClickedTask = taskBelowClickedTask ?: return
     val context = LocalContext.current
 
+    val isInFocus = remember { mutableStateOf(false) }
+
+    val customColors = LocalCustomColors.current
+    val cardBgColor = remember {
+        when (nonNullClickedTask.type) {
+            TaskTypes.MAIN -> customColors.mainTaskColor
+            TaskTypes.BASICS -> customColors.basicsTaskColor
+            TaskTypes.HELPER -> customColors.helperTaskColor
+            TaskTypes.QUICK -> customColors.quickTaskColor
+            TaskTypes.UNDEFINED -> customColors.undefinedTaskColor
+            else -> customColors.gray300
+        }
+    }
+
+
     // region: State variables for new task details
-    var taskName by remember { mutableStateOf("") }
-    val clickedTaskEndTime = clickedTask.endTime
+    var taskName by remember { mutableStateOf("New Task") }
+    val clickedTaskEndTime = nonNullClickedTask?.endTime
     var startTime by remember { mutableStateOf(clickedTaskEndTime) }
     val defaultDuration = 1L
     val newEndTime = startTime?.plusMinutes(defaultDuration) ?: LocalTime.now()
     var endTime by remember { mutableStateOf(newEndTime)}
     var notes by remember { mutableStateOf("") }
-    var duration by remember { mutableLongStateOf(defaultDuration) }
+
+    var durationLong by remember { mutableLongStateOf(defaultDuration) }
+    var durationString by remember { mutableStateOf(durationLong.toString()) }
+
     var reminder by remember { mutableStateOf(startTime) }
-    var taskType by remember { mutableStateOf(TaskTypes.UNDEFINED) }
-    val taskPosition by remember {mutableIntStateOf(clickedTask.position?.plus(1) ?: 2)}
+    var taskType by remember { mutableStateOf(TaskTypes.QUICK) }
+    val taskPosition by remember {mutableIntStateOf(nonNullClickedTask?.position?.plus(1) ?: 2)}
 
     // Recurrence-related state variables
     var isRecurring by remember { mutableStateOf(false) }
@@ -81,32 +122,146 @@ fun NewTaskCreationScreen(
     // State for linked main task if this is a helper task
     var linkedMainTaskIdIfHelper by remember { mutableStateOf<Int?>(null) }
 
+    val newTaskFormData = remember {
+        mutableStateOf(
+            TaskFormData(
+                name = taskName,
+                startTime = startTime,
+                endTime = endTime,
+                notes = notes,
+                taskType = taskType,
+                position = taskPosition,
+                duration = durationLong.toInt(),
+                reminder = reminder,
+                mainTaskId = linkedMainTaskIdIfHelper,
+                startDate = selectedDate,
+                isRecurring = isRecurring,
+                recurrenceType = recurrenceType.takeIf { isRecurring },
+                recurrenceInterval = recurrenceInterval.takeIf { isRecurring },
+                recurrenceEndDate = recurrenceEndDate
+            )
+        )
+    }
+
+    var taskNameError by remember { mutableStateOf<String?>(null) }
+    var durationError by remember { mutableStateOf<String?>(null) }
+    var taskTypeError by remember { mutableStateOf<String?>(null) }
+
+
+    val isAddingEnabled by remember {
+        derivedStateOf {
+            // Validation rules
+            val isTaskNameValid = if (taskName.isNotBlank()) {
+                taskNameError = null
+                true
+            } else {
+                taskNameError = "Task name cannot be empty"
+                false
+            }
+            val isStartTimeValid = startTime != null
+            val isDurationValid = if (durationLong > 0) {
+                durationError = null
+                true
+            } else {
+                durationError = "Duration must be greater than 0"
+                false
+            }
+            val isEndTimeValid = endTime != null && startTime != null && endTime.isAfter(startTime)
+            val isTaskTypeValid = if (taskType != TaskTypes.UNDEFINED) {
+                taskTypeError = null
+                true
+            } else {
+                taskTypeError = "TaskType Cannot be Undefined"
+                false
+            }
+            val isHelperTaskValid = if (taskType == TaskTypes.HELPER) {
+                linkedMainTaskIdIfHelper != null
+            } else { true }
+            val isRecurrenceValid = if (isRecurring) {
+                recurrenceInterval > 0 &&
+                        (recurrenceEndDate == null)
+            } else { true }
+
+            // Combine all validations
+            isTaskNameValid &&
+                isStartTimeValid &&
+                isDurationValid &&
+                isEndTimeValid &&
+                isTaskTypeValid &&
+                isHelperTaskValid &&
+                isRecurrenceValid
+        }
+    }
+
+
+
+
+
     // endregion
 
-    // Dialog UI
-    Dialog(
-        onDismissRequest = { onCancel() },
-        properties = DialogProperties(usePlatformDefaultWidth = false),
+    Surface(
+        modifier = Modifier
+            .padding(paddingValues)
+            .fillMaxWidth()
+            .verticalScroll(scrollState),
     ) {
-        Surface(
-            modifier = Modifier.fillMaxWidth(0.9f),
-            color = MaterialTheme.colorScheme.secondaryContainer,
-            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-        ) {
+        // Reference clicked Card
+        Column {
+            Card(
+                // region: card properties
+                modifier = Modifier
+                    .padding(end = 10.dp)
+                    .height(60.dp), // animated height
+                colors = CardDefaults.cardColors(containerColor = cardBgColor.copy(alpha = 0.6f)),
+                shape = RectangleShape,
+                // endregion
+            ) {
+                // region: Reference clickedTask
+
+                Row {
+                    Spacer(modifier = Modifier.width(5.dp))
+
+                    HourColumn(
+                        // region: arguments
+                        startTime = nonNullClickedTask.startTime,
+                        duration = nonNullClickedTask.duration,
+                        isThisTaskClicked = false,
+                        isCurrentTask = false,
+                        height = 60.dp,
+                        topPadding = 8.dp
+                        //endregion
+                    )
+
+                    PrimaryTaskView(
+                        task = nonNullClickedTask,
+                        isThisTaskClicked = false,
+                        stateChangeEvents = stateChangeEvents,
+                        cardHeight = 60.dp,
+                        topPadding = 8.dp,
+                        forReferenceView = true,
+                        bgColor = cardBgColor
+                    )
+                }
+                // endregion
+            }
+
+            // Task details input
             Column(
-                modifier = Modifier.padding(8.dp).fillMaxWidth(),
+                modifier = Modifier
+                    .padding(8.dp)
+                    .fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Text("Add New Task", style = MaterialTheme.typography.titleLarge)
-
                 // region: Task name input
                 CustomTextField(
                     value = taskName,
                     onValueChange = { taskName = it },
-                    label = "Task Name",
+                    label = "Name",
+                    isInFocus = isInFocus,
                     placeholder = "Enter task name",
                     leadingIcon = Icons.Default.AddTask,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    errorMessage = taskNameError
                 )
                 // endregion
 
@@ -116,17 +271,20 @@ fun NewTaskCreationScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    CustomTextField(
-                        value = timeToString(startTime),
-                        onValueChange = { startTime = stringToTime(it) },
+                    TimePickerField(
+                        value = startTime,
+                        onValueChange = {
+                            Log.d(tag, "Clicked")
+                            startTime = it
+                        },
                         label = "Start Time",
                         leadingIcon = Icons.Sharp.Start,
                         modifier = Modifier.weight(1f)
                     )
 
-                    CustomTextField(
-                        value = timeToString(reminder),
-                        onValueChange = { reminder = stringToTime(it) },
+                    TimePickerField(
+                        value = reminder,
+                        onValueChange = { reminder = it },
                         label = "Reminder",
                         leadingIcon = Icons.Sharp.AddAlert,
                         modifier = Modifier.weight(1f)
@@ -140,38 +298,50 @@ fun NewTaskCreationScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     CustomTextField(
-                        value = duration.toString(),
-                        onValueChange = {
-                            if (it.isEmpty()) {
-                                duration = 1L  // Set duration to zero if the input is empty
+                        value = durationString,
+
+                        onValueChange = { text ->
+                            durationString = text
+
+                            // Safely attempt to parse the input to a Long
+                            val parsedDuration = text.toLongOrNull()
+                            if (parsedDuration != null && parsedDuration > 0 && startTime != null) {
+                                // Update duration and endTime only if input is valid
+                                durationLong = parsedDuration
+                                endTime = startTime!!.plusMinutes(durationLong)
+
                             } else {
-                                try {
-                                    duration = it.toLong()
-                                } catch (e: NumberFormatException) {
-                                    duration = 1L  // Handle invalid input gracefully by setting duration to zero
-                                    Toast.makeText(context, "Invalid duration format", Toast.LENGTH_SHORT).show()
-                                }
+                                durationLong = 0
+                                Log.e(tag, "Problem with duration. $parsedDuration")
                             }
+                            // Else, do not update duration or endTime to prevent unexpected behavior
                         },
+
                         label = "Duration",
+                        isInFocus = isInFocus,
                         leadingIcon = Icons.Sharp.Timer,
-                        modifier = Modifier.weight(1f)
+                        keyboardType = KeyboardType.Number,
+                        modifier = Modifier.weight(1f),
+                        errorMessage = durationError
                     )
 
-                    CustomTextField(
-                        value = timeToString(endTime),
-                        onValueChange = { endTime = stringToTime(it) },
+                    TimePickerField(
+                        value = endTime,
+                        onValueChange = { endTime = it },
                         label = "End Time",
-                        leadingIconResId = R.drawable.arrowrighttoleft,
+                        leadingIcon = Icons.Default.MoreTime,
                         modifier = Modifier.weight(1f)
                     )
                 }
+
                 // endregion
 
                 // region: Task type dropdown
                 SelectTaskTypeDropdown(
                     selectedTaskType = taskType,
-                    onTaskTypeSelected = { taskType = it }
+                    onTaskTypeSelected = { taskType = it },
+                    leadingIcon = Icons.AutoMirrored.Sharp.Assignment,
+                    taskTypeErrorMessage = taskTypeError
                 )
 
                 // Show the main task dropdown only if task type is "HelperTask"
@@ -202,33 +372,30 @@ fun NewTaskCreationScreen(
                 if (isRecurring) {
                     // Recurrence type and interval
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        CustomTextField(
-                            value = recurrenceType.name, // Convert the enum value to a string
-                            onValueChange = {
-                                val newType = try {
-                                    // Convert input to uppercase and find the matching enum
-                                    RecurrenceType.valueOf(it.uppercase())
-                                } catch (e: IllegalArgumentException) {
-                                    RecurrenceType.DAILY // Default to DAILY if input is invalid
-                                }
-                                recurrenceType = newType
-                            },
-                            label = "Recurrence Type",
-                            placeholder = "e.g., DAILY, WEEKLY",
-                            modifier = Modifier.weight(1f)
-                        )
+                        // region: Recurrence type dropdown
+                        Box(modifier = Modifier.weight(1f)) {
+                            SelectRecurrenceTypeDropdown(
+                                selectedRecurrenceType = recurrenceType,
+                                onRecurrenceTypeSelected = { recurrenceType = it }
+                            )
+                        }
+                        // endregion
 
-                        CustomTextField(
-                            value = recurrenceInterval.toString(),
-                            onValueChange = { recurrenceInterval = it.toInt() },
-                            label = "Interval",
-                            placeholder = "Enter interval (1 for daily)",
-                            modifier = Modifier.weight(1f)
-                        )
+                        Box(modifier = Modifier.weight(0.5f)) {
+                            CustomTextField(
+                                value = recurrenceInterval.toString(),
+                                onValueChange = { recurrenceInterval = it.toInt() },
+                                label = "Interval",
+                                isInFocus = isInFocus,
+                                placeholder = "Enter interval (1 for daily)"
+                            )
+                        }
                     }
+
+
+
 
 
                     // Recurrence end date
@@ -236,6 +403,7 @@ fun NewTaskCreationScreen(
                         value = recurrenceEndDate?.toString() ?: "",
                         onValueChange = { recurrenceEndDate = LocalDate.parse(it) },
                         label = "Recurrence End Date (optional)",
+                        isInFocus = isInFocus,
                         placeholder = "Enter end date",
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -243,11 +411,12 @@ fun NewTaskCreationScreen(
 
                 // endregion
 
-                // Notes input
+                // region: Notes and Position
                 CustomTextField(
                     value = notes,
                     onValueChange = { notes = it },
                     label = "Notes",
+                    isInFocus = isInFocus,
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -257,25 +426,33 @@ fun NewTaskCreationScreen(
                     label = "Position (Don't Change) (Only for dev)",
                     placeholder = "Internal purposes. Don't change.",
                     modifier = Modifier.fillMaxWidth(),
+                    isInFocus = isInFocus,
                     enabled = false
                 )
+                // endregion
 
                 // Add/Cancel buttons
                 Row(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Button(onClick = onCancel) { Text("Cancel") }
-                    Button(onClick = {
+                    // Cancel Button
+                    Button(onClick = stateChangeEvents.onCancelClick) {
+                        Text("Cancel")
+                    }
+
+                    Button(
+                        enabled = isAddingEnabled,
+                        onClick = {
                         Log.d(tag, "New Task Confirm clicked on AddTaskDialog")
-                        val newTaskFormData = TaskFormData(
+                        newTaskFormData.value = TaskFormData(
                             name = taskName,
                             startTime = startTime,
                             endTime = endTime,
                             notes = notes,
                             taskType = taskType,
                             position = taskPosition,
-                            duration = duration.toInt(),
+                            duration = durationLong.toInt(),
                             reminder = reminder,
                             mainTaskId = linkedMainTaskIdIfHelper,
                             startDate = selectedDate,
@@ -284,10 +461,16 @@ fun NewTaskCreationScreen(
                             recurrenceInterval = recurrenceInterval.takeIf { isRecurring },
                             recurrenceEndDate = recurrenceEndDate.takeIf { isRecurring }
                         )
-                        onConfirm(newTaskFormData)
-                    }) { Text("Add Task") }
+                        Log.d(tag, "${newTaskFormData.value}")
+                        onConfirm(
+                            nonNullClickedTask,
+                            nonNullTaskBelowClickedTask,
+                            newTaskFormData.value,
+                        )
+                    }) { Text("Add") }
                 }
             }
         }
+
     }
 }

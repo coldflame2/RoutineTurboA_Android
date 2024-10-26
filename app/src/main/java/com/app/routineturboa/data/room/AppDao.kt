@@ -10,6 +10,10 @@ import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
 import com.app.routineturboa.data.dbutils.DbConstants
+import com.app.routineturboa.data.room.entities.NonRecurringTaskEntity
+import com.app.routineturboa.data.room.entities.TaskCompletionEntity
+import com.app.routineturboa.data.room.entities.TaskCompletionHistory
+import com.app.routineturboa.data.room.entities.TaskEntity
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
 
@@ -20,6 +24,9 @@ interface AppDao {
 
     @Query("SELECT * FROM ${DbConstants.TASKS_TABLE} ORDER BY position ASC")
     fun getAllTasks(): Flow<List<TaskEntity>>
+
+    @Query("SELECT * FROM ${DbConstants.TASKS_TABLE} ORDER BY position ASC")
+    fun getAllTasksList(): List<TaskEntity>
 
     @Query("""
         SELECT EXISTS(

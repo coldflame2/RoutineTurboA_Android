@@ -1,4 +1,4 @@
-package com.app.routineturboa.data.room
+package com.app.routineturboa.data.room.entities
 
 import androidx.room.Embedded
 import androidx.room.Relation

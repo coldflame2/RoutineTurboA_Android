@@ -6,7 +6,7 @@ class EventsHandler (
     private val tasksViewModel: TasksViewModel
 ) {
     // Function to provide EventsOnStates implementation
-    fun stateChangeEventsHandling(): StateChangeEvents {
+    fun onStateChangeEvents(): StateChangeEvents {
         return StateChangeEvents(
             onTaskClick = tasksViewModel::onTaskClick,
             onTaskLongPress = tasksViewModel::onTaskLongPress,
@@ -17,12 +17,13 @@ class EventsHandler (
             onShowCompletedTasksClick = tasksViewModel::onShowCompletedTasksClick,
             onCancelClick = tasksViewModel::onCancelClick,
             onShowDatePickerClick = tasksViewModel::onDatePickerClick,
-            onDateChangeClick = tasksViewModel::onDateChangeClick
+            resetTaskCreationState = tasksViewModel::resetTaskCreationState,
+            onDateChangeClick = tasksViewModel::onDateChangeClick,
         )
     }
 
     // Function to provide EventsOnData implementation
-    fun dataOperationEventsHandling(): DataOperationEvents {
+    fun onDataOperationEvents(): DataOperationEvents {
         return DataOperationEvents(
             onNewTaskConfirmClick = tasksViewModel::onNewTaskConfirmClick,
             onUpdateTaskConfirmClick = tasksViewModel::onUpdateTaskConfirmClick,

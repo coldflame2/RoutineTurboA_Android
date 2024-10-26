@@ -1,6 +1,6 @@
 package com.app.routineturboa.shared
 
-import com.app.routineturboa.data.room.TaskEntity
+import com.app.routineturboa.data.room.entities.TaskEntity
 import java.time.LocalDate
 
 data class StateChangeEvents(
@@ -18,5 +18,6 @@ data class StateChangeEvents(
     val onShowDatePickerClick: () -> Unit,
 
     // Functions to hide UI components
+    val resetTaskCreationState: () -> Unit,
     val onCancelClick: () -> Unit,
 )

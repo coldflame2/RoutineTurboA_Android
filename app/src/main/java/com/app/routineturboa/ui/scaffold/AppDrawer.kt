@@ -51,13 +51,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.app.routineturboa.R
-import com.app.routineturboa.data.room.TaskEntity
+import com.app.routineturboa.data.room.entities.TaskEntity
 import com.app.routineturboa.reminders.ReminderManager
-import com.app.routineturboa.shared.UiStates
-import com.app.routineturboa.ui.reusable.SignInAndSyncButtons
-import com.app.routineturboa.ui.reusable.SmoothCircularProgressIndicator
+import com.app.routineturboa.ui.reusable.others.SignInAndSyncButtons
+import com.app.routineturboa.ui.reusable.animation.SmoothCircularProgressIndicator
 import com.app.routineturboa.viewmodel.TasksViewModel
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
@@ -69,7 +67,6 @@ fun AppDrawer(
     reminderManager: ReminderManager,
     showExactAlarmDialog: MutableState<Boolean>,
     onShowCompletedTasks: () -> Unit,
-    uiStates: UiStates,
     clickedTask: TaskEntity?,
     selectedDate: LocalDate
 ) {
@@ -198,8 +195,7 @@ fun AppDrawer(
                 drawerState = drawerState
             ) {
                 coroutineScope.launch {
-                    val tasks = tasksViewModel.tasksByDate.first() // This will get the current value of allTasks and then stop observing
-                    Log.d(tag, "***************\n")
+                    val tasks = tasksViewModel.logAllTasks()
                     Log.d(tag, "$tasks")
                 }
             }

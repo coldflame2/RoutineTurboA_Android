@@ -1,4 +1,4 @@
-package com.app.routineturboa.ui.reusable
+package com.app.routineturboa.ui.reusable.animation
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.scaleIn
@@ -24,19 +24,20 @@ import kotlinx.coroutines.delay
 
 @Composable
 fun SuccessIndicator(
+    modifier: Modifier = Modifier,
     onReset: () -> Unit,
-    modifier: Modifier = Modifier
+    visibilityDuration: Long = 1000,
 ) {
     var isVisible by remember { mutableStateOf(false) }
     val customColors = LocalCustomColors.current
 
     // Automatically show the indicator after a slight delay for a cute effect
     LaunchedEffect(Unit) {
-        delay(300) // Delay before showing for cuteness
+        delay(1000) // Delay before showing for cuteness
         isVisible = true
 
         // Reset the visibility after some time (e.g., 2 seconds)
-        delay(2000)
+        delay(visibilityDuration)
         isVisible = false
         onReset()
     }
@@ -49,7 +50,7 @@ fun SuccessIndicator(
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
-                .size(40.dp)
+                .size(80.dp)
                 .background(customColors.successIndicatorColor, shape = CircleShape)
         ) {
             Text(

@@ -1,69 +1,89 @@
-package com.app.routineturboa.ui.reusable.dropdowns
+package com.app.routineturboa.ui.reusable.pickers
 
+import android.app.TimePickerDialog
+import android.util.Log
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import com.app.routineturboa.utils.TaskTypes
+import androidx.compose.ui.unit.dp
+import com.app.routineturboa.data.dbutils.Converters.timeToString
+import java.time.LocalTime
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SelectTaskTypeDropdown(
-    selectedTaskType: String,
-    onTaskTypeSelected: (String) -> Unit,
+fun TimePickerField(
+    modifier: Modifier = Modifier,
+    value: LocalTime?,
+    onValueChange: (LocalTime) -> Unit,
+    label: String,
     leadingIcon: ImageVector? = null,
     leadingIconResId: Int? = null,
-    taskTypeErrorMessage: String?
 ) {
-    val expanded = remember { mutableStateOf(false) }
-    val allTaskTypes = TaskTypes.getAllTaskTypes()
+    val context = LocalContext.current
+    val isFocused by remember { mutableStateOf(false) }
+
     val backgroundColor = MaterialTheme.colorScheme.surfaceTint
     val textColor = MaterialTheme.colorScheme.onSurfaceVariant
 
-    ExposedDropdownMenuBox(
-        expanded = expanded.value,
-        onExpandedChange = { expanded.value = it },
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable {
+                Log.d("TimePicker", "Okay, clicked")
+                val now = LocalTime.now()
+                val hour = value?.hour ?: now.hour
+                val minute = value?.minute ?: now.minute
+
+                TimePickerDialog(
+                    context,
+                    { _, selectedHour: Int, selectedMinute: Int ->
+                        onValueChange(LocalTime.of(selectedHour, selectedMinute))
+                    },
+                    hour,
+                    minute,
+                    true
+                ).show()
+            }
     ) {
+
         TextField(
-            label = { Text("Task Type") },
-            readOnly = true,
-            value = selectedTaskType,
-            onValueChange = {},
-            leadingIcon = when {
-                leadingIcon != null -> { { Icon(leadingIcon, contentDescription = null) } }
-                leadingIconResId != null -> { { Icon(painterResource(id = leadingIconResId), contentDescription = null) } }
-                else -> null
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .menuAnchor(),
-            trailingIcon = {
-                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded.value)
-            },
-            isError = (taskTypeErrorMessage != null),
-            supportingText = {
-                if (taskTypeErrorMessage != null) {
-                    Text(
-                        text = taskTypeErrorMessage,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error
+            value = timeToString(value) ?: " ",
+            onValueChange = { /* Read-only field */ },
+            label = { Text(label) },
+            suffix = { },
+            supportingText = { },
+            leadingIcon = {
+                when {
+                    leadingIcon != null -> Icon(
+                        leadingIcon, modifier = Modifier.size(18.dp),
+                        contentDescription = null,
                     )
+                    leadingIconResId != null -> Icon(
+                        painterResource(id = leadingIconResId),
+                        contentDescription = null
+                    )
+                    else -> null
                 }
             },
+            readOnly = true,
+            enabled = false, // Make it look like a read-only field
+            modifier = Modifier.fillMaxWidth(),
             colors = TextFieldDefaults.colors(
-                // region: colors
                 // **Container Colors**
                 focusedContainerColor = backgroundColor.copy(alpha = 0.09f),
                 unfocusedContainerColor = backgroundColor.copy(alpha = 0.25f),
@@ -107,25 +127,14 @@ fun SelectTaskTypeDropdown(
 
                 // **Cursor Color**
                 errorCursorColor = MaterialTheme.colorScheme.error
-                //endregion
             ),
-        )
 
-        ExposedDropdownMenu(
-            expanded = expanded.value,
-            onDismissRequest = { expanded.value = false },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            allTaskTypes.forEach { taskType ->
-                DropdownMenuItem(
-                    onClick = {
-                        onTaskTypeSelected(taskType) // Notify parent of the selection
-                        expanded.value = false
-                    },
-                    text = { Text(taskType) },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        }
+        )
     }
+}
+
+
+sealed class TextFieldValue {
+    data class Text(val value: String) : TextFieldValue()
+    data class Time(val value: LocalTime) : TextFieldValue()
 }

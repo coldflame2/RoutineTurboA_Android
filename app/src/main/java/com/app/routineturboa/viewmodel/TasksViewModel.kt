@@ -5,18 +5,21 @@ import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.app.routineturboa.data.room.TaskEntity
+import com.app.routineturboa.data.room.entities.TaskEntity
 import com.app.routineturboa.data.onedrive.MsalApp
 import com.app.routineturboa.data.repository.AppRepository
-import com.app.routineturboa.data.repository.TaskOperationResult
-import com.app.routineturboa.data.room.TaskCompletionHistory
-import com.app.routineturboa.shared.TasksBasedOnState
-import com.app.routineturboa.shared.UiStates
+import com.app.routineturboa.data.repository.TaskCreationOutcome
+import com.app.routineturboa.data.room.entities.TaskCompletionHistory
+import com.app.routineturboa.shared.ActiveOverlayComponent
+import com.app.routineturboa.shared.TaskCreationState
+import com.app.routineturboa.shared.UiState
 import com.app.routineturboa.ui.models.TaskFormData
 import com.app.routineturboa.utils.getBasicTasksList
 import com.app.routineturboa.utils.getSampleTasksList
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -26,6 +29,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import javax.inject.Inject
 
@@ -37,12 +41,10 @@ class TasksViewModel @Inject constructor(
 
     // region: ----------------------- Tasks StateFlow -------------------------
 
-    // MutableStateFlow to handle the UI state
-    private val _uiStates = MutableStateFlow(UiStates())
-    val uiStates: StateFlow<UiStates> = _uiStates.asStateFlow()
 
-    private val _tasksBasedOnState = MutableStateFlow(TasksBasedOnState())
-    val tasksBasedOnState: StateFlow<TasksBasedOnState> = _tasksBasedOnState.asStateFlow()
+    // MutableStateFlow to handle the UI state
+    private val _uiState = MutableStateFlow(UiState())
+    val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
     private val _selectedDate = MutableStateFlow(LocalDate.now())
     val selectedDate: StateFlow<LocalDate> get() = _selectedDate
@@ -72,6 +74,11 @@ class TasksViewModel @Inject constructor(
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
         )
+
+    private suspend fun getFirstTask(): TaskEntity? {
+        val firstTask = repository.getTaskAtPosition(1)
+        return firstTask
+    }
 
     // endregion
 
@@ -111,7 +118,7 @@ class TasksViewModel @Inject constructor(
 
     fun insertBasicTasks() {
         Log.d(tag, "Inserting basic tasks...")
-        val basicTasks = getBasicTasksList()
+        val basicTasks = getBasicTasksList(selectedDate = selectedDate.value)
         insertBasicOrSampleTasks(basicTasks)
     }
 
@@ -159,9 +166,31 @@ class TasksViewModel @Inject constructor(
         return repository.getTaskName(taskId)
     }
 
-    suspend fun getTaskAtPosition(taskPosition: Int): TaskEntity? {
+    private suspend fun getTaskAtPosition(taskPosition: Int): TaskEntity? {
         return repository.getTaskAtPosition(taskPosition)
     }
+
+    private suspend fun getTaskById(taskId: Int): TaskEntity? {
+        return repository.getTaskById(taskId)
+    }
+
+    private suspend fun isTaskLast(task: TaskEntity): Boolean {
+        return repository.isTaskLast(task)
+    }
+
+    suspend fun logAllTasks() {
+        Log.d(tag, "**********Logging all tasks***********")
+        val allTasksList = withContext(Dispatchers.IO) {
+            repository.getAllTasksList()
+        }
+
+        // Log each task with a line break between them
+        allTasksList.forEach { task ->
+            Log.d(tag, "......")
+            Log.d(tag, "$task")
+        }
+    }
+
 
     // endregion
 
@@ -170,63 +199,86 @@ class TasksViewModel @Inject constructor(
 
     // Confirm a new task and add it to the database
     suspend fun onNewTaskConfirmClick(
-        newTaskFormData: TaskFormData,
         clickedTask: TaskEntity,
-        taskBelowClickedTask: TaskEntity
-    ): Result<TaskOperationResult> {
+        taskBelowClickedTask: TaskEntity,
+        newTaskFormData: TaskFormData,
+    ): Result<TaskCreationOutcome> {
         Log.d(tag, "onNewTaskConfirmClick...")
-        Log.d(tag,
-            "clickedTask: ${clickedTask.name}. Id: ${clickedTask.id}. Position: ${clickedTask.position}")
-        Log.d(tag,
-            "NewTaskFormData: ${newTaskFormData.name}. Position: ${newTaskFormData.position}")
-
-        Log.d(tag,
-            "belowClickedTask: ${taskBelowClickedTask.name}. Id: ${taskBelowClickedTask.id}. Initial Position: ${taskBelowClickedTask.position}")
 
         val newTaskEntity = createTaskEntityFromForm(taskFormData = newTaskFormData)
-        val result = repository.beginNewTaskOperations(newTaskEntity, clickedTask, taskBelowClickedTask)
+        val result = repository.beginNewTaskOperations(
+            newTaskEntity, clickedTask, taskBelowClickedTask
+        )
 
-        // Set clickedTask as NewTask and other UI states updates
-        if (result.isSuccess) {
-            val taskOperationResult = result.getOrNull()
-            val newTaskId = taskOperationResult?.newTaskId
-            val newTask = newTaskId?.let { repository.getTaskEntityById(newTaskId) }
-
-            // update ui state
-            _uiStates.update { it.copy(
-                isAddingNew = false,
-                isFullEditing = false) }
-
-            _tasksBasedOnState.update{
-                it.copy (
-                    clickedTask = newTask,
-                    longPressedTask = null,
-                    taskBelowClickedTask = null,
-                    inEditTask = null,
-                    showingDetailsTask = null
-                )
-            }
-        }
-
-        // on result.failure: regular UiState and tasksBasedOnState updates
-        else {
-            // update ui state
-            _uiStates.update { it.copy(
-                isAddingNew = false,
-                isFullEditing = false) }
-
-            _tasksBasedOnState.update{
-                it.copy (
-                    clickedTask = clickedTask,
-                    longPressedTask = null,
-                    taskBelowClickedTask = null,
-                    inEditTask = null,
-                    showingDetailsTask = null
-                )
-            }
-        }
+        updateStatesAfterNewTaskOperation(result, clickedTask)
 
         return result
+    }
+
+    /**
+     * Steps:
+     * - Create a new task entity from the form data.
+     * - Begin new task operations by interacting with the repository.
+     * - Update the UI state based on the result of the operation.
+     * - Return the result of the task creation operation.
+     */
+    private suspend fun updateStatesAfterNewTaskOperation(
+        result: Result<TaskCreationOutcome>,
+        clickedTask: TaskEntity
+    ) {
+        Log.d(tag, "Updating States after New Task Operation...")
+        result.fold(
+            onSuccess = { taskCreationOutcome ->
+                taskCreationOutcome.newTaskId?.let { newId ->
+                    Log.d(tag, "Task confirmed successfully with ID: $newId")
+                    val newTask = getTaskById(newId)
+
+                    // Update the UI state
+                    _uiState.update { currentState ->
+                        currentState.copy(
+                            uiTaskReferences = currentState.uiTaskReferences.copy(
+                                clickedTask = newTask,
+                                inEditTask = null,
+                                latestTask = newTask,
+                                taskBelowClickedTask = null
+                            ),
+                            activeOverlayComponent = ActiveOverlayComponent.None, // Update as needed
+                            taskCreationState = TaskCreationState.Success(newId)
+                        )
+                    }
+
+                    Log.d(tag, "Message containing updated Task Below: ${taskCreationOutcome.message}")
+                } ?: run {
+                    _uiState.update { currentState ->
+                        currentState.copy(
+                            uiTaskReferences = currentState.uiTaskReferences.copy(
+                                clickedTask = clickedTask,
+                                inEditTask = null,
+                                latestTask = null,
+                                taskBelowClickedTask = null
+                            ),
+                            activeOverlayComponent = ActiveOverlayComponent.None, // Update as needed
+                            taskCreationState = TaskCreationState.Error("Error")
+                        )
+                    }
+                }
+            },
+
+            onFailure = { exception ->
+                _uiState.update { currentState ->
+                    currentState.copy(
+                        uiTaskReferences = currentState.uiTaskReferences.copy(
+                            clickedTask = clickedTask,
+                            inEditTask = null,
+                            latestTask = null,
+                            taskBelowClickedTask = null
+                        ),
+                        activeOverlayComponent = ActiveOverlayComponent.None, // Update as needed
+                        taskCreationState = TaskCreationState.Error(exception.message.toString())
+                    )
+                }
+            }
+        )
     }
 
     // Confirm an edit for an existing task
@@ -245,16 +297,17 @@ class TasksViewModel @Inject constructor(
             Log.d(tag, "success: $success. Message: $message")
         }
 
-        _uiStates.update {
-            it.copy(
-                isQuickEditing = false,
-                isFullEditing = false,
-            )
-        }
-
-        _tasksBasedOnState.update {
-            it.copy(
-                inEditTask = null,
+        // Update the UI state
+        _uiState.update { currentState ->
+            currentState.copy(
+                uiTaskReferences = currentState.uiTaskReferences.copy(
+                    clickedTask = updatedTaskEntity,
+                    inEditTask = null,
+                    latestTask = null,
+                    taskBelowClickedTask = null
+                ),
+                activeOverlayComponent = ActiveOverlayComponent.None, // Update as needed
+                taskCreationState = TaskCreationState.Idle
             )
         }
     }
@@ -265,11 +318,16 @@ class TasksViewModel @Inject constructor(
         task.let {
             Log.d(tag, "Deleting task: ${task.name}")
             repository.deleteTask(task)
-
-            _uiStates.update {
-                it.copy(
-                    isQuickEditing = false,
-                    isFullEditing = false
+            _uiState.update { currentState ->
+                currentState.copy(
+                    uiTaskReferences = currentState.uiTaskReferences.copy(
+                        clickedTask = getFirstTask(),
+                        inEditTask = null,
+                        latestTask = null,
+                        taskBelowClickedTask = null
+                    ),
+                    activeOverlayComponent = ActiveOverlayComponent.None, // Update as needed
+                    taskCreationState = TaskCreationState.Idle
                 )
             }
         }
@@ -283,189 +341,238 @@ class TasksViewModel @Inject constructor(
     // Handle task click events
     fun onTaskClick(taskClicked: TaskEntity) {
         // Some task in-edit
-        if (uiStates.value.isQuickEditing) {
+        if (_uiState.value.activeOverlayComponent is ActiveOverlayComponent.QuickEditing) {
             // Task in-edit is same as task clicked
-            if (taskClicked == tasksBasedOnState.value.inEditTask) {
+            if (taskClicked == _uiState.value.uiTaskReferences.inEditTask) {
                 return // no changes are needed
             }
 
             // Task in-edit is not task clicked
             else {
-                _uiStates.update { it.copy(
-                    isQuickEditing = false,
-                    isFullEditing = false,
-                    isShowingDetails = false,
-                    isShowingCompletedTasks = false,
-                    isAddingNew = false,
-                    isShowingDatePicker = false
-                ) }
-
-                _tasksBasedOnState.update {
-                    it.copy(
-                        clickedTask = it.inEditTask,
-                        inEditTask = null,
+                _uiState.update { currentState ->
+                    currentState.copy(
+                        uiTaskReferences = currentState.uiTaskReferences.copy(
+                            clickedTask = taskClicked,
+                            inEditTask = null,
+                            latestTask = null,
+                            taskBelowClickedTask = null
+                        ),
+                        activeOverlayComponent = ActiveOverlayComponent.None, // Update as needed
+                        taskCreationState = TaskCreationState.Idle,
+                        isBaseTasksLazyColumnVisible = true
                     )
                 }
+
             }
         }
 
         // No Task in Edit Mode
         else {
-            _uiStates.update { it.copy (
-                isQuickEditing = false,
-                isFullEditing = false,
-                isShowingDetails = false,
-                isShowingCompletedTasks = false,
-                isAddingNew = false,
-            ) }
-
-            _tasksBasedOnState.update {
-                it.copy(
-                    clickedTask = taskClicked,
-                    longPressedTask = null,
-                    taskBelowClickedTask = null,
-                    inEditTask = null,
-                    showingDetailsTask = null
+            _uiState.update { currentState ->
+                currentState.copy(
+                    uiTaskReferences = currentState.uiTaskReferences.copy(
+                        clickedTask = taskClicked,
+                        inEditTask = null,
+                        latestTask = null,
+                        taskBelowClickedTask = null
+                    ),
+                    activeOverlayComponent = ActiveOverlayComponent.None, // Update as needed
+                    taskCreationState = TaskCreationState.Idle,
+                    isBaseTasksLazyColumnVisible = true
                 )
             }
+
         }
     }
 
     // Show the UI to add a new task
     suspend fun onShowAddNewTaskClick() {
         Log.d(tag, "Show Add New Task Clicked")
-        val clickedTaskPosition = _tasksBasedOnState.value.clickedTask?.position
-        val taskBelowPosition = clickedTaskPosition?.plus(1)
-        val taskBelowClickedTask = taskBelowPosition?.let { getTaskAtPosition(it) }
 
-        _uiStates.update { it.copy(isAddingNew = true) }
-        _tasksBasedOnState.update { it.copy(taskBelowClickedTask = taskBelowClickedTask) }
-    }
+        val clickedTask = _uiState.value.uiTaskReferences.clickedTask
+        val posOfClickedTask = clickedTask?.position
 
-    // Show Quick Edit UI for a task
-    suspend fun onShowQuickEditClick(task: TaskEntity) {
-        Log.d(tag, "Quick edit click for task: $task")
-        val clickedTaskPosition = _tasksBasedOnState.value.clickedTask?.position
-        val taskBelowPosition = clickedTaskPosition?.plus(1)
-        val taskBelowClickedTask = taskBelowPosition?.let { getTaskAtPosition(it) }
+        val posOfTaskBelow = posOfClickedTask?.plus(1)
+        val taskBelow = posOfTaskBelow?.let { getTaskAtPosition(it) }
 
-        _uiStates.update {
-            it.copy(
-                isQuickEditing = true,
-                isFullEditing = false,
-                isShowingDetails = false,
-                isShowingCompletedTasks = false,
-                isAddingNew = false,
-                isShowingDatePicker = false
-            )
-        }
-
-        _tasksBasedOnState.update { it.copy(
-            inEditTask = task,
-            clickedTask = task,
-            taskBelowClickedTask = taskBelowClickedTask,
-            )
+        // if no clicked Task or no task below clicked, don't show addNew Task screen
+        if (clickedTask != null) {
+            if (taskBelow != null) {
+                _uiState.update { currentState ->
+                    currentState.copy(
+                        uiTaskReferences = currentState.uiTaskReferences.copy(
+                            taskBelowClickedTask = taskBelow
+                        ),
+                        activeOverlayComponent = ActiveOverlayComponent.AddingNew,
+                        taskCreationState = TaskCreationState.Loading,
+                        isBaseTasksLazyColumnVisible = false
+                    )
+                }
+            }
         }
     }
 
     // Show Full Edit UI for a task
     suspend fun onShowFullEditClick(taskInEdit: TaskEntity) {
-        val clickedTaskPosition = _tasksBasedOnState.value.clickedTask?.position
-        val taskBelowClickedTask = clickedTaskPosition?.let { getTaskAtPosition(it+1) }
+        val clickedTaskPosition = _uiState.value.uiTaskReferences.clickedTask?.position
+        val taskBelowClickedTask = clickedTaskPosition?.let { getTaskAtPosition(it + 1) }
 
         if (taskBelowClickedTask != null) {
             Log.d(tag, "FullEdit: Task below clicked task: $taskBelowClickedTask")
-            _uiStates.update { it.copy(
-                isFullEditing = true,
-                isQuickEditing = false,
-                isShowingDetails = false,
-                isShowingCompletedTasks = false,
-                isAddingNew = false,
-                isShowingDatePicker = false
-            ) }
+            _uiState.update { currentState ->
+                currentState.copy(
+                    uiTaskReferences = currentState.uiTaskReferences.copy(
+                        inEditTask = taskInEdit,
+                        taskBelowClickedTask = taskBelowClickedTask,
+                        clickedTask = taskInEdit
+                    ),
+                    activeOverlayComponent = ActiveOverlayComponent.FullEditing,
+                    isBaseTasksLazyColumnVisible = true
+                )
+            }
+        } else {
+            Log.d(tag, "FullEdit: No Task below. This is the last task.")
+            // Handle the case for the last task (could add additional logic here if needed)
+            _uiState.update { currentState ->
+                currentState.copy(
+                    uiTaskReferences = currentState.uiTaskReferences.copy(
+                        inEditTask = taskInEdit,
+                        clickedTask = taskInEdit,
+                        taskBelowClickedTask = null
+                    ),
+                    activeOverlayComponent = ActiveOverlayComponent.FullEditing,
+                    isBaseTasksLazyColumnVisible = true
 
-            _tasksBasedOnState.update { it.copy(
-                inEditTask = taskInEdit,
-                taskBelowClickedTask = taskBelowClickedTask,
-                clickedTask = taskInEdit
-            ) }
-        }
-
-        else {
-            Log.d(tag, "FullEdit: No Task below. This is last task.")
-            //#TODO: Handle the case of last task edit
-
-            // for now, same as above condition
-            _uiStates.update { it.copy(isFullEditing = true, isQuickEditing = false) }
-            _tasksBasedOnState.update { it.copy(inEditTask = taskInEdit) }
+                )
+            }
         }
     }
+
+    // Show Quick Edit UI for a task
+    suspend fun onShowQuickEditClick(task: TaskEntity) {
+        Log.d(tag, "Quick edit click for task: $task")
+
+        val clickedTaskPosition = _uiState.value.uiTaskReferences.clickedTask?.position
+        val taskBelowPosition = clickedTaskPosition?.plus(1)
+        val taskBelowClickedTask = taskBelowPosition?.let { getTaskAtPosition(it) }
+
+        // Update the UI state
+        _uiState.update { currentState ->
+            currentState.copy(
+                uiTaskReferences = currentState.uiTaskReferences.copy(
+                    inEditTask = task,
+                    clickedTask = task,
+                    taskBelowClickedTask = taskBelowClickedTask
+                ),
+                activeOverlayComponent = ActiveOverlayComponent.QuickEditing,
+                taskCreationState = TaskCreationState.Idle,
+                isBaseTasksLazyColumnVisible = true
+            )
+        }
+    }
+
 
     // Show task details
     fun onTaskDetailsClick(task: TaskEntity) {
         Log.d(tag, "Show task details clicked: $task")
-        _uiStates.update { it.copy(isShowingDetails = true) }
-        _tasksBasedOnState.update { it.copy(showingDetailsTask = task) }
+        _uiState.update { currentState ->
+            currentState.copy(
+                uiTaskReferences = currentState.uiTaskReferences.copy(
+                    showingDetailsTask = task
+                ),
+                activeOverlayComponent = ActiveOverlayComponent.ShowingDetails,
+                isBaseTasksLazyColumnVisible = true
+            )
+        }
     }
 
     fun onShowCompletedTasksClick() {
         Log.d(tag, "Show completed tasks clicked")
-        _uiStates.update {
-            it.copy(
-                isShowingCompletedTasks = true,
-                isQuickEditing = false,
-                isFullEditing = false
+        _uiState.update { currentState ->
+            currentState.copy(
+                activeOverlayComponent = ActiveOverlayComponent.ShowingCompletedTasks,
+                isBaseTasksLazyColumnVisible = true
             )
         }
     }
 
-    // Handle long press events on a task
     fun onTaskLongPress(task: TaskEntity) {
         Log.d(tag, "Long press on task: $task")
-        onTaskClick(task)
-        _tasksBasedOnState.update {
-            it.copy(longPressedTask = task)
+        onTaskClick(task)  // Handle the click on the task
+
+        _uiState.update { currentState ->
+            currentState.copy(
+                uiTaskReferences = currentState.uiTaskReferences.copy(
+                    longPressedTask = task
+                ),
+                isBaseTasksLazyColumnVisible = true
+            )
         }
     }
 
-    // Cancel task editing or viewing
+    fun resetTaskCreationState() {
+        _uiState.update { currentState ->
+            currentState.copy(
+                taskCreationState = TaskCreationState.Idle,
+                isBaseTasksLazyColumnVisible = true
+            )
+        }
+    }
+
     fun onCancelClick() {
-        Log.d(tag, "Cancel clicked")
-        _uiStates.update {
-            it.copy(
-                isQuickEditing = false,
-                isFullEditing = false,
-                isShowingDetails = false,
-                isShowingCompletedTasks = false,
-                isAddingNew = false,
-                isShowingDatePicker = false
-            )
-        }
+        viewModelScope.launch {
+            val firstTask = getFirstTask()
+            // Optionally delay the reset for 3 seconds, if required
+            delay(200)
 
-        _tasksBasedOnState.update {
-            it.copy(
-                clickedTask = null,
-                longPressedTask = null,
-                taskBelowClickedTask = null,
-                inEditTask = null,
-                showingDetailsTask = null,
-            )
+            Log.d(tag, "Cancel clicked")
+
+            _uiState.update { currentState ->
+                currentState.copy(
+                    activeOverlayComponent = ActiveOverlayComponent.None,
+                    uiTaskReferences = currentState.uiTaskReferences.copy(
+                        clickedTask = firstTask,  // Reset to the first task
+                        longPressedTask = null,
+                        taskBelowClickedTask = null,
+                        inEditTask = null,
+                        showingDetailsTask = null
+                    ),
+                    isBaseTasksLazyColumnVisible = true
+                )
+            }
         }
     }
 
-    // show date picker
-    fun onDatePickerClick(){
+    // Date Picker
+    fun onDatePickerClick() {
         Log.d(tag, "Date picker clicked")
-        _uiStates.update {
-            it.copy(isShowingDatePicker = true)
+        _uiState.update { currentState ->
+            currentState.copy(
+                activeOverlayComponent = ActiveOverlayComponent.ShowingDatePicker,
+                isBaseTasksLazyColumnVisible = true
+            )
         }
     }
 
-    // Updates the selected date in the UI state
+    // set the selected Date
     fun onDateChangeClick(date: LocalDate) {
         Log.d(tag, "Date changed to: $date")
-        _uiStates.update { it.copy(isShowingDatePicker = false) }  // Update UiState to hide DatePicker
+
+        _uiState.update { currentState ->
+            currentState.copy(
+                activeOverlayComponent = ActiveOverlayComponent.None,  // Reset active component after date change
+
+                isBaseTasksLazyColumnVisible = true
+            )
+        }
+
         _selectedDate.value = date  // Update the selected date in the ViewModel
+    }
+
+    fun setUiStateToDefault() {
+        _uiState.value = _uiState.value.copy(
+            activeOverlayComponent = ActiveOverlayComponent.None,
+            isBaseTasksLazyColumnVisible = true)
     }
 
 

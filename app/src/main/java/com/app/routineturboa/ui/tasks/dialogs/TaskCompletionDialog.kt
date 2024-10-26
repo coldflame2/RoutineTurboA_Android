@@ -20,8 +20,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.app.routineturboa.data.room.TaskCompletionEntity
-import com.app.routineturboa.data.room.TaskCompletionHistory
+import com.app.routineturboa.data.room.entities.TaskCompletionEntity
+import com.app.routineturboa.data.room.entities.TaskCompletionHistory
 
 @Composable
 fun TaskCompletionDialog(
