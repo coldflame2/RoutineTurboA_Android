@@ -1,4 +1,4 @@
-package com.app.routineturboa.shared
+package com.app.routineturboa.shared.events
 
 import com.app.routineturboa.data.room.entities.TaskEntity
 import java.time.LocalDate

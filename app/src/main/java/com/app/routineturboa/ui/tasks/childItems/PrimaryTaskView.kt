@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -39,7 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.app.routineturboa.data.dbutils.Converters.timeToUiString
 import com.app.routineturboa.data.room.entities.TaskEntity
-import com.app.routineturboa.shared.StateChangeEvents
+import com.app.routineturboa.shared.events.StateChangeEvents
 import com.app.routineturboa.ui.theme.LocalCustomColors
 import kotlinx.coroutines.launch
 

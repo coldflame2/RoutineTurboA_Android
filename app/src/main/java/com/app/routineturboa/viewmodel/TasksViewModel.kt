@@ -10,9 +10,9 @@ import com.app.routineturboa.data.onedrive.MsalApp
 import com.app.routineturboa.data.repository.AppRepository
 import com.app.routineturboa.data.repository.TaskCreationOutcome
 import com.app.routineturboa.data.room.entities.TaskCompletionHistory
-import com.app.routineturboa.shared.ActiveOverlayComponent
-import com.app.routineturboa.shared.TaskCreationState
-import com.app.routineturboa.shared.UiState
+import com.app.routineturboa.shared.states.ActiveUiComponent
+import com.app.routineturboa.shared.states.TaskCreationState
+import com.app.routineturboa.shared.states.UiState
 import com.app.routineturboa.ui.models.TaskFormData
 import com.app.routineturboa.utils.getBasicTasksList
 import com.app.routineturboa.utils.getSampleTasksList
@@ -242,7 +242,7 @@ class TasksViewModel @Inject constructor(
                                 latestTask = newTask,
                                 taskBelowClickedTask = null
                             ),
-                            activeOverlayComponent = ActiveOverlayComponent.None, // Update as needed
+                            activeUiComponent = ActiveUiComponent.None, // Update as needed
                             taskCreationState = TaskCreationState.Success(newId)
                         )
                     }
@@ -257,7 +257,7 @@ class TasksViewModel @Inject constructor(
                                 latestTask = null,
                                 taskBelowClickedTask = null
                             ),
-                            activeOverlayComponent = ActiveOverlayComponent.None, // Update as needed
+                            activeUiComponent = ActiveUiComponent.None, // Update as needed
                             taskCreationState = TaskCreationState.Error("Error")
                         )
                     }
@@ -273,7 +273,7 @@ class TasksViewModel @Inject constructor(
                             latestTask = null,
                             taskBelowClickedTask = null
                         ),
-                        activeOverlayComponent = ActiveOverlayComponent.None, // Update as needed
+                        activeUiComponent = ActiveUiComponent.None, // Update as needed
                         taskCreationState = TaskCreationState.Error(exception.message.toString())
                     )
                 }
@@ -306,7 +306,7 @@ class TasksViewModel @Inject constructor(
                     latestTask = null,
                     taskBelowClickedTask = null
                 ),
-                activeOverlayComponent = ActiveOverlayComponent.None, // Update as needed
+                activeUiComponent = ActiveUiComponent.None, // Update as needed
                 taskCreationState = TaskCreationState.Idle
             )
         }
@@ -326,7 +326,7 @@ class TasksViewModel @Inject constructor(
                         latestTask = null,
                         taskBelowClickedTask = null
                     ),
-                    activeOverlayComponent = ActiveOverlayComponent.None, // Update as needed
+                    activeUiComponent = ActiveUiComponent.None, // Update as needed
                     taskCreationState = TaskCreationState.Idle
                 )
             }
@@ -341,7 +341,7 @@ class TasksViewModel @Inject constructor(
     // Handle task click events
     fun onTaskClick(taskClicked: TaskEntity) {
         // Some task in-edit
-        if (_uiState.value.activeOverlayComponent is ActiveOverlayComponent.QuickEditing) {
+        if (_uiState.value.activeUiComponent is ActiveUiComponent.QuickEditOverlay) {
             // Task in-edit is same as task clicked
             if (taskClicked == _uiState.value.uiTaskReferences.inEditTask) {
                 return // no changes are needed
@@ -357,9 +357,9 @@ class TasksViewModel @Inject constructor(
                             latestTask = null,
                             taskBelowClickedTask = null
                         ),
-                        activeOverlayComponent = ActiveOverlayComponent.None, // Update as needed
+                        activeUiComponent = ActiveUiComponent.None, // Update as needed
                         taskCreationState = TaskCreationState.Idle,
-                        isBaseTasksLazyColumnVisible = true
+                        
                     )
                 }
 
@@ -376,9 +376,9 @@ class TasksViewModel @Inject constructor(
                         latestTask = null,
                         taskBelowClickedTask = null
                     ),
-                    activeOverlayComponent = ActiveOverlayComponent.None, // Update as needed
+                    activeUiComponent = ActiveUiComponent.None, // Update as needed
                     taskCreationState = TaskCreationState.Idle,
-                    isBaseTasksLazyColumnVisible = true
+                    
                 )
             }
 
@@ -403,9 +403,9 @@ class TasksViewModel @Inject constructor(
                         uiTaskReferences = currentState.uiTaskReferences.copy(
                             taskBelowClickedTask = taskBelow
                         ),
-                        activeOverlayComponent = ActiveOverlayComponent.AddingNew,
+                        activeUiComponent = ActiveUiComponent.AddingNew,
                         taskCreationState = TaskCreationState.Loading,
-                        isBaseTasksLazyColumnVisible = false
+                        
                     )
                 }
             }
@@ -426,8 +426,8 @@ class TasksViewModel @Inject constructor(
                         taskBelowClickedTask = taskBelowClickedTask,
                         clickedTask = taskInEdit
                     ),
-                    activeOverlayComponent = ActiveOverlayComponent.FullEditing,
-                    isBaseTasksLazyColumnVisible = true
+                    activeUiComponent = ActiveUiComponent.FullEditing,
+                    
                 )
             }
         } else {
@@ -440,8 +440,8 @@ class TasksViewModel @Inject constructor(
                         clickedTask = taskInEdit,
                         taskBelowClickedTask = null
                     ),
-                    activeOverlayComponent = ActiveOverlayComponent.FullEditing,
-                    isBaseTasksLazyColumnVisible = true
+                    activeUiComponent = ActiveUiComponent.FullEditing,
+                    
 
                 )
             }
@@ -464,9 +464,9 @@ class TasksViewModel @Inject constructor(
                     clickedTask = task,
                     taskBelowClickedTask = taskBelowClickedTask
                 ),
-                activeOverlayComponent = ActiveOverlayComponent.QuickEditing,
+                activeUiComponent = ActiveUiComponent.QuickEditOverlay,
                 taskCreationState = TaskCreationState.Idle,
-                isBaseTasksLazyColumnVisible = true
+                
             )
         }
     }
@@ -480,8 +480,8 @@ class TasksViewModel @Inject constructor(
                 uiTaskReferences = currentState.uiTaskReferences.copy(
                     showingDetailsTask = task
                 ),
-                activeOverlayComponent = ActiveOverlayComponent.ShowingDetails,
-                isBaseTasksLazyColumnVisible = true
+                activeUiComponent = ActiveUiComponent.DetailsView,
+                
             )
         }
     }
@@ -490,8 +490,8 @@ class TasksViewModel @Inject constructor(
         Log.d(tag, "Show completed tasks clicked")
         _uiState.update { currentState ->
             currentState.copy(
-                activeOverlayComponent = ActiveOverlayComponent.ShowingCompletedTasks,
-                isBaseTasksLazyColumnVisible = true
+                activeUiComponent = ActiveUiComponent.FinishedTasks,
+                
             )
         }
     }
@@ -505,7 +505,7 @@ class TasksViewModel @Inject constructor(
                 uiTaskReferences = currentState.uiTaskReferences.copy(
                     longPressedTask = task
                 ),
-                isBaseTasksLazyColumnVisible = true
+                
             )
         }
     }
@@ -514,7 +514,7 @@ class TasksViewModel @Inject constructor(
         _uiState.update { currentState ->
             currentState.copy(
                 taskCreationState = TaskCreationState.Idle,
-                isBaseTasksLazyColumnVisible = true
+                
             )
         }
     }
@@ -529,7 +529,7 @@ class TasksViewModel @Inject constructor(
 
             _uiState.update { currentState ->
                 currentState.copy(
-                    activeOverlayComponent = ActiveOverlayComponent.None,
+                    activeUiComponent = ActiveUiComponent.None,
                     uiTaskReferences = currentState.uiTaskReferences.copy(
                         clickedTask = firstTask,  // Reset to the first task
                         longPressedTask = null,
@@ -537,7 +537,7 @@ class TasksViewModel @Inject constructor(
                         inEditTask = null,
                         showingDetailsTask = null
                     ),
-                    isBaseTasksLazyColumnVisible = true
+                    
                 )
             }
         }
@@ -548,8 +548,8 @@ class TasksViewModel @Inject constructor(
         Log.d(tag, "Date picker clicked")
         _uiState.update { currentState ->
             currentState.copy(
-                activeOverlayComponent = ActiveOverlayComponent.ShowingDatePicker,
-                isBaseTasksLazyColumnVisible = true
+                activeUiComponent = ActiveUiComponent.DatePicker,
+                
             )
         }
     }
@@ -560,9 +560,9 @@ class TasksViewModel @Inject constructor(
 
         _uiState.update { currentState ->
             currentState.copy(
-                activeOverlayComponent = ActiveOverlayComponent.None,  // Reset active component after date change
+                activeUiComponent = ActiveUiComponent.None,  // Reset active component after date change
 
-                isBaseTasksLazyColumnVisible = true
+                
             )
         }
 
@@ -571,8 +571,8 @@ class TasksViewModel @Inject constructor(
 
     fun setUiStateToDefault() {
         _uiState.value = _uiState.value.copy(
-            activeOverlayComponent = ActiveOverlayComponent.None,
-            isBaseTasksLazyColumnVisible = true)
+            activeUiComponent = ActiveUiComponent.None,
+            )
     }
 
 

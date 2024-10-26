@@ -1,4 +1,4 @@
-package com.app.routineturboa.shared
+package com.app.routineturboa.shared.events
 
 import com.app.routineturboa.data.repository.TaskCreationOutcome
 import com.app.routineturboa.data.room.entities.TaskEntity

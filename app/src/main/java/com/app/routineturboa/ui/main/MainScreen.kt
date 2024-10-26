@@ -29,9 +29,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.app.routineturboa.RoutineTurboApp
-import com.app.routineturboa.shared.ActiveOverlayComponent
-import com.app.routineturboa.shared.EventsHandler
-import com.app.routineturboa.shared.TaskCreationState
+import com.app.routineturboa.shared.states.ActiveUiComponent
+import com.app.routineturboa.shared.events.EventsHandler
+import com.app.routineturboa.shared.states.TaskCreationState
 
 import com.app.routineturboa.viewmodel.TasksViewModel
 
@@ -76,8 +76,8 @@ fun MainScreen(
     val onDataOperationEvents = eventsHandler.onDataOperationEvents()
 
     // Check if the current state is either AddingNewTask or FullEditing
-    val isAddingOrFullEditing = uiState.activeOverlayComponent is ActiveOverlayComponent.AddingNew ||
-            uiState.activeOverlayComponent is ActiveOverlayComponent.FullEditing
+    val isAddingOrFullEditing = uiState.activeUiComponent is ActiveUiComponent.AddingNew ||
+            uiState.activeUiComponent is ActiveUiComponent.FullEditing
 
 
     // Get the clicked task from the UI state
@@ -124,7 +124,7 @@ fun MainScreen(
 
             // Show Main TasksLazyColumn
             TasksLazyColumnAnimation(
-                visible = uiState.isBaseTasksLazyColumnVisible
+                visible = uiState.activeUiComponent.shouldShowLazyColumn() ?: true
             ) {
                 LazyColumn(
                     modifier = Modifier.padding(paddingValues),  // Use paddingValues passed from MainScreen here
@@ -162,7 +162,7 @@ fun MainScreen(
 
             // AnimatedVisibility for NewTaskCreationScreen
             NewTaskScreenAnimation(
-                visible = uiState.activeOverlayComponent is ActiveOverlayComponent.AddingNew
+                visible = uiState.activeUiComponent is ActiveUiComponent.AddingNew
             ) {
                 // Remember the tasks when the screen is first displayed
                 val rememberedClickedTask = remember { clickedTask }
@@ -190,7 +190,7 @@ fun MainScreen(
 
             // Show DatePickerDialog when showDatePickerDialog is true
             NewTaskScreenAnimation(
-                visible = uiState.activeOverlayComponent is ActiveOverlayComponent.ShowingDatePicker
+                visible = uiState.activeUiComponent is ActiveUiComponent.DatePicker
             ) {
                 PickDateDialog(
                     selectedDate,
@@ -202,7 +202,7 @@ fun MainScreen(
 
 
             // Show completed tasks dialog
-            if (uiState.activeOverlayComponent is ActiveOverlayComponent.ShowingCompletedTasks) {
+            if (uiState.activeUiComponent is ActiveUiComponent.FinishedTasks) {
                 TaskCompletionDialog(tasksCompleted, onStateChangeEvents.onCancelClick)
             }
 

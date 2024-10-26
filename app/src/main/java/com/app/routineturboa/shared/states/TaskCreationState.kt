@@ -1,4 +1,4 @@
-package com.app.routineturboa.shared
+package com.app.routineturboa.shared.states
 
 sealed class TaskCreationState {
     data object Idle : TaskCreationState()

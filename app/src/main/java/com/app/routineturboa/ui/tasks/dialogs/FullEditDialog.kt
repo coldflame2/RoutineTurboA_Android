@@ -11,7 +11,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddTask
 import androidx.compose.material.icons.filled.Link
@@ -67,6 +69,7 @@ fun FullEditDialog(
     val tag = "FullEditDialog"
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    val rememberScrollState = rememberScrollState()
 
     // Actual data of task being edited as State variables
     var id by remember { mutableIntStateOf(task.id) }
@@ -108,6 +111,7 @@ fun FullEditDialog(
         ) {
             Column(
                 modifier = Modifier
+                    .verticalScroll(rememberScrollState)
                     .padding(8.dp)
                     .fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(10.dp)

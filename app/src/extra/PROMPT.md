@@ -26,6 +26,8 @@ DateTime Handling:
 Windows Version: startTime, endTime, and reminder are stored as ISO 8601 strings. A 'T' is inserted between the date and time to align with Android formatting. These strings are converted to DateTime objects in the app model.
 Android Version: startTime, endTime, and reminder are LocalDateTime objects in the TaskEntity class. A TypeConverters class handles conversion between LocalDateTime and ISO strings.
 
+
+
 I am a beginner who has developed most of this app using AI tools, like GPT and Claude. I am seeking guidance on refining both the Android version (RoutineTurboA) and the Windows version (RoutineTurbo, built with PyQt6). My goal is to learn as I build. It's imperative that the advice must incorporate the latest APIs, methods, and best practices as of 2024. Please ensure that all suggestions are compatible with the versions I mentioned earlier and avoid any deprecated or outdated approaches.
 
 Today, it's about RoutineTurboA, the android version.

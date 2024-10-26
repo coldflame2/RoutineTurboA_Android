@@ -37,10 +37,10 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.app.routineturboa.data.room.entities.TaskEntity
-import com.app.routineturboa.shared.ActiveOverlayComponent
-import com.app.routineturboa.shared.DataOperationEvents
-import com.app.routineturboa.shared.StateChangeEvents
-import com.app.routineturboa.shared.UiState
+import com.app.routineturboa.shared.states.ActiveUiComponent
+import com.app.routineturboa.shared.events.DataOperationEvents
+import com.app.routineturboa.shared.events.StateChangeEvents
+import com.app.routineturboa.shared.states.UiState
 import com.app.routineturboa.ui.tasks.childItems.HourColumn
 import com.app.routineturboa.ui.tasks.childItems.InLineQuickEdit
 import com.app.routineturboa.ui.tasks.childItems.PrimaryTaskView
@@ -68,24 +68,24 @@ fun ParentTaskItem(
     var isShowContextMenu by remember { mutableStateOf(false) }
     var longPressOffset by remember { mutableStateOf(Offset.Zero) }
 
-    val isTaskWithinCurrentTimeRange = remember { mutableStateOf(false) }  // Set in Launched Effect
+    val isTaskWithinCurrentTimeRange = remember { mutableStateOf(false) }
 
     val isThisTaskClicked = (uiState.uiTaskReferences.clickedTask?.id == task.id)
 
     val isThisTaskQuickEditing =
-        (uiState.activeOverlayComponent is ActiveOverlayComponent.QuickEditing) &&
+        (uiState.activeUiComponent is ActiveUiComponent.QuickEditOverlay) &&
                 (uiState.uiTaskReferences.inEditTask?.id == task.id)
 
     val isThisTaskFullEditing =
-        (uiState.activeOverlayComponent is ActiveOverlayComponent.FullEditing) &&
+        (uiState.activeUiComponent is ActiveUiComponent.FullEditing) &&
                 (uiState.uiTaskReferences.inEditTask?.id == task.id)
 
     val isThisTaskShowDetails =
-        (uiState.activeOverlayComponent is ActiveOverlayComponent.ShowingDetails) &&
+        (uiState.activeUiComponent is ActiveUiComponent.DetailsView) &&
                 (uiState.uiTaskReferences.showingDetailsTask?.id == task.id)
 
     val isAnotherTaskEditing =
-        (uiState.activeOverlayComponent is ActiveOverlayComponent.QuickEditing) &&
+        (uiState.activeUiComponent is ActiveUiComponent.QuickEditOverlay) &&
                 (uiState.uiTaskReferences.inEditTask?.id != task.id)
 
     val latestTask = uiState.uiTaskReferences.latestTask
@@ -232,7 +232,7 @@ fun ParentTaskItem(
                 // Full Editing
                 if (isThisTaskFullEditing) {
                     FullEditDialog(
-                        mainTasks = mainTasks ?: emptyList(),
+                        mainTasks = mainTasks,
                         task = task,
                         onConfirmEdit = { updatedTaskForm ->
                             coroutineScope.launch {

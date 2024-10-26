@@ -1,4 +1,4 @@
-package com.app.routineturboa.shared
+package com.app.routineturboa.shared.states
 
 import com.app.routineturboa.data.room.entities.TaskEntity
 

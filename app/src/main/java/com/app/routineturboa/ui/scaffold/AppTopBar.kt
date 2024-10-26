@@ -9,10 +9,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
-import com.app.routineturboa.shared.ActiveOverlayComponent
-import com.app.routineturboa.shared.DataOperationEvents
-import com.app.routineturboa.shared.StateChangeEvents
-import com.app.routineturboa.shared.UiState
+import com.app.routineturboa.shared.states.ActiveUiComponent
+import com.app.routineturboa.shared.events.DataOperationEvents
+import com.app.routineturboa.shared.events.StateChangeEvents
+import com.app.routineturboa.shared.states.UiState
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -33,9 +33,9 @@ fun AppTopBar(
     val dateFormatter = DateTimeFormatter.ofPattern("d MMMM", Locale.getDefault())
     val currentDate = selectedDate?.format(dateFormatter) ?: "{Set Date}"
 
-    val isEditingOrAddingNew = uiState.activeOverlayComponent is ActiveOverlayComponent.FullEditing ||
-            uiState.activeOverlayComponent is ActiveOverlayComponent.QuickEditing ||
-            uiState.activeOverlayComponent is ActiveOverlayComponent.AddingNew
+    val isEditingOrAddingNew = uiState.activeUiComponent is ActiveUiComponent.FullEditing ||
+            uiState.activeUiComponent is ActiveUiComponent.QuickEditOverlay ||
+            uiState.activeUiComponent is ActiveUiComponent.AddingNew
 
     val titleText = if (isEditingOrAddingNew) "Enter the task details" else currentDate
 

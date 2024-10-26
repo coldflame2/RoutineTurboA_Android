@@ -16,7 +16,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.core.view.WindowCompat
 import com.app.routineturboa.data.repository.AppRepository
 import com.app.routineturboa.reminders.ReminderManager
-import com.app.routineturboa.shared.ActiveOverlayComponent
+import com.app.routineturboa.shared.states.ActiveUiComponent
 import com.app.routineturboa.ui.main.MainScreen
 import com.app.routineturboa.ui.theme.RoutineTurboATheme
 import com.app.routineturboa.utils.NotificationPermissionHandler
@@ -71,12 +71,10 @@ class MainActivity : ComponentActivity() {
         Log.d(tag, "handleBackPress...")
         val uiState = tasksViewModel.uiState.value
 
-        // If an overlay is active or task list visibility is false, reset to default state
-        if (uiState.activeOverlayComponent != ActiveOverlayComponent.None || !uiState.isBaseTasksLazyColumnVisible) {
+        if (uiState.activeUiComponent !is ActiveUiComponent.None) {
             tasksViewModel.setUiStateToDefault()
         } else {
-            Log.d(tag, "Back button clicked with task list base view visible")
-            // Do nothing as the task list is the active base view
+            Log.d(tag, "Back button clicked")
         }
     }
 

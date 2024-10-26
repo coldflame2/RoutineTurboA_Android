@@ -14,17 +14,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.automirrored.sharp.Assignment
-import androidx.compose.material.icons.automirrored.sharp.Label
 import androidx.compose.material.icons.filled.AddTask
-import androidx.compose.material.icons.filled.Assignment
-import androidx.compose.material.icons.filled.Label
 import androidx.compose.material.icons.filled.MoreTime
-import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material.icons.filled.TypeSpecimen
 import androidx.compose.material.icons.sharp.AddAlert
-import androidx.compose.material.icons.sharp.Assignment
 import androidx.compose.material.icons.sharp.Start
 import androidx.compose.material.icons.sharp.Timer
 import androidx.compose.material3.Button
@@ -50,7 +43,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.app.routineturboa.data.dbutils.RecurrenceType
 import com.app.routineturboa.data.room.entities.TaskEntity
-import com.app.routineturboa.shared.StateChangeEvents
+import com.app.routineturboa.shared.events.StateChangeEvents
 import com.app.routineturboa.ui.models.TaskFormData
 import com.app.routineturboa.ui.reusable.dropdowns.SelectRecurrenceTypeDropdown
 import com.app.routineturboa.ui.reusable.fields.CustomTextField
