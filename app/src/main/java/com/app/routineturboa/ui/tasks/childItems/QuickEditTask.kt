@@ -17,14 +17,13 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.app.routineturboa.data.room.entities.TaskEntity
 import com.app.routineturboa.ui.models.TaskFormData
-import com.app.routineturboa.data.dbutils.Converters.timeToString
-import com.app.routineturboa.ui.reusable.fields.QuickEditInputTextField
+import com.app.routineturboa.core.dbutils.Converters.timeToString
+import com.app.routineturboa.ui.tasks.fields.QuickEditInputTextField
 import com.app.routineturboa.ui.theme.LocalCustomColors
 
 @RequiresApi(Build.VERSION_CODES.S)
 @Composable
 fun InLineQuickEdit(
-    mainTasks: List<TaskEntity>?,
     task: TaskEntity,
     isFullEditing: Boolean,
     onShowFullEditClick: (Int) -> Unit,
@@ -57,7 +56,7 @@ fun InLineQuickEdit(
                 position = task.position,
                 duration = newDuration,
                 reminder = task.reminder,
-                mainTaskId = task.mainTaskId,
+                linkedMainIfHelper = task.mainTaskId,
                 startDate = task.startDate,
                 isRecurring = task.isRecurring ?: false,
                 recurrenceType = task.recurrenceType,

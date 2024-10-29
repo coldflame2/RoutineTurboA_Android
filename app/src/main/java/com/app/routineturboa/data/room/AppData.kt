@@ -3,7 +3,7 @@ package com.app.routineturboa.data.room
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
-import com.app.routineturboa.data.dbutils.Converters
+import com.app.routineturboa.core.dbutils.Converters
 import com.app.routineturboa.data.room.entities.NonRecurringTaskEntity
 import com.app.routineturboa.data.room.entities.TaskCompletionEntity
 import com.app.routineturboa.data.room.entities.TaskEntity

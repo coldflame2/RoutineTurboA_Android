@@ -1,3 +1,0 @@
-1. Add the state in TasksUiState
-2. Add the function in TasksViewModel to set it's value (like on-Some-Button-Click)
-3. Also make sure to update it in other viewModel methods to set it false.

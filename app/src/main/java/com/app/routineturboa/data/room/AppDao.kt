@@ -9,11 +9,12 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
-import com.app.routineturboa.data.dbutils.DbConstants
+import com.app.routineturboa.core.dbutils.DbConstants
 import com.app.routineturboa.data.room.entities.NonRecurringTaskEntity
 import com.app.routineturboa.data.room.entities.TaskCompletionEntity
 import com.app.routineturboa.data.room.entities.TaskCompletionHistory
 import com.app.routineturboa.data.room.entities.TaskEntity
+import com.app.routineturboa.core.utils.TaskTypes
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
 
@@ -27,6 +28,10 @@ interface AppDao {
 
     @Query("SELECT * FROM ${DbConstants.TASKS_TABLE} ORDER BY position ASC")
     fun getAllTasksList(): List<TaskEntity>
+
+    // Get all tasks with type Main
+    @Query("SELECT * FROM ${DbConstants.TASKS_TABLE} WHERE type = :mainType")
+    suspend fun getAllMainTasks(mainType: String = TaskTypes.MAIN): List<TaskEntity>
 
     @Query("""
         SELECT EXISTS(

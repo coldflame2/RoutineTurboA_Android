@@ -9,8 +9,9 @@ import com.app.routineturboa.data.room.entities.TaskCompletionEntity
 import com.app.routineturboa.data.room.entities.TaskEntity
 import com.app.routineturboa.data.room.entities.TaskCompletionHistory
 import com.app.routineturboa.data.room.entities.NonRecurringTaskEntity
-import com.app.routineturboa.data.dbutils.Converters.stringToTime
-import com.app.routineturboa.data.dbutils.RecurrenceType
+import com.app.routineturboa.core.dbutils.Converters.stringToTime
+import com.app.routineturboa.core.dbutils.RecurrenceType
+import com.app.routineturboa.core.models.TaskCreationOutcome
 import com.microsoft.identity.client.IAuthenticationResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
@@ -319,6 +320,10 @@ class AppRepository @Inject constructor(
 
     suspend fun getAllTasksList(): List<TaskEntity> {
         return appDao.getAllTasksList()
+    }
+
+    suspend fun getAllMainTasks(): List<TaskEntity> {
+        return appDao.getAllMainTasks()
     }
     // endregion
 

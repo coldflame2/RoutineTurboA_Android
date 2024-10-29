@@ -4,8 +4,8 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.PrimaryKey
 import androidx.room.TypeConverters
-import com.app.routineturboa.data.dbutils.DbConstants
-import com.app.routineturboa.data.dbutils.Converters
+import com.app.routineturboa.core.dbutils.DbConstants
+import com.app.routineturboa.core.dbutils.Converters
 import java.time.LocalDate
 
 // Only for non-recurring tasks

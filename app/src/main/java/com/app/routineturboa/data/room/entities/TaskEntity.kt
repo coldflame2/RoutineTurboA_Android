@@ -3,10 +3,10 @@ package com.app.routineturboa.data.room.entities
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import androidx.room.TypeConverters
-import com.app.routineturboa.data.dbutils.DbConstants
-import com.app.routineturboa.data.dbutils.RecurrenceType
-import com.app.routineturboa.data.dbutils.Converters
-import com.app.routineturboa.utils.TaskTypes
+import com.app.routineturboa.core.dbutils.DbConstants
+import com.app.routineturboa.core.dbutils.RecurrenceType
+import com.app.routineturboa.core.dbutils.Converters
+import com.app.routineturboa.core.utils.TaskTypes
 import java.time.LocalDate
 import java.time.LocalTime
 

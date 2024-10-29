@@ -1,8 +1,7 @@
 package com.app.routineturboa.ui.models
 
-import com.app.routineturboa.data.dbutils.RecurrenceType
-import com.app.routineturboa.utils.TaskTypes
-import java.time.LocalDateTime
+import com.app.routineturboa.core.dbutils.RecurrenceType
+import com.app.routineturboa.core.utils.TaskTypes
 import java.time.LocalDate
 import java.time.LocalTime
 
@@ -16,7 +15,7 @@ data class TaskFormData(
     val position: Int?,
     val duration: Int?,
     val reminder: LocalTime?,
-    val mainTaskId: Int?,
+    val linkedMainIfHelper: Int?,
 
     // Recurrence-related fields
     val startDate: LocalDate? = null,

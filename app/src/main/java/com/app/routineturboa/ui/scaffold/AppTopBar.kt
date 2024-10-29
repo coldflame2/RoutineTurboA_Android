@@ -9,10 +9,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
-import com.app.routineturboa.shared.states.ActiveUiComponent
-import com.app.routineturboa.shared.events.DataOperationEvents
-import com.app.routineturboa.shared.events.StateChangeEvents
-import com.app.routineturboa.shared.states.UiState
+import com.app.routineturboa.core.models.ActiveUiComponent
+import com.app.routineturboa.core.models.DataOperationEvents
+import com.app.routineturboa.core.models.StateChangeEvents
+import com.app.routineturboa.core.models.UiState
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -40,7 +40,7 @@ fun AppTopBar(
     val titleText = if (isEditingOrAddingNew) "Enter the task details" else currentDate
 
     val navigationIconClickAction: () -> Unit = if (isEditingOrAddingNew) {
-        onStateEvents.onCancelClick
+        { onStateEvents.onDismissOrReset(uiState.stateBasedTasks.clickedTask) }
     } else {
         { coroutineScope.launch { drawerState.open() } }
     }

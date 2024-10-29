@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Start
 import androidx.compose.material.icons.sharp.Timer
-import androidx.compose.material.icons.twotone.Timer
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -32,7 +31,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.app.routineturboa.ui.theme.LocalCustomColors
-import com.app.routineturboa.utils.SineEasing
+import com.app.routineturboa.core.utils.SineEasing
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
@@ -55,13 +54,8 @@ fun HourColumn(
 
     // region: Card background color and alpha, and fontWeight
 
-    val fontWeight = when {
-        isThisTaskClicked -> MaterialTheme.typography.bodyLarge.copy(
-                            fontSize = 11.sp, fontWeight = FontWeight.Thin)
-
-        else -> MaterialTheme.typography.bodyLarge.copy(
-                fontSize = 11.sp, fontWeight = FontWeight.Thin)
-    }
+    val startTimeTextStyle = MaterialTheme.typography.bodyLarge.copy(
+        fontSize = 11.sp, fontWeight = FontWeight.Thin)
 
     val infiniteTransition = rememberInfiniteTransition(label = "BorderAnimation")
     val animatedAlpha by infiniteTransition.animateFloat(
@@ -104,9 +98,9 @@ fun HourColumn(
         Column(
             modifier = Modifier
                 .height(height)
-                .width(80.dp)
+                .width(70.dp)
                 .padding(
-                    start = 4.dp,
+                    start = 6.dp,
                     top = topPadding - 1.dp,
                 )
         ) {
@@ -115,13 +109,6 @@ fun HourColumn(
                 horizontalArrangement = Arrangement.spacedBy(3.dp),
                 modifier = Modifier.padding(start = 2.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.Start,
-                    modifier = Modifier.size(12.dp).alpha(0.5f),
-                    tint = customColors.gray400,
-                    contentDescription = "StartTime"
-                )
-
                 // Hour Strings (eg. "06:00")
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -129,17 +116,17 @@ fun HourColumn(
                 ) {
                     Text(
                         text = startTimeHourString ?: "--",
-                        style = fontWeight,
+                        style = startTimeTextStyle,
                     )
 
                     Text(
                         text = ":",
-                        style = fontWeight,
+                        style = startTimeTextStyle,
                     )
 
                     Text(
                         text = startTimeMinuteString ?: "--",
-                        style = fontWeight,
+                        style = startTimeTextStyle,
                     )
                 }
 
@@ -150,11 +137,11 @@ fun HourColumn(
                 ) {
                     Text(
                         text = startTimeAinAm ?: "--", // A or P
-                        style = fontWeight,
+                        style = startTimeTextStyle,
                     )
                     Text(
                         text = startTimeMinAm ?: "--", // M
-                        style = fontWeight,
+                        style = startTimeTextStyle,
                     )
                 }
             }

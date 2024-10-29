@@ -16,10 +16,10 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.core.view.WindowCompat
 import com.app.routineturboa.data.repository.AppRepository
 import com.app.routineturboa.reminders.ReminderManager
-import com.app.routineturboa.shared.states.ActiveUiComponent
+import com.app.routineturboa.core.models.ActiveUiComponent
 import com.app.routineturboa.ui.main.MainScreen
 import com.app.routineturboa.ui.theme.RoutineTurboATheme
-import com.app.routineturboa.utils.NotificationPermissionHandler
+import com.app.routineturboa.core.utils.NotificationPermissionHandler
 import com.app.routineturboa.viewmodel.TasksViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -77,7 +77,4 @@ class MainActivity : ComponentActivity() {
             Log.d(tag, "Back button clicked")
         }
     }
-
-
-
 }

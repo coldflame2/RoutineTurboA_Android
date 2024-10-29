@@ -1,6 +1,11 @@
 package com.app.routineturboa.ui.tasks.childItems
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,10 +20,16 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.ArrowDropUp
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonColors
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuItemColors
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -29,31 +40,41 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.app.routineturboa.data.dbutils.Converters.timeToUiString
+import com.app.routineturboa.core.dbutils.Converters.timeToUiString
+import com.app.routineturboa.core.models.DataOperationEvents
 import com.app.routineturboa.data.room.entities.TaskEntity
-import com.app.routineturboa.shared.events.StateChangeEvents
+import com.app.routineturboa.core.models.StateChangeEvents
+import com.app.routineturboa.ui.tasks.dropdowns.TaskOptionsMenu
 import com.app.routineturboa.ui.theme.LocalCustomColors
 import kotlinx.coroutines.launch
 
 @Composable
 fun PrimaryTaskView(
     task: TaskEntity,
-    isThisTaskClicked: Boolean,
-    cardHeight: Dp,
+    isThisTaskClicked: Boolean = false,
+    isThisTaskLongPressMenu: Boolean = false,
     stateChangeEvents: StateChangeEvents,
-    topPadding: Dp,
-    forReferenceView: Boolean = false,
+    dataOperationEvents: DataOperationEvents,
+
+    cardHeight: Dp = 60.dp,
+    topPadding: Dp = 10.dp,
     bgColor: Color = Color.LightGray,
+
+    forReferenceView: Boolean = false,  // Used for reference view in AddNewTask Screeen
 ) {
+    // region: variables
     val tag = "PrimaryTaskView"
-    val coRoutineScope = rememberCoroutineScope()
+    val coroutineScope = rememberCoroutineScope()
     val customColors = LocalCustomColors.current
 
     var taskTypeFirstLetter = ' ' // Initialize Empty
@@ -94,13 +115,14 @@ fun PrimaryTaskView(
     val endTime = timeToUiString(task.endTime)
     val endTimeText = if (forReferenceView) "EndTime: $endTime" else endTime
 
+    // endregion
 
-    Column( // Primary Task View and Optional Task Timings if card height enough
-        modifier = Modifier.padding(start = 8.dp)
-    ) {
+    // Primary Task View and Optional Task Timings if card height enough
+    Column {
         Row(
             modifier = Modifier.fillMaxWidth(),
         ) {
+            // Name and Alphabet-TaskType Icon
             Row ( modifier = Modifier.weight(0.3f)) {
                 // taskName
                 Text(
@@ -108,7 +130,7 @@ fun PrimaryTaskView(
                     maxLines = maxLinesForTaskName,
                     overflow = onTextOverflow,
                     style = taskNameFontStyle,
-                    modifier = Modifier.padding(end = 1.dp, top=topPadding),
+                    modifier = Modifier.padding(start = 5.dp, end = 1.dp, top=topPadding),
                     onTextLayout = { textLayoutResult ->
                         // Check if the text did overflow
                         isTextOverflowing = textLayoutResult.hasVisualOverflow
@@ -133,40 +155,30 @@ fun PrimaryTaskView(
                 }
             }
 
-            // Right-most area
+            // Right-most area (Edit Icon, endTime, DropDown context menu)
             Column(
                 verticalArrangement = Arrangement.SpaceBetween, // Pushes the children to the top and bottom
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
                     .fillMaxHeight()
-                    .padding(top = 8.dp)
+                    .padding(top=2.dp, end = 5.dp)
             ) {
-                IconButton(
-                    onClick = {
-                        if (!forReferenceView) {  // not when in new task creation screen
-                            coRoutineScope.launch {
-                                stateChangeEvents.onShowQuickEditClick(task)
-                            }
-                        }
-                    },
-                    modifier = Modifier
-                        .alpha(if (forReferenceView) 0f else 1f)
-                        .size(16.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Edit,
-                        contentDescription = "Edit Task",
+                // DropDown IconButton
+                if(!forReferenceView) {  // Not when used as reference View
+                    TaskOptionsMenu(
+                        task = task,
+                        bgColor = bgColor,
+                        coroutineScope = coroutineScope,
+                        stateChangeEvents = stateChangeEvents,
+                        dataOperationEvents = dataOperationEvents,
+                        isThisTaskLongPressMenu = isThisTaskLongPressMenu,
                     )
                 }
 
                 // Task End Time
                 Box(
                     modifier = Modifier
-                        .background(
-                            color = bgColor.copy(alpha=1f),
-                            shape = RoundedCornerShape(5.dp),
-                        )
-                        .padding(1.dp)
+                        .padding(bottom=5.dp)
                 ) {
                     Text(
                         text = endTimeText ?: "-",

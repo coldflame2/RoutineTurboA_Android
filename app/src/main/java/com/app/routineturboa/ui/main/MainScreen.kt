@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalNavigationDrawer
@@ -21,7 +22,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -29,9 +29,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.app.routineturboa.RoutineTurboApp
-import com.app.routineturboa.shared.states.ActiveUiComponent
-import com.app.routineturboa.shared.events.EventsHandler
-import com.app.routineturboa.shared.states.TaskCreationState
+import com.app.routineturboa.core.models.ActiveUiComponent
+import com.app.routineturboa.core.models.EventsHandler
+import com.app.routineturboa.core.models.TaskCreationState
 
 import com.app.routineturboa.viewmodel.TasksViewModel
 
@@ -39,15 +39,12 @@ import com.app.routineturboa.viewmodel.TasksViewModel
 import com.app.routineturboa.ui.scaffold.AppBottomBar
 import com.app.routineturboa.ui.scaffold.AppDrawer
 import com.app.routineturboa.ui.scaffold.AppTopBar
-import com.app.routineturboa.ui.reusable.pickers.PickDateDialog
+import com.app.routineturboa.ui.tasks.pickers.PickDateDialog
 import com.app.routineturboa.ui.reusable.animation.NewTaskScreenAnimation
 import com.app.routineturboa.ui.reusable.animation.TasksLazyColumnAnimation
 import com.app.routineturboa.ui.reusable.animation.SuccessIndicator
-import com.app.routineturboa.ui.tasks.ParentTaskItem
-import com.app.routineturboa.ui.tasks.dialogs.NewTaskCreationScreen
+import com.app.routineturboa.ui.tasks.form.NewTaskForm
 import com.app.routineturboa.ui.tasks.dialogs.TaskCompletionDialog
-import com.app.routineturboa.utils.TaskTypes
-import kotlinx.coroutines.launch
 
 @RequiresApi(Build.VERSION_CODES.S)
 @Composable
@@ -58,15 +55,13 @@ fun MainScreen(
     val tag = "MainScreen"
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    val lazyListState = rememberLazyListState()
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val app = remember { context.applicationContext as RoutineTurboApp }
     val reminderManager = app.reminderManager
 
     val tasksByDate by tasksViewModel.tasksByDate.collectAsState()
     val tasksCompleted by tasksViewModel.taskCompletions.collectAsState()
-    val mainTasks by remember(tasksByDate) {
-        mutableStateOf(tasksByDate.filter { it.type == TaskTypes.MAIN })
-    }
 
     val uiState by tasksViewModel.uiState.collectAsState()
     val selectedDate by tasksViewModel.selectedDate.collectAsState()
@@ -81,10 +76,10 @@ fun MainScreen(
 
 
     // Get the clicked task from the UI state
-    val clickedTask = uiState.uiTaskReferences.clickedTask
+    val clickedTask = uiState.stateBasedTasks.clickedTask
 
     // Get the task below the clicked task from the UI state
-    val taskBelowClickedTask = uiState.uiTaskReferences.taskBelowClickedTask
+    val taskBelowClicked = uiState.stateBasedTasks.taskBelowClickedTask
 
 
 
@@ -127,16 +122,16 @@ fun MainScreen(
                 visible = uiState.activeUiComponent.shouldShowLazyColumn() ?: true
             ) {
                 LazyColumn(
+                    state = lazyListState,
                     modifier = Modifier.padding(paddingValues),  // Use paddingValues passed from MainScreen here
-                    contentPadding = PaddingValues(0.dp, 0.dp, 6.dp, 0.dp),
+                    contentPadding = PaddingValues(4.dp, 0.dp, 6.dp, 0.dp),
                     verticalArrangement = Arrangement.spacedBy(0.dp) // space between tasks
                 ) {
                     // Show ParentTaskItem for each task in the list
                     if (tasksByDate.isNotEmpty()) {
                         items(tasksByDate, key = { task -> task.id }) { task ->
-                            ParentTaskItem(
+                            ParentContainerLayout(
                                 task = task,
-                                mainTasks = mainTasks,
                                 uiState = uiState,
                                 onStateChangeEvents = onStateChangeEvents,
                                 onDataOperationEvents = onDataOperationEvents,
@@ -164,27 +159,18 @@ fun MainScreen(
             NewTaskScreenAnimation(
                 visible = uiState.activeUiComponent is ActiveUiComponent.AddingNew
             ) {
-                // Remember the tasks when the screen is first displayed
+                // Remember the clicked and task below (but only after new task screen is first shown)
                 val rememberedClickedTask = remember { clickedTask }
-                val rememberedTaskBelowClicked = remember { taskBelowClickedTask }
+                val rememberedTaskBelowClicked = remember { taskBelowClicked }
 
-                NewTaskCreationScreen(
+                NewTaskForm(
                     paddingValues = paddingValues,
-                    clickedTask = rememberedClickedTask,
-                    taskBelowClickedTask = rememberedTaskBelowClicked,
+                    clickedTaskOrNull = rememberedClickedTask,
+                    taskBelowClickedOrNull = rememberedTaskBelowClicked,
                     selectedDate = selectedDate,
-                    mainTasks = mainTasks,
-                    stateChangeEvents = onStateChangeEvents,
-                    onConfirm = { confirmedClickedTask, confirmedTaskBelowClicked, newTaskFormData ->
-                        coroutineScope.launch {
-                            // set the state to loading
-                            onDataOperationEvents.onNewTaskConfirmClick(
-                                confirmedClickedTask,
-                                confirmedTaskBelowClicked,
-                                newTaskFormData
-                            )
-                        }
-                    }
+                    onStateChangeEvents = onStateChangeEvents,
+                    onDataOperationEvents = onDataOperationEvents,
+                    taskCreationState = uiState.taskCreationState
                 )
             }
 
@@ -193,9 +179,9 @@ fun MainScreen(
                 visible = uiState.activeUiComponent is ActiveUiComponent.DatePicker
             ) {
                 PickDateDialog(
-                    selectedDate,
-                    onStateChangeEvents.onDateChangeClick,
-                    onStateChangeEvents.onCancelClick
+                    selectedDate = selectedDate,
+                    onDateChange = onStateChangeEvents.onDateChangeClick,
+                    onCancel = { onStateChangeEvents.onDismissOrReset(null) }
                 )
             }
 
@@ -203,7 +189,10 @@ fun MainScreen(
 
             // Show completed tasks dialog
             if (uiState.activeUiComponent is ActiveUiComponent.FinishedTasks) {
-                TaskCompletionDialog(tasksCompleted, onStateChangeEvents.onCancelClick)
+                TaskCompletionDialog(
+                    taskCompletionHistories = tasksCompleted,
+                    onDismiss = { onStateChangeEvents.onDismissOrReset(clickedTask) }
+                )
             }
 
             // Success Indicator for the new task

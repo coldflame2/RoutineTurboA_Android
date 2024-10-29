@@ -24,7 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
-import com.app.routineturboa.data.dbutils.Converters.timeToString
+import com.app.routineturboa.core.dbutils.Converters.timeToString
 import com.app.routineturboa.data.room.entities.TaskEntity
 
 @OptIn(ExperimentalMaterial3Api::class)

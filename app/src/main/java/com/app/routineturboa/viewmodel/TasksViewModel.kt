@@ -8,14 +8,15 @@ import androidx.lifecycle.viewModelScope
 import com.app.routineturboa.data.room.entities.TaskEntity
 import com.app.routineturboa.data.onedrive.MsalApp
 import com.app.routineturboa.data.repository.AppRepository
-import com.app.routineturboa.data.repository.TaskCreationOutcome
 import com.app.routineturboa.data.room.entities.TaskCompletionHistory
-import com.app.routineturboa.shared.states.ActiveUiComponent
-import com.app.routineturboa.shared.states.TaskCreationState
-import com.app.routineturboa.shared.states.UiState
+import com.app.routineturboa.core.models.ActiveUiComponent
+import com.app.routineturboa.core.models.TaskCreationOutcome
+import com.app.routineturboa.core.models.TaskCreationState
+import com.app.routineturboa.core.models.UiState
 import com.app.routineturboa.ui.models.TaskFormData
-import com.app.routineturboa.utils.getBasicTasksList
-import com.app.routineturboa.utils.getSampleTasksList
+import com.app.routineturboa.core.utils.TaskTypes
+import com.app.routineturboa.core.utils.getBasicTasksList
+import com.app.routineturboa.core.utils.getSampleTasksList
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -75,10 +76,6 @@ class TasksViewModel @Inject constructor(
             initialValue = emptyList()
         )
 
-    private suspend fun getFirstTask(): TaskEntity? {
-        val firstTask = repository.getTaskAtPosition(1)
-        return firstTask
-    }
 
     // endregion
 
@@ -101,7 +98,7 @@ class TasksViewModel @Inject constructor(
             duration = taskFormData.duration,
             reminder = taskFormData.reminder,
             type = taskFormData.taskType,
-            mainTaskId = taskFormData.mainTaskId,
+            mainTaskId = taskFormData.linkedMainIfHelper,
             startDate = taskFormData.startDate,
             isRecurring = taskFormData.isRecurring,
             recurrenceType = taskFormData.recurrenceType,
@@ -178,6 +175,11 @@ class TasksViewModel @Inject constructor(
         return repository.isTaskLast(task)
     }
 
+    private suspend fun getFirstTask(): TaskEntity? {
+        val firstTask = repository.getTaskAtPosition(1)
+        return firstTask
+    }
+
     suspend fun logAllTasks() {
         Log.d(tag, "**********Logging all tasks***********")
         val allTasksList = withContext(Dispatchers.IO) {
@@ -195,7 +197,7 @@ class TasksViewModel @Inject constructor(
     // endregion
 
 
-    // region: ------------- On Database operations (Add, edit, and Delete) ----------------
+    // region: ------------- onDataOperationEvents (Add, edit, and Delete) ----------------
 
     // Confirm a new task and add it to the database
     suspend fun onNewTaskConfirmClick(
@@ -228,6 +230,7 @@ class TasksViewModel @Inject constructor(
     ) {
         Log.d(tag, "Updating States after New Task Operation...")
         result.fold(
+            // New Task was Successful
             onSuccess = { taskCreationOutcome ->
                 taskCreationOutcome.newTaskId?.let { newId ->
                     Log.d(tag, "Task confirmed successfully with ID: $newId")
@@ -236,13 +239,13 @@ class TasksViewModel @Inject constructor(
                     // Update the UI state
                     _uiState.update { currentState ->
                         currentState.copy(
-                            uiTaskReferences = currentState.uiTaskReferences.copy(
+                            stateBasedTasks = currentState.stateBasedTasks.copy(
                                 clickedTask = newTask,
                                 inEditTask = null,
                                 latestTask = newTask,
                                 taskBelowClickedTask = null
                             ),
-                            activeUiComponent = ActiveUiComponent.None, // Update as needed
+                            activeUiComponent = ActiveUiComponent.None,
                             taskCreationState = TaskCreationState.Success(newId)
                         )
                     }
@@ -251,7 +254,7 @@ class TasksViewModel @Inject constructor(
                 } ?: run {
                     _uiState.update { currentState ->
                         currentState.copy(
-                            uiTaskReferences = currentState.uiTaskReferences.copy(
+                            stateBasedTasks = currentState.stateBasedTasks.copy(
                                 clickedTask = clickedTask,
                                 inEditTask = null,
                                 latestTask = null,
@@ -267,7 +270,7 @@ class TasksViewModel @Inject constructor(
             onFailure = { exception ->
                 _uiState.update { currentState ->
                     currentState.copy(
-                        uiTaskReferences = currentState.uiTaskReferences.copy(
+                        stateBasedTasks = currentState.stateBasedTasks.copy(
                             clickedTask = clickedTask,
                             inEditTask = null,
                             latestTask = null,
@@ -300,7 +303,7 @@ class TasksViewModel @Inject constructor(
         // Update the UI state
         _uiState.update { currentState ->
             currentState.copy(
-                uiTaskReferences = currentState.uiTaskReferences.copy(
+                stateBasedTasks = currentState.stateBasedTasks.copy(
                     clickedTask = updatedTaskEntity,
                     inEditTask = null,
                     latestTask = null,
@@ -320,7 +323,7 @@ class TasksViewModel @Inject constructor(
             repository.deleteTask(task)
             _uiState.update { currentState ->
                 currentState.copy(
-                    uiTaskReferences = currentState.uiTaskReferences.copy(
+                    stateBasedTasks = currentState.stateBasedTasks.copy(
                         clickedTask = getFirstTask(),
                         inEditTask = null,
                         latestTask = null,
@@ -333,17 +336,27 @@ class TasksViewModel @Inject constructor(
         }
     }
 
+    suspend fun onMainTasksRequested(): List<TaskEntity> {
+        Log.d(tag, "Main tasks requested...")
+        return repository.getAllMainTasks()
+    }
+
+    suspend fun onNameRequested(taskId: Int): String {
+        return getTaskById(taskId)?.name ?: "--"
+    }
+
     // endregion
 
 
-    // region: ----------------------- UI State Handling -------------------------
+    // region: ----------------------- onStateChangeEvents (UI State Handling) -------------------
 
     // Handle task click events
     fun onTaskClick(taskClicked: TaskEntity) {
+        Log.d(tag, "Task clicked: ${taskClicked.name}")
         // Some task in-edit
         if (_uiState.value.activeUiComponent is ActiveUiComponent.QuickEditOverlay) {
             // Task in-edit is same as task clicked
-            if (taskClicked == _uiState.value.uiTaskReferences.inEditTask) {
+            if (taskClicked == _uiState.value.stateBasedTasks.inEditTask) {
                 return // no changes are needed
             }
 
@@ -351,7 +364,7 @@ class TasksViewModel @Inject constructor(
             else {
                 _uiState.update { currentState ->
                     currentState.copy(
-                        uiTaskReferences = currentState.uiTaskReferences.copy(
+                        stateBasedTasks = currentState.stateBasedTasks.copy(
                             clickedTask = taskClicked,
                             inEditTask = null,
                             latestTask = null,
@@ -359,7 +372,7 @@ class TasksViewModel @Inject constructor(
                         ),
                         activeUiComponent = ActiveUiComponent.None, // Update as needed
                         taskCreationState = TaskCreationState.Idle,
-                        
+
                     )
                 }
 
@@ -370,7 +383,7 @@ class TasksViewModel @Inject constructor(
         else {
             _uiState.update { currentState ->
                 currentState.copy(
-                    uiTaskReferences = currentState.uiTaskReferences.copy(
+                    stateBasedTasks = currentState.stateBasedTasks.copy(
                         clickedTask = taskClicked,
                         inEditTask = null,
                         latestTask = null,
@@ -378,7 +391,7 @@ class TasksViewModel @Inject constructor(
                     ),
                     activeUiComponent = ActiveUiComponent.None, // Update as needed
                     taskCreationState = TaskCreationState.Idle,
-                    
+
                 )
             }
 
@@ -389,7 +402,7 @@ class TasksViewModel @Inject constructor(
     suspend fun onShowAddNewTaskClick() {
         Log.d(tag, "Show Add New Task Clicked")
 
-        val clickedTask = _uiState.value.uiTaskReferences.clickedTask
+        val clickedTask = _uiState.value.stateBasedTasks.clickedTask
         val posOfClickedTask = clickedTask?.position
 
         val posOfTaskBelow = posOfClickedTask?.plus(1)
@@ -398,14 +411,31 @@ class TasksViewModel @Inject constructor(
         // if no clicked Task or no task below clicked, don't show addNew Task screen
         if (clickedTask != null) {
             if (taskBelow != null) {
+                Log.d(tag, "Creating Initial form Data based on clickedTask.")
+                val initialFormData = TaskFormData(
+                    name = "New",
+                    startTime = clickedTask.endTime,
+                    endTime = clickedTask.endTime?.plusMinutes(1),
+                    notes = "",
+                    taskType = TaskTypes.QUICK,
+                    linkedMainIfHelper = null,
+                    position = posOfClickedTask + 1,
+                    duration = 1,
+                    reminder = clickedTask.endTime,
+                    startDate = LocalDate.now(),
+                    isRecurring = false,
+                    recurrenceType = null,
+                    recurrenceInterval = null,
+                    recurrenceEndDate = null,
+                )
+
                 _uiState.update { currentState ->
                     currentState.copy(
-                        uiTaskReferences = currentState.uiTaskReferences.copy(
-                            taskBelowClickedTask = taskBelow
-                        ),
+                        taskCreationState = TaskCreationState.FillingDetails(initialFormData),
                         activeUiComponent = ActiveUiComponent.AddingNew,
-                        taskCreationState = TaskCreationState.Loading,
-                        
+                        stateBasedTasks = currentState.stateBasedTasks.copy(
+                            taskBelowClickedTask = taskBelow
+                        )
                     )
                 }
             }
@@ -414,14 +444,14 @@ class TasksViewModel @Inject constructor(
 
     // Show Full Edit UI for a task
     suspend fun onShowFullEditClick(taskInEdit: TaskEntity) {
-        val clickedTaskPosition = _uiState.value.uiTaskReferences.clickedTask?.position
+        val clickedTaskPosition = _uiState.value.stateBasedTasks.clickedTask?.position
         val taskBelowClickedTask = clickedTaskPosition?.let { getTaskAtPosition(it + 1) }
 
         if (taskBelowClickedTask != null) {
-            Log.d(tag, "FullEdit: Task below clicked task: $taskBelowClickedTask")
+            Log.d(tag, "FullEdit: Task below clicked task: ${taskBelowClickedTask.name}")
             _uiState.update { currentState ->
                 currentState.copy(
-                    uiTaskReferences = currentState.uiTaskReferences.copy(
+                    stateBasedTasks = currentState.stateBasedTasks.copy(
                         inEditTask = taskInEdit,
                         taskBelowClickedTask = taskBelowClickedTask,
                         clickedTask = taskInEdit
@@ -435,7 +465,7 @@ class TasksViewModel @Inject constructor(
             // Handle the case for the last task (could add additional logic here if needed)
             _uiState.update { currentState ->
                 currentState.copy(
-                    uiTaskReferences = currentState.uiTaskReferences.copy(
+                    stateBasedTasks = currentState.stateBasedTasks.copy(
                         inEditTask = taskInEdit,
                         clickedTask = taskInEdit,
                         taskBelowClickedTask = null
@@ -450,38 +480,35 @@ class TasksViewModel @Inject constructor(
 
     // Show Quick Edit UI for a task
     suspend fun onShowQuickEditClick(task: TaskEntity) {
-        Log.d(tag, "Quick edit click for task: $task")
+        Log.d(tag, "Quick edit click for task: ${task.name}. ID:${task.id}")
 
-        val clickedTaskPosition = _uiState.value.uiTaskReferences.clickedTask?.position
+        val clickedTaskPosition = _uiState.value.stateBasedTasks.clickedTask?.position
         val taskBelowPosition = clickedTaskPosition?.plus(1)
         val taskBelowClickedTask = taskBelowPosition?.let { getTaskAtPosition(it) }
 
         // Update the UI state
         _uiState.update { currentState ->
             currentState.copy(
-                uiTaskReferences = currentState.uiTaskReferences.copy(
+                stateBasedTasks = currentState.stateBasedTasks.copy(
                     inEditTask = task,
                     clickedTask = task,
                     taskBelowClickedTask = taskBelowClickedTask
                 ),
                 activeUiComponent = ActiveUiComponent.QuickEditOverlay,
                 taskCreationState = TaskCreationState.Idle,
-                
             )
         }
     }
-
 
     // Show task details
     fun onTaskDetailsClick(task: TaskEntity) {
         Log.d(tag, "Show task details clicked: $task")
         _uiState.update { currentState ->
             currentState.copy(
-                uiTaskReferences = currentState.uiTaskReferences.copy(
+                stateBasedTasks = currentState.stateBasedTasks.copy(
                     showingDetailsTask = task
                 ),
                 activeUiComponent = ActiveUiComponent.DetailsView,
-                
             )
         }
     }
@@ -497,15 +524,14 @@ class TasksViewModel @Inject constructor(
     }
 
     fun onTaskLongPress(task: TaskEntity) {
-        Log.d(tag, "Long press on task: $task")
-        onTaskClick(task)  // Handle the click on the task
-
+        Log.d(tag, "Long press on task: ${task.name}")
         _uiState.update { currentState ->
             currentState.copy(
-                uiTaskReferences = currentState.uiTaskReferences.copy(
-                    longPressedTask = task
+                stateBasedTasks = currentState.stateBasedTasks.copy(
+                    clickedTask = task,
+                    longPressMenuTask = task
                 ),
-                
+                activeUiComponent = ActiveUiComponent.LongPressMenu,
             )
         }
     }
@@ -519,25 +545,33 @@ class TasksViewModel @Inject constructor(
         }
     }
 
-    fun onCancelClick() {
+    fun onDismissOrReset(task:TaskEntity? = null) {
+
         viewModelScope.launch {
             val firstTask = getFirstTask()
-            // Optionally delay the reset for 3 seconds, if required
-            delay(200)
-
-            Log.d(tag, "Cancel clicked")
+            Log.d(tag, "Cancel or Reset clicked or back button pressed. Resetting state to base Tasks Lazy column.")
 
             _uiState.update { currentState ->
+                // Determine the clickedTask based on the active UI component
+                val newClickedTask = when (currentState.activeUiComponent) {
+                    ActiveUiComponent.AddingNew -> currentState.stateBasedTasks.clickedTask
+                    ActiveUiComponent.FullEditing -> currentState.stateBasedTasks.inEditTask // Reset to the task in edit mode
+                    ActiveUiComponent.QuickEditOverlay -> currentState.stateBasedTasks.inEditTask // Reset to task in edit mode
+                    ActiveUiComponent.DetailsView -> currentState.stateBasedTasks.showingDetailsTask // Reset to task in details view
+                    ActiveUiComponent.FinishedTasks -> currentState.stateBasedTasks.clickedTask // Reset to first task
+                    ActiveUiComponent.None -> currentState.stateBasedTasks.clickedTask // Default to first task if in base state
+                    else -> currentState.stateBasedTasks.clickedTask // Default for other components
+                }
+
                 currentState.copy(
                     activeUiComponent = ActiveUiComponent.None,
-                    uiTaskReferences = currentState.uiTaskReferences.copy(
-                        clickedTask = firstTask,  // Reset to the first task
-                        longPressedTask = null,
+                    stateBasedTasks = currentState.stateBasedTasks.copy(
+                        clickedTask = newClickedTask,
+                        longPressMenuTask = null,
                         taskBelowClickedTask = null,
                         inEditTask = null,
                         showingDetailsTask = null
                     ),
-                    
                 )
             }
         }
@@ -572,7 +606,7 @@ class TasksViewModel @Inject constructor(
     fun setUiStateToDefault() {
         _uiState.value = _uiState.value.copy(
             activeUiComponent = ActiveUiComponent.None,
-            )
+        )
     }
 
 

@@ -1,0 +1,96 @@
+|-- routineturboa/
+|   |-- MainActivity.kt
+|   |-- RoutineTurboApp.kt
+|   |-- core/
+|   |   |-- dbutils/
+|   |   |   |-- Converters.kt
+|   |   |   |-- DbConstants.kt
+|   |   |   |-- RecurrenceType.kt
+|   |   |-- di/
+|   |   |   |-- AppModule.kt
+|   |   |-- models/
+|   |   |   |-- EventsHandler.kt
+|   |   |   |-- UiState.kt
+|   |   |-- utils/
+|   |   |   |-- defaultTasks.kt
+|   |   |   |-- demoTasks.kt
+|   |   |   |-- getTaskColor.kt
+|   |   |   |-- NotificationPermissionHandler.kt
+|   |   |   |-- SineEasing.kt
+|   |   |   |-- TaskTypes.kt
+|   |-- data/
+|   |   |-- onedrive/
+|   |   |   |-- downloadFromOneDrive.kt
+|   |   |   |-- MsalApp.kt
+|   |   |   |-- OneDriveManager.kt
+|   |   |-- repository/
+|   |   |   |-- AppRepository.kt
+|   |   |-- room/
+|   |   |   |-- AppDao.kt
+|   |   |   |-- AppData.kt
+|   |   |   |-- entities/
+|   |   |   |   |-- NonRecurringTaskEntity.kt
+|   |   |   |   |-- TaskCompletionEntity.kt
+|   |   |   |   |-- TaskCompletionHistory.kt
+|   |   |   |   |-- TaskEntity.kt
+|   |-- reminders/
+|   |   |-- NotificationHelper.kt
+|   |   |-- ReminderManager.kt
+|   |   |-- receivers/
+|   |   |   |-- ReminderReceiver.kt
+|   |   |   |-- SnoozeReceiver.kt
+|   |   |   |-- TaskCompletionReceiver.kt
+|   |   |   |-- TestReceiver.kt
+|   |-- ui/
+|   |   |-- main/
+|   |   |   |-- MainScreen.kt
+|   |   |-- models/
+|   |   |   |-- TaskFormData.kt
+|   |   |-- reusable/
+|   |   |   |-- animation/
+|   |   |   |   |-- AnimateVisibilityComponent.kt
+|   |   |   |   |-- CircularProgressIndicator.kt
+|   |   |   |   |-- SuccessIndicator.kt
+|   |   |   |-- dropdowns/
+|   |   |   |   |-- MainTasksListDropdown.kt
+|   |   |   |   |-- SelectRecurrenceTypeDropdown.kt
+|   |   |   |   |-- SelectTaskTypeDropdown.kt
+|   |   |   |-- fields/
+|   |   |   |   |-- CustomTextField.kt
+|   |   |   |   |-- QuickEditInputTextField.kt
+|   |   |   |-- others/
+|   |   |   |   |-- SignInAndSyncButtons.kt
+|   |   |   |   |-- SimpleToast.kt
+|   |   |   |   |-- TaskCardPlaceholder.kt
+|   |   |   |-- pickers/
+|   |   |   |   |-- CustomNumberPicker.kt
+|   |   |   |   |-- PickDateDialog.kt
+|   |   |   |   |-- TimePickerField.kt
+|   |   |-- scaffold/
+|   |   |   |-- AppBottomBar.kt
+|   |   |   |-- AppDrawer.kt
+|   |   |   |-- AppTopBar.kt
+|   |   |-- tasks/
+|   |   |   |-- ParentTaskItem.kt
+|   |   |   |-- childItems/
+|   |   |   |   |-- HourColumn.kt
+|   |   |   |   |-- OptionalTaskTimings.kt
+|   |   |   |   |-- PrimaryTaskView.kt
+|   |   |   |   |-- QuickEditTask.kt
+|   |   |   |-- dialogs/
+|   |   |   |   |-- TaskCompletionDialog.kt
+|   |   |   |   |-- TaskDetailsDialog.kt
+|   |   |   |-- form/
+|   |   |   |   |-- FullEditDialog.kt
+|   |   |   |   |-- NewTaskCreationScreen.kt
+|   |   |   |-- menu/
+|   |   |   |   |-- OptionsMenu.kt
+|   |   |   |   |-- TaskOptionsDropdownMenu.kt
+|   |   |-- theme/
+|   |   |   |-- Color.kt
+|   |   |   |-- LocalCustomColors.kt
+|   |   |   |-- Theme.kt
+|   |   |   |-- Type.kt
+|   |-- utils/
+|   |-- viewmodel/
+|   |   |-- TasksViewModel.kt
