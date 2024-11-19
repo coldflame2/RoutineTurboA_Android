@@ -1,21 +1,34 @@
 package com.app.routineturboa.ui.main
 
+import android.graphics.Color.alpha
 import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -24,123 +37,164 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.coerceAtLeast
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.app.routineturboa.data.room.entities.TaskEntity
-import com.app.routineturboa.core.models.ActiveUiComponent
+import com.app.routineturboa.core.models.UiScreen
 import com.app.routineturboa.core.models.DataOperationEvents
 import com.app.routineturboa.core.models.StateChangeEvents
 import com.app.routineturboa.core.models.UiState
 import com.app.routineturboa.ui.tasks.childItems.HourColumn
 import com.app.routineturboa.ui.tasks.childItems.InLineQuickEdit
 import com.app.routineturboa.ui.tasks.childItems.PrimaryTaskView
-import com.app.routineturboa.ui.tasks.form.FullEditForm
 import com.app.routineturboa.ui.tasks.dialogs.TaskDetailsDialog
+import com.app.routineturboa.core.dbutils.TaskTypes
+import com.app.routineturboa.core.dbutils.TaskTypes.utilsGetColor
+import com.app.routineturboa.core.utils.adjustIntensity
+
+import com.app.routineturboa.ui.reusable.animation.FullEditingAnimation
+import com.app.routineturboa.ui.reusable.animation.PrimaryTaskViewAnimation
+import com.app.routineturboa.ui.tasks.form.FullEditForm
 import com.app.routineturboa.ui.theme.LocalCustomColors
-import com.app.routineturboa.core.utils.TaskTypes
 import kotlinx.coroutines.launch
 import java.time.LocalTime
+import kotlin.math.pow
 
 @RequiresApi(Build.VERSION_CODES.S)
 @Composable
-// Usage: TasksLazyColumn
 fun ParentContainerLayout(
     task: TaskEntity,
+    indexInList: Int,
+    lazyListState: LazyListState,
     uiState: UiState,
     onStateChangeEvents: StateChangeEvents,
     onDataOperationEvents: DataOperationEvents,
 ) {
-    val tag = "ParentTaskItem"
+    val tag = "ParentContainerLayout"
     val coroutineScope = rememberCoroutineScope()
 
-    val isThisTaskClicked = (uiState.stateBasedTasks.clickedTask?.id == task.id)
+    // region: booleanStates (clicked, quickEdit, fullEdit, showDetails, longPressMenu)
+    val isThisTaskClicked =  (uiState.taskContext.clickedTask?.id == task.id)
 
     val isThisTaskQuickEditing =
-        (uiState.activeUiComponent is ActiveUiComponent.QuickEditOverlay) &&
-                (uiState.stateBasedTasks.inEditTask?.id == task.id)
+        (uiState.uiScreen is UiScreen.QuickEditOverlay) &&
+                (uiState.taskContext.inEditTask?.id == task.id)
 
     val isThisTaskFullEditing =
-        (uiState.activeUiComponent is ActiveUiComponent.FullEditing) &&
-                (uiState.stateBasedTasks.inEditTask?.id == task.id)
-
-    val isThisTaskShowDetails =
-        (uiState.activeUiComponent is ActiveUiComponent.DetailsView) &&
-                (uiState.stateBasedTasks.showingDetailsTask?.id == task.id)
+        (uiState.uiScreen is UiScreen.FullEditing) &&
+                (uiState.taskContext.inEditTask?.id == task.id)
 
     val isAnotherTaskEditing =
-        (uiState.activeUiComponent is ActiveUiComponent.QuickEditOverlay) &&
-                (uiState.stateBasedTasks.inEditTask?.id != task.id)
+        (uiState.uiScreen is UiScreen.QuickEditOverlay) &&
+                (uiState.taskContext.inEditTask?.id != task.id)
 
-    val latestTask = uiState.stateBasedTasks.latestTask
+    val isThisTaskShowDetails =
+        (uiState.uiScreen is UiScreen.DetailsView) &&
+                (uiState.taskContext.showingDetailsTask?.id == task.id)
+
+    val isThisLatestTask = uiState.taskContext.latestTasks.contains(task)
 
     val isThisTaskLongPressMenu =
-        (uiState.activeUiComponent is ActiveUiComponent.LongPressMenu) &&
-                (uiState.stateBasedTasks.longPressMenuTask?.id == task.id)
-
-
-    // region: colors, height, border, padding
-    val customColors = LocalCustomColors.current
-    val cardBgColor = remember(onStateChangeEvents) {
-        when {
-            isAnotherTaskEditing -> customColors.gray100
-            task.type == TaskTypes.MAIN -> customColors.mainTaskColor
-            task.type == TaskTypes.BASICS -> customColors.basicsTaskColor
-            task.type == TaskTypes.HELPER -> customColors.helperTaskColor
-            task.type == TaskTypes.QUICK -> customColors.quickTaskColor
-            task.type == TaskTypes.UNDEFINED -> customColors.undefinedTaskColor
-            else -> customColors.gray300
-        }
-    }
-
-    val cardHeight: Dp by animateDpAsState(
-        // region: Height of card, animated when QuickEditing, else static
-        targetValue = if (isThisTaskQuickEditing) {
-            120.dp // Inline Quick Editing
-        }
-        // Regular task view
-        else {
-            when (task.type) {
-                // Based on duration
-                TaskTypes.MAIN,
-                TaskTypes.HELPER,
-                TaskTypes.BASICS -> {
-                    task.duration?.let { (1.dp * it).coerceAtLeast(60.dp) } ?: 60.dp
-                }
-
-                // Fixed
-                TaskTypes.QUICK -> 40.dp
-                else -> 55.dp
-            }
-        },
-        animationSpec = spring(
-            stiffness = Spring.StiffnessMedium, // Slower or faster animations
-            dampingRatio = Spring.DampingRatioLowBouncy // Control how bouncy or smooth it is
-        ),
-        label = "card height animation",
-        // endregion
-    )
-
-    val topPadding = 10.dp
+        (uiState.uiScreen is UiScreen.LongPressMenu) &&
+                (uiState.taskContext.longPressMenuTask?.id == task.id)
 
     val isTaskWithinCurrentTimeRange = remember { mutableStateOf(false) }
 
+    val booleanStatesMap = mapOf(
+        // region: booleanStates
+        "isThisTaskClicked" to isThisTaskClicked,
+        "isThisTaskQuickEditing" to isThisTaskQuickEditing,
+        "isThisTaskFullEditing" to isThisTaskFullEditing,
+        "isThisTaskShowDetails" to isThisTaskShowDetails,
+        "isAnotherTaskEditing" to isAnotherTaskEditing,
+        "isThisLatestTask" to isThisLatestTask,
+        "isThisTaskLongPressMenu" to isThisTaskLongPressMenu
+        // endregion
+    )
+    // endregion
+
+    // region: colors, height, border, padding
+
+    // Configuration for linear scaling of cardHeight based on duration
+    val minHeight = 15.dp
+    val minPadding = 0.dp
+    val maxPadding = 10.dp
+    val minFontSize = 8.sp
+    val maxFontSize = 15.sp
+
+    // Constant for the height after which padding and font size don't increment
+    val maxHeightForPaddingAndFontSize = 55.dp
+
+    // Height increment per minute of task duration
+    val heightPerMinute = 2.dp
+
+    val calculatedCardHeight  = if (isThisTaskFullEditing) {
+        550.dp
+    } else if (isThisTaskQuickEditing) {
+        120.dp
+    } else {
+        when (task.type) {
+            TaskTypes.MAIN, TaskTypes.HELPER, TaskTypes.BASICS -> {
+                task.duration?.let { durationMinutes ->
+                    // Linear scaling based on duration without maximum limit
+                    val extraHeight = durationMinutes * heightPerMinute.value
+                    val heightValue = minHeight.value + extraHeight
+                    heightValue.dp.coerceAtLeast(minHeight)
+                } ?: minHeight
+            }
+            TaskTypes.QUICK -> 40.dp
+            else -> 55.dp
+        }
+    }
+
+    val cardHeight = minOf(calculatedCardHeight, 150.dp)
+
+    // Dynamic calculation for topPadding based on cardHeight
+    val topPadding = when {
+        cardHeight <= minHeight -> minPadding
+        cardHeight >= maxHeightForPaddingAndFontSize -> maxPadding
+        else -> {
+            val paddingValue = minPadding.value +
+                    ((cardHeight.value - minHeight.value) / (maxHeightForPaddingAndFontSize.value - minHeight.value) * (maxPadding.value - minPadding.value))
+            paddingValue.dp
+        }
+    }
+
+    // Dynamic calculation for taskNameFontSize based on cardHeight
+    val taskNameFontSize = when {
+        cardHeight <= minHeight -> minFontSize
+        cardHeight >= maxHeightForPaddingAndFontSize -> maxFontSize
+        else -> {
+            val fontSizeValue = minFontSize.value +
+                    ((cardHeight.value - minHeight.value) / (maxHeightForPaddingAndFontSize.value - minHeight.value) * (maxFontSize.value - minFontSize.value))
+            fontSizeValue.sp
+        }
+    }
+        // endregion
+
+    val customColors = LocalCustomColors.current
+    val cardBgColor = utilsGetColor(customColors, task.type)
+
     val cardBorder = when {
         isTaskWithinCurrentTimeRange.value -> null
-        isThisTaskQuickEditing -> BorderStroke(5.dp, MaterialTheme.colorScheme.tertiary)
-        isThisTaskClicked -> BorderStroke(3.dp, MaterialTheme.colorScheme.tertiary)
+        isThisTaskQuickEditing -> BorderStroke(3.dp, MaterialTheme.colorScheme.tertiary)
+        isThisTaskClicked -> BorderStroke(1.dp, cardBgColor.adjustIntensity(0.8f))
         else -> null
     }
 
-    var iconOffset by remember { mutableStateOf(Offset.Zero) }
+    var menuOffsetOnLongPress by remember { mutableStateOf(Offset.Zero) }
 
     // endregion
-
 
     // get task within current time range
     LaunchedEffect(Unit) {
@@ -156,51 +210,76 @@ fun ParentContainerLayout(
         } ?: false // Default to false if either startTime or endTime is null
     }
 
-    Box(
+    Card(
+        colors = CardDefaults.cardColors(containerColor = cardBgColor),
+        shape = RoundedCornerShape(10.dp),
+        border = cardBorder,
         modifier = Modifier
-            .fillMaxWidth()
+            .height(cardHeight) // Limit the card height to 200.dp
             .pointerInput(Unit) {
                 detectTapGestures(
                     onLongPress = { offset ->
                         onStateChangeEvents.onTaskLongPress(task)
-                        iconOffset = offset
+                        menuOffsetOnLongPress = offset
                     },
                     onTap = { onStateChangeEvents.onTaskClick(task) }
                 )
-            }
+            },
     ) {
-        Card(
-            // region: card properties
-            modifier = Modifier
-                .height(cardHeight) // animated height
-                .alpha(if (isAnotherTaskEditing) 0.3f else 1f),
-            colors = CardDefaults.cardColors(containerColor = cardBgColor.copy(alpha = 0.6f)),
-            shape = RectangleShape,
-            border = cardBorder
-            // endregion
+        // Use a Box to overlay the gradient within the Card's constrained height
+        Box(
+            modifier = Modifier.fillMaxSize()
         ) {
-            // region: Placement of Items
+            // Your main content
             Row {
+                // region: HourColumn
                 HourColumn(
-                    // region: arguments
                     startTime = task.startTime,
                     duration = task.duration,
                     isThisTaskClicked = isThisTaskClicked,
                     isCurrentTask = isTaskWithinCurrentTimeRange.value,
                     height = cardHeight,
-                    topPadding=topPadding
-                    //endregion
+                    topPadding = topPadding
                 )
+                // endregion
+
+                // PrimaryTaskView
+                PrimaryTaskViewAnimation(
+                    visible = !(isThisTaskQuickEditing || isThisTaskShowDetails || isThisTaskFullEditing)
+                ) {
+                    PrimaryTaskView(
+                        task = task,
+                        isThisTaskClicked = isThisTaskClicked,
+                        isThisTaskLongPressMenu = isThisTaskLongPressMenu,
+                        isThisLatestTask = isThisLatestTask,
+                        stateChangeEvents = onStateChangeEvents,
+                        dataOperationEvents = onDataOperationEvents,
+                        cardHeight = cardHeight,
+                        topPadding = topPadding,
+                        taskNameFontSize = taskNameFontSize,
+                        bgColor = MaterialTheme.colorScheme.background
+                    )
+                }
+
+                // Full Editing
+                FullEditingAnimation(visible = isThisTaskFullEditing) {
+                    FullEditForm(
+                        taskInEdit = task,
+                        onStateChangeEvents = onStateChangeEvents,
+                        onDataOperationEvents = onDataOperationEvents,
+                        taskOperationState = uiState.taskOperationState,
+                    )
+                }
 
                 // Quick Editing
-                if (isThisTaskQuickEditing) {
+                AnimatedVisibility(visible = isThisTaskQuickEditing) {
                     InLineQuickEdit(
                         task = task,
                         onCancelClick = { onStateChangeEvents.onDismissOrReset(task) },
                         isFullEditing = isThisTaskFullEditing,
                         onShowFullEditClick = { id ->
                             coroutineScope.launch {
-                                onStateChangeEvents.onShowFullEditClick(task)
+                                onStateChangeEvents.onShowFullEditClick()
                             }
                         },
                         onUpdateTaskConfirmClick = { editedFormData ->
@@ -213,63 +292,74 @@ fun ParentContainerLayout(
                     )
                 }
 
-                // Full Editing
-                if (isThisTaskFullEditing) {
-                    FullEditForm(
-                        task = task,
-                        onConfirmEdit = { updatedTaskForm ->
-                            coroutineScope.launch {
-                                onDataOperationEvents.onUpdateTaskConfirmClick(
-                                    updatedTaskForm
-                                )
-                            }
-                        },
-                        onCancel = { onStateChangeEvents.onDismissOrReset(task) }
-                    )
-                }
-
                 // Show Task Details
-                else if (isThisTaskShowDetails) {
+                AnimatedVisibility(visible = isThisTaskShowDetails) {
                     TaskDetailsDialog(
                         task = task,
                         onDismiss = { onStateChangeEvents.onDismissOrReset(task) }
                     )
                 }
+            }
 
-                // The main view for Task
-                else {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        PrimaryTaskView(
-                            task = task,
-                            isThisTaskClicked = isThisTaskClicked,
-                            isThisTaskLongPressMenu = isThisTaskLongPressMenu,
-                            stateChangeEvents = onStateChangeEvents,
-                            dataOperationEvents = onDataOperationEvents,
-                            cardHeight = cardHeight,
-                            topPadding = topPadding,
-                            bgColor = MaterialTheme.colorScheme.background
+            // Add the gradient overlay at the bottom of the Box
+            if (calculatedCardHeight > 300.dp) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(100.dp)
+                        .align(Alignment.BottomCenter) // Align it to the bottomCenter
+                        .background(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.Transparent,      // Start with transparent to show content
+                                    Color.Transparent,
+                                    MaterialTheme.colorScheme.background, // Full background color (behind it) to complete the fade
+                                )
+                            )
                         )
+                )
+
+                // Dotted line effect at the bottom of the card
+                Canvas(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(3.dp) // Increase the height to accommodate both lines
+                        .align(Alignment.BottomCenter)
+                ) {
+                    val dotRadius = 3f // Radius for each dot
+                    val dotSpacing = 5f  // Spacing between dots
+                    val lineSpacing = 3.dp.toPx() // Vertical distance between the two dotted lines
+
+                    var xPosition = 0f // Starting x-position of the dots
+
+                    // Draw the first dotted line
+                    while (xPosition < size.width) {
+                        drawCircle(
+                            color = cardBgColor,
+                            radius = dotRadius,
+                            center = Offset(xPosition, size.height / 2 - lineSpacing / 2)
+                        )
+                        xPosition += dotRadius * 2 + dotSpacing
+                    }
+
+                    // Reset xPosition for the second line
+                    xPosition = 0f
+
+                    // Draw the second dotted line
+                    while (xPosition < size.width) {
+                        drawCircle(
+                            color = cardBgColor.copy(alpha = 0.5f), // Adjust alpha to 0.5 for transparency
+                            radius = dotRadius,
+                            center = Offset(xPosition, size.height / 2 + lineSpacing / 2)
+                        )
+                        xPosition += dotRadius * 2 + dotSpacing
                     }
                 }
+
+
             }
-            // endregion
+
+
         }
     }
-
-    // region: Space at the bottom used as visible underline for clicked task
-    Spacer(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(3.dp) // Thickness of the line
-            .background(
-                if (isThisTaskClicked) customColors.clickedTaskLineColor.copy(
-                    alpha = 0f
-                )
-                else Color.Transparent
-            )
-    )
-    // endregion
-
 }

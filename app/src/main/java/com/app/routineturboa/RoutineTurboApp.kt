@@ -1,10 +1,6 @@
 package com.app.routineturboa
 
 import android.app.Application
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.content.Context
-import android.os.StrictMode
 import android.util.Log
 import com.app.routineturboa.data.onedrive.MsalApp
 import com.app.routineturboa.data.repository.AppRepository
@@ -19,24 +15,26 @@ import javax.inject.Inject
 
 @HiltAndroidApp
 class RoutineTurboApp : Application() {
+    @Inject lateinit var msalApp: MsalApp
+
     companion object {
         lateinit var instance: RoutineTurboApp
             private set
     }
 
-    private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
-    lateinit var msalApp: MsalApp
-
-    @Inject lateinit var reminderManager: ReminderManager  // Singleton provided by Hilt
+    @Inject lateinit var reminderManager: ReminderManager
     @Inject lateinit var appRepository: AppRepository
 
     override fun onCreate() {
+
         super.onCreate()
         Log.d("MyApplication", "     ***** STARTING APPLICATION ****** ")
 
+
         instance = this
-        msalApp = MsalApp.getInstance(this)
-        applicationScope.launch { msalApp.initialize() }
+
+        // Set up notification channel (remaining one-time setup)
         NotificationHelper.createNotificationChannel(this)
     }
 }
+

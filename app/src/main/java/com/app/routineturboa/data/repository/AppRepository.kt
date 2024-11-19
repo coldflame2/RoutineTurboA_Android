@@ -11,7 +11,9 @@ import com.app.routineturboa.data.room.entities.TaskCompletionHistory
 import com.app.routineturboa.data.room.entities.NonRecurringTaskEntity
 import com.app.routineturboa.core.dbutils.Converters.stringToTime
 import com.app.routineturboa.core.dbutils.RecurrenceType
-import com.app.routineturboa.core.models.TaskCreationOutcome
+import com.app.routineturboa.core.models.TaskOperationState
+import com.app.routineturboa.core.models.TaskOperationType.EDIT_TASK
+import com.app.routineturboa.core.models.TaskOperationType.NEW_TASK
 import com.microsoft.identity.client.IAuthenticationResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
@@ -101,62 +103,54 @@ class AppRepository @Inject constructor(
 
     // region: ------------- Database Operations (Add, update, Delete) ------------- //
 
-    suspend fun beginNewTaskOperations(
-        newTaskBeforeInsertion: TaskEntity,
+    suspend fun addNewAndUpdateBelow(
+        newTaskToInsert: TaskEntity,
         clickedTask: TaskEntity,
-        originalTaskBelow: TaskEntity,
-    ): Result<TaskCreationOutcome> {
+        initialTaskBelow: TaskEntity,
+    ): TaskOperationState {
         Log.d(tag, "Starting the transaction for new Task operations in Repository...")
 
         return try {
             runAsTransaction {
                 Log.d(tag, "Original clickedTask: ID=${clickedTask.id}, Name=${clickedTask.name}, Position=${clickedTask.position}")
-                Log.d(tag, "newTask: Name=${newTaskBeforeInsertion.name}, Position=${newTaskBeforeInsertion.position}. ID not yet generated.")
+                Log.d(tag, "newTaskToInsert: Name=${newTaskToInsert.name}, Position=${newTaskToInsert.position}. ID not yet generated.")
 
                 // Step 1: Increment Positions starting from TaskToShift-Before-Insertion
-                val originalTaskBelowPosition = originalTaskBelow.position
-                if (originalTaskBelowPosition != null) {
-                    incrementTasksPositionBelow(originalTaskBelowPosition)
+                val initialTaskBelowPosition = initialTaskBelow.position
+                if (initialTaskBelowPosition != null) {
+                    incrementTasksPositionBelow(initialTaskBelowPosition)
                 }
 
-                // log positions of all
-                val allTaskPositions = appDao.getAllTaskNamesAndPositions()
-                Log.d(tag, "Task positions after incrementing: $allTaskPositions.")
+                // step 3: Update TaskBelow-After-Insertion (whose position is now incremented)
+                // Now the initialTaskBelow is updated with new position. So get the updated Entity.
+                val updatedTaskBelow =  getTaskById(initialTaskBelow.id)
+                Log.d(tag, "newTaskBelowAfterInsertion: ID: ${updatedTaskBelow?.id}. Name:${updatedTaskBelow?.name}. Position: ${updatedTaskBelow?.position}")
 
-
-                // Now the originalTaskBelow and all other tasks below have been updated
-
-                // Step 2: Insert the new task (already has provided position clickedTask.position+1)
-                Log.d(tag, "Inserting the new task at position ${newTaskBeforeInsertion.position}")
-                val newTaskId = appDao.safeInsertTask(newTaskBeforeInsertion)
-                Log.d(tag, "Inserted new task. newTaskId:$newTaskId")
-
-                // step 3: Update Incremented-TaskBelow-After-Insertion
-                val originalTaskBelowId = originalTaskBelow.id
-                val newTaskBelowAfterInsertion =  getTaskById(originalTaskBelowId)
-                Log.d(tag, "newTaskBelowAfterInsertion: ID: ${newTaskBelowAfterInsertion?.id}. Name:${newTaskBelowAfterInsertion?.name}. Position: ${newTaskBelowAfterInsertion?.position}")
-
-                newTaskBeforeInsertion.endTime?.let {
-                    if (newTaskBelowAfterInsertion != null) {
-                        updateTaskBelowAfterInsertion(newTaskBelowAfterInsertion, it)
+                newTaskToInsert.endTime?.let {
+                    if (updatedTaskBelow != null) {
+                        updateTaskBelowAfterInsertion(updatedTaskBelow, it)
                     }
                 }
 
-                Log.d(tag, "Transaction Complete: Committing transaction")
+                // Step 2: Insert the new task (already has provided position clickedTask.position+1)
+                val newTaskId = appDao.safeInsertTask(newTaskToInsert)
+                Log.d(tag, "New Task '${newTaskToInsert.name}' Added Successfully. ID: ${newTaskId}.")
+
+                Log.d(tag, "Transaction Complete: Committing transaction and creating TaskOperationState.Success")
 
                 // Return the custom data class wrapped in Result
-                Result.success(
-                    TaskCreationOutcome(success = true,
-                        newTaskId = newTaskId.toInt(),
-                        message = "Updated task below: $newTaskBelowAfterInsertion"
-                    )
-                )
+                TaskOperationState.Success(
+                    operationType = NEW_TASK,
+                    taskId = newTaskId.toInt(),
+                    message = "New Task '${updatedTaskBelow?.name}' Added Successfully. ID: ${updatedTaskBelow?.id}.")
             }
 
         } catch (e: Exception) {
             Log.e(tag, "Error in beginNewTaskOperations", e)
-            Result.failure(
-                e
+            TaskOperationState.Error(
+                operationType = NEW_TASK,
+                taskId = -1,
+                message = "Error when inserting new task '${newTaskToInsert.name}'"
             )
         }
     }
@@ -178,7 +172,7 @@ class AppRepository @Inject constructor(
             val durationDifference = taskToShift.endTime.until(
                 newStartTimeTaskToShift, ChronoUnit.MINUTES
             )
-            val newDuration = (taskToShift.duration - durationDifference).toInt()
+            val newDuration = (taskToShift.duration - durationDifference)
             val updatedTaskBelow = taskToShift.copy(
                 startTime = newTaskEndTime,
                 duration = newDuration,
@@ -190,6 +184,7 @@ class AppRepository @Inject constructor(
             Log.d(tag, "Updated taskBelow: startTime=${updatedTaskBelow.startTime}, duration=${updatedTaskBelow.duration}, position=${updatedTaskBelow.position}")
 
             return updatedTaskBelow
+
         } else {
             Log.e(tag, "Invalid duration calculated for task below.")
             throw Exception("Invalid duration calculated for task below.")
@@ -211,14 +206,17 @@ class AppRepository @Inject constructor(
 
 
     // Update a task and adjust the next task.
-    suspend fun onEditUpdateTaskCurrentAndBelow(taskToEdit: TaskEntity): Result<TaskCreationOutcome> {
+    suspend fun onEditUpdateTaskCurrentAndBelow(taskToEdit: TaskEntity): TaskOperationState {
         return try {
             // If the current task is the last one, update only taskToEdit
             if (isTaskLast(taskToEdit)) {
                 Log.d(tag, "Current task is the last one, updating the task only.")
                 updateTask(taskToEdit)
-                return Result.success(
-                    TaskCreationOutcome(success = true, message = "Updated the last task only.")
+
+                TaskOperationState.Success(
+                    operationType = EDIT_TASK,
+                    taskId = taskToEdit.id,
+                    message = "Updated the last task successfully."
                 )
             }
 
@@ -229,13 +227,16 @@ class AppRepository @Inject constructor(
             if (taskBelow == null) {
                 Log.d(tag, "No task below found, updating the task only.")
                 updateTask(taskToEdit)
-                Result.success(
-                    TaskCreationOutcome(success = true, message = "Updated the task only; no task below found.")
+                TaskOperationState.Success(
+                    operationType = EDIT_TASK,
+                    taskId = taskToEdit.id,
+                    message = "Updated the task successfully (no Task Below was found)."
                 )
+
             } else {
                 Log.d(tag, "Task below found, updating both tasks.")
-                // Calculate the duration between taskToEdit's end time and taskBelow's end time
-                val durationBetween = Duration.between(taskToEdit.endTime, taskBelow.endTime).toMinutes().toInt()
+                // Calculate the duration between taskToEdit's end time and taskBelow end time
+                val durationBetween = Duration.between(taskToEdit.endTime, taskBelow.endTime).toMinutes()
                 val updatedTaskBelow = taskBelow.copy(duration = durationBetween, startTime = taskToEdit.endTime)
 
                 // Update both tasks within a transaction
@@ -243,14 +244,19 @@ class AppRepository @Inject constructor(
                     updateTask(taskToEdit)
                     updateTask(updatedTaskBelow)
                 }
-
-                Result.success(
-                    TaskCreationOutcome(success = true, message = "Updated both the task and the task below.")
+                TaskOperationState.Success(
+                    operationType = EDIT_TASK,
+                    taskId = taskToEdit.id,
+                    message = "Updated the task and the task below successfully."
                 )
             }
         } catch (e: Exception) {
             Log.e(tag, "Error updating task and adjusting next", e)
-            Result.failure(e)
+            TaskOperationState.Success(
+                operationType = EDIT_TASK,
+                taskId = -1,
+                message = "Task updated failed. $e"
+            )
         }
     }
 
@@ -356,16 +362,16 @@ class AppRepository @Inject constructor(
         while (cursor.moveToNext()) {
             tasks.add(
                 TaskEntity(
-                id = cursor.getInt(cursor.getColumnIndexOrThrow("id")),
-                name = cursor.getString(cursor.getColumnIndexOrThrow("name")),
-                notes = cursor.getString(cursor.getColumnIndexOrThrow("notes")),
-                duration = cursor.getInt(cursor.getColumnIndexOrThrow("duration")),
-                startTime = stringToTime(cursor.getString(cursor.getColumnIndexOrThrow("startTime")))!!,
-                endTime = stringToTime(cursor.getString(cursor.getColumnIndexOrThrow("endTime")))!!,
-                reminder = stringToTime(cursor.getString(cursor.getColumnIndexOrThrow("reminder")))!!,
-                type = cursor.getString(cursor.getColumnIndexOrThrow("type")),
-                position = cursor.getInt(cursor.getColumnIndexOrThrow("position"))
-            )
+                    id = cursor.getInt(cursor.getColumnIndexOrThrow("id")),
+                    name = cursor.getString(cursor.getColumnIndexOrThrow("name")),
+                    notes = cursor.getString(cursor.getColumnIndexOrThrow("notes")),
+                    duration = cursor.getLong(cursor.getColumnIndexOrThrow("duration")),
+                    startTime = stringToTime(cursor.getString(cursor.getColumnIndexOrThrow("startTime")))!!,
+                    endTime = stringToTime(cursor.getString(cursor.getColumnIndexOrThrow("endTime")))!!,
+                    reminder = stringToTime(cursor.getString(cursor.getColumnIndexOrThrow("reminder")))!!,
+                    type = cursor.getString(cursor.getColumnIndexOrThrow("type")),
+                    position = cursor.getInt(cursor.getColumnIndexOrThrow("position"))
+                )
             )
         }
         cursor.close()

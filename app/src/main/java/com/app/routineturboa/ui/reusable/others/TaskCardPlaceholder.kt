@@ -14,7 +14,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.app.routineturboa.ui.reusable.animation.SmoothCircularProgressIndicator
+import com.app.routineturboa.ui.reusable.animation.LoadingSpinner
 
 @Composable
 fun EmptyTaskCardPlaceholder (modifier: Modifier = Modifier) {
@@ -59,7 +59,7 @@ fun EmptyTaskCardPlaceholder (modifier: Modifier = Modifier) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        SmoothCircularProgressIndicator()
+                        LoadingSpinner()
                     }
                 }
             }

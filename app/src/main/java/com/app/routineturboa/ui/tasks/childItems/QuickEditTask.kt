@@ -43,7 +43,7 @@ fun InLineQuickEdit(
 
     fun onSave() {
         try {
-            val newDuration = durationString.toInt()
+            val newDuration = durationString.toLong()
             val newEndTime = task.startTime?.plusMinutes(newDuration.toLong())
 
             val updatedTaskFormData = TaskFormData(
@@ -52,11 +52,11 @@ fun InLineQuickEdit(
                 startTime = task.startTime,
                 endTime = newEndTime,
                 notes = task.notes,
-                taskType = task.type,
+                type = task.type,
                 position = task.position,
                 duration = newDuration,
                 reminder = task.reminder,
-                linkedMainIfHelper = task.mainTaskId,
+                linkedMainIfHelper = task.linkedMainIfHelper,
                 startDate = task.startDate,
                 isRecurring = task.isRecurring ?: false,
                 recurrenceType = task.recurrenceType,

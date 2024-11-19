@@ -4,6 +4,8 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 
@@ -46,6 +48,50 @@ fun NewTaskScreenAnimation(
         exit = slideOutVertically(
             targetOffsetY = { it }, // Slides down when exiting
             animationSpec = tween(durationMillis = 400, delayMillis = 200)
+        ),
+        modifier = modifier
+    ) {
+        content()
+    }
+}
+
+@Composable
+fun FullEditingAnimation(
+    modifier: Modifier = Modifier,
+    visible: Boolean,
+    content: @Composable () -> Unit
+) {
+    AnimatedVisibility(
+        visible = visible,
+        enter = slideInHorizontally(
+            initialOffsetX = { it }, // Starts off-screen to the right
+            animationSpec = tween(durationMillis = 500, delayMillis = 0)
+        ),
+        exit = slideOutHorizontally(
+            targetOffsetX = { it }, // Slides out to the right when exiting
+            animationSpec = tween(durationMillis = 500, delayMillis = 200)
+        ),
+        modifier = modifier
+    ) {
+        content()
+    }
+}
+
+@Composable
+fun PrimaryTaskViewAnimation(
+    modifier: Modifier = Modifier,
+    visible: Boolean,
+    content: @Composable () -> Unit
+) {
+    AnimatedVisibility(
+        visible = visible,
+        enter = slideInHorizontally(
+            initialOffsetX = { -it }, // Starts off-screen to the right
+            animationSpec = tween(durationMillis = 400, delayMillis = 0)
+        ),
+        exit = slideOutHorizontally(
+            targetOffsetX = { -it }, // Slides out to the right when exiting
+            animationSpec = tween(durationMillis = 400, delayMillis = 300)
         ),
         modifier = modifier
     ) {

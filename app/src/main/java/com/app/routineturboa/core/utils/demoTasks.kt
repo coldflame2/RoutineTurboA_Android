@@ -3,6 +3,7 @@ package com.app.routineturboa.core.utils
 import com.app.routineturboa.data.room.entities.TaskEntity
 import com.app.routineturboa.core.dbutils.Converters.uiStringToTime
 import com.app.routineturboa.core.dbutils.RecurrenceType
+import com.app.routineturboa.core.dbutils.TaskTypes
 import java.time.Duration
 import java.time.LocalDate
 
@@ -360,8 +361,7 @@ fun getSampleTasksList(
             duration = Duration.between(
                 uiStringToTime("10:45 PM"), uiStringToTime("11:59 PM")
             )
-            .toMinutes()
-            .toInt(),
+            .toMinutes(),
             startTime = uiStringToTime("10:45 PM"),
             endTime = uiStringToTime("11:59 PM"),
             reminder = uiStringToTime("10:45 PM"),

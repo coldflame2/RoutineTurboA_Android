@@ -28,8 +28,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -39,11 +37,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.app.routineturboa.core.dbutils.RecurrenceType
 import com.app.routineturboa.core.models.DataOperationEvents
 import com.app.routineturboa.data.room.entities.TaskEntity
 import com.app.routineturboa.core.models.StateChangeEvents
-import com.app.routineturboa.core.models.TaskCreationState
+import com.app.routineturboa.core.models.TaskOperationState
 import com.app.routineturboa.ui.tasks.dropdowns.MainTasksListDropdown
 import com.app.routineturboa.ui.tasks.dropdowns.SelectRecurrenceTypeDropdown
 import com.app.routineturboa.ui.tasks.fields.CustomTextField
@@ -51,47 +48,44 @@ import com.app.routineturboa.ui.tasks.dropdowns.SelectTaskTypeDropdown
 import com.app.routineturboa.ui.tasks.pickers.TimePickerField
 import com.app.routineturboa.ui.tasks.childItems.HourColumn
 import com.app.routineturboa.ui.tasks.childItems.PrimaryTaskView
-import com.app.routineturboa.ui.theme.LocalCustomColors
-import com.app.routineturboa.core.utils.TaskTypes
+import com.app.routineturboa.core.dbutils.TaskTypes
 import com.app.routineturboa.core.utils.getTaskColor
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
 @Composable
 fun NewTaskForm(
-    paddingValues: PaddingValues,
-    clickedTaskOrNull: TaskEntity?,
-    taskBelowClickedOrNull: TaskEntity?,
+    paddingValues: PaddingValues,  // Passed to top-level surface
+    clickedTaskOrNull: TaskEntity?,  // Remembered before passing
+    taskBelowClickedOrNull: TaskEntity?,  // Remember before passing
     selectedDate: LocalDate?,
     onStateChangeEvents: StateChangeEvents,
     onDataOperationEvents: DataOperationEvents,
-    taskCreationState: TaskCreationState,
+    taskOperationState: TaskOperationState,
 ) {
-    val tag = "NewTaskCreationScreen"
+    val tag = "NewTaskForm"
     val coroutineScope = rememberCoroutineScope()
+    Log.d(tag, "NewTaskForm: recomposing")
+    Log.d(tag, "taskBelowClicked: $taskBelowClickedOrNull")
 
     val clickedTask = clickedTaskOrNull ?: return
     val taskBelowClicked = taskBelowClickedOrNull ?: return
-
-    val defaultDuration = 1L
-
+    Log.d(tag, "taskBelowClicked: $taskBelowClicked")
     // region: State variables for new task details
-
-    val initialFormData = (taskCreationState as? TaskCreationState.FillingDetails)?.formData ?: return
+    val initialFormData = (taskOperationState as? TaskOperationState.FillingDetails)?.formData ?: return
 
     var taskName by remember { mutableStateOf(initialFormData.name) }
     var startTime by remember { mutableStateOf(initialFormData.startTime) }
     var endTime by remember { mutableStateOf(initialFormData.endTime) }
-    var notes by remember { mutableStateOf(initialFormData.notes ?: "") }
-    var durationLong by remember { mutableLongStateOf(initialFormData.duration?.toLong() ?: defaultDuration) }
+    var notes by remember { mutableStateOf(initialFormData.notes) }
+    var durationLong by remember { mutableStateOf(initialFormData.duration) }
     var reminder by remember { mutableStateOf(initialFormData.reminder) }
-    var taskType by remember { mutableStateOf(initialFormData.taskType ?: TaskTypes.UNDEFINED) }
+    var taskType by remember { mutableStateOf(initialFormData.type) }
     var linkedMainIfHelper by remember { mutableStateOf(initialFormData.linkedMainIfHelper) }
-    val taskPosition = initialFormData.position ?: 1
-
+    val taskPosition by remember { mutableStateOf(initialFormData.position) }
     var isRecurring by remember { mutableStateOf(initialFormData.isRecurring) }
-    var recurrenceType by remember { mutableStateOf(initialFormData.recurrenceType ?: RecurrenceType.DAILY) }
-    var recurrenceInterval by remember { mutableIntStateOf(initialFormData.recurrenceInterval ?: 1) }
+    var recurrenceType by remember { mutableStateOf(initialFormData.recurrenceType) }
+    var recurrenceInterval by remember { mutableStateOf(initialFormData.recurrenceInterval) }
     var recurrenceEndDate by remember { mutableStateOf(initialFormData.recurrenceEndDate) }
 
     // endregion
@@ -111,12 +105,14 @@ fun NewTaskForm(
                 false
             }
             val isStartTimeValid = startTime != null
-            val isDurationValid = if (durationLong > 0) {
-                durationError = null
-                true
-            } else {
-                durationError = "Duration must be greater than 0"
-                false
+            val isDurationValid = run {
+                val localDuration = durationLong // Store the value in a local variable
+                if (localDuration != null && localDuration > 0) {
+                    durationError = null
+                    true
+                } else {
+                    false
+                }
             }
             val isEndTimeValid = endTime != null && startTime != null
             val isTaskTypeValid = if (taskType != TaskTypes.UNDEFINED) {
@@ -129,27 +125,28 @@ fun NewTaskForm(
             val isHelperTaskValid = if (taskType == TaskTypes.HELPER) {
                 linkedMainIfHelper != null
             } else { true }
-            val isRecurrenceValid = if (isRecurring) {
-                recurrenceInterval > 0 &&
-                        (recurrenceEndDate == null)
-            } else { true }
+            val isRecurrenceValid = run {
+                val localRecurrentInterval = recurrenceInterval
+                if (isRecurring && localRecurrentInterval != null) {
+                    localRecurrentInterval > 0 &&
+                            (recurrenceEndDate == null)
+                } else { true }
+            }
 
             // Combine all validations
             isTaskNameValid &&
-                isStartTimeValid &&
-                isDurationValid &&
-                isEndTimeValid &&
-                isTaskTypeValid &&
-                isHelperTaskValid &&
-                isRecurrenceValid
+                    isStartTimeValid &&
+                    isDurationValid &&
+                    isEndTimeValid &&
+                    isTaskTypeValid &&
+                    isHelperTaskValid &&
+                    isRecurrenceValid
         }
     }
 
     val scrollState = rememberScrollState()
-    val isInFocus = remember { mutableStateOf(false) }
 
-    val customColors = LocalCustomColors.current
-    val taskColor = clickedTask.type?.let { getTaskColor(it) } ?: customColors.gray200
+    val taskColor = getTaskColor(clickedTask.type)  // used in reference view
 
 
     Surface(
@@ -159,6 +156,8 @@ fun NewTaskForm(
             .verticalScroll(scrollState),
     ) {
         Column {
+
+            // region: reference task (clickedTask)
             Card(
                 // region: card properties
                 modifier = Modifier
@@ -168,8 +167,6 @@ fun NewTaskForm(
                 shape = RectangleShape,
                 // endregion
             ) {
-                // region: Reference clickedTask
-
                 Row {
                     Spacer(modifier = Modifier.width(5.dp))
 
@@ -190,12 +187,12 @@ fun NewTaskForm(
                         dataOperationEvents = onDataOperationEvents,
                         cardHeight = 60.dp,
                         topPadding = 8.dp,
+                        bgColor = taskColor,
                         forReferenceView = true,
-                        bgColor = taskColor
                     )
                 }
-                // endregion
             }
+            // endregion
 
             // Task details input
             Column(
@@ -206,13 +203,12 @@ fun NewTaskForm(
             ) {
                 // region: Task name input
                 CustomTextField(
+                    modifier = Modifier.fillMaxWidth(),
                     value = taskName,
                     onValueChange = { taskName = it },
                     label = "Name",
-                    isInFocus = isInFocus,
                     placeholder = "Enter task name",
                     leadingIcon = Icons.Default.AddTask,
-                    modifier = Modifier.fillMaxWidth(),
                     errorMessage = taskNameError
                 )
                 // endregion
@@ -250,28 +246,25 @@ fun NewTaskForm(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     CustomTextField(
+                        modifier = Modifier.weight(1f),
                         value = durationLong.toString(),
-
                         onValueChange = { text ->
-                            // Safely attempt to parse the input to a Long
                             val parsedDuration = text.toLongOrNull()
-                            if (parsedDuration != null && parsedDuration > 0 && startTime != null) {
-                                // Update duration and endTime only if input is valid
-                                durationLong = parsedDuration
-                                endTime = startTime!!.plusMinutes(durationLong)
-
+                            if (parsedDuration != null && parsedDuration > 0) {
+                                startTime?.let { nonNullStartTime ->
+                                    // Using `nonNullStartTime` here guarantees that it's not null
+                                    durationLong = parsedDuration
+                                    endTime = nonNullStartTime.plusMinutes(parsedDuration)
+                                    durationError = null
+                                }
                             } else {
                                 durationLong = 0
-                                Log.e(tag, "Problem with duration. $parsedDuration")
+                                durationError = "Problem with duration. $parsedDuration"
                             }
-                            // Else, do not update duration or endTime to prevent unexpected behavior
                         },
-
                         label = "Duration",
-                        isInFocus = isInFocus,
                         leadingIcon = Icons.Sharp.Timer,
                         keyboardType = KeyboardType.Number,
-                        modifier = Modifier.weight(1f),
                         errorMessage = durationError
                     )
 
@@ -342,7 +335,6 @@ fun NewTaskForm(
                                 value = recurrenceInterval.toString(),
                                 onValueChange = { recurrenceInterval = it.toInt() },
                                 label = "Interval",
-                                isInFocus = isInFocus,
                                 placeholder = "Enter interval (1 for daily)"
                             )
                         }
@@ -354,12 +346,11 @@ fun NewTaskForm(
 
                     // Recurrence end date
                     CustomTextField(
+                        modifier = Modifier.fillMaxWidth(),
                         value = recurrenceEndDate?.toString() ?: "",
                         onValueChange = { recurrenceEndDate = LocalDate.parse(it) },
                         label = "Recurrence End Date (optional)",
-                        isInFocus = isInFocus,
-                        placeholder = "Enter end date",
-                        modifier = Modifier.fillMaxWidth()
+                        placeholder = "Enter end date"
                     )
                 }
 
@@ -367,20 +358,18 @@ fun NewTaskForm(
 
                 // region: Notes and Position
                 CustomTextField(
+                    modifier = Modifier.fillMaxWidth(),
                     value = notes,
                     onValueChange = { notes = it },
-                    label = "Notes",
-                    isInFocus = isInFocus,
-                    modifier = Modifier.fillMaxWidth()
+                    label = "Notes"
                 )
 
                 CustomTextField(
+                    modifier = Modifier.fillMaxWidth(),
                     value = taskPosition.toString(),
                     onValueChange = { },
                     label = "Position (Don't Change) (Only for dev)",
                     placeholder = "Internal purposes. Don't change.",
-                    modifier = Modifier.fillMaxWidth(),
-                    isInFocus = isInFocus,
                     enabled = false
                 )
                 // endregion
@@ -407,9 +396,9 @@ fun NewTaskForm(
                                     startTime = startTime,
                                     endTime = endTime,
                                     notes = notes,
-                                    taskType = taskType,
+                                    type = taskType,
                                     position = taskPosition,
-                                    duration = durationLong.toInt(),
+                                    duration = durationLong,
                                     reminder = reminder,
                                     linkedMainIfHelper = linkedMainIfHelper,
                                     startDate = selectedDate,
@@ -419,9 +408,7 @@ fun NewTaskForm(
                                     recurrenceEndDate = recurrenceEndDate.takeIf { isRecurring }
                                 )
                                 onDataOperationEvents.onNewTaskConfirmClick(
-                                    clickedTask,
-                                    taskBelowClicked,
-                                    updatedFormData,
+                                    updatedFormData
                                 )
                             }
                         }

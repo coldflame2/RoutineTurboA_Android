@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "102412636622",
+    "project_id": "routineturboa",
+    "storage_bucket": "routineturboa.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:102412636622:android:b0001734ff2be620cadb9f",
+        "android_client_info": {
+          "package_name": "com.app.routineturboa"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCgkQXhH5HAve_eDaYe7t-RpM4uTxOusPw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

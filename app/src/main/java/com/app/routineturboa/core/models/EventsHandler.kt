@@ -1,5 +1,7 @@
 package com.app.routineturboa.core.models
 
+import android.app.Activity
+import android.content.Context
 import com.app.routineturboa.data.room.entities.TaskEntity
 import com.app.routineturboa.ui.models.TaskFormData
 import com.app.routineturboa.viewmodel.TasksViewModel
@@ -18,10 +20,9 @@ class EventsHandler (
             onShowFullEditClick = tasksViewModel::onShowFullEditClick,
             onShowTaskDetailsClick = tasksViewModel::onTaskDetailsClick,
 
-            onShowCompletedTasksClick = tasksViewModel::onShowCompletedTasksClick,
+            onShowCompletedTasksClick = tasksViewModel::onShowFinishedTasksView,
             onDismissOrReset = tasksViewModel::onDismissOrReset,
             onShowDatePickerClick = tasksViewModel::onDatePickerClick,
-            resetTaskCreationState = tasksViewModel::resetTaskCreationState,
             onDateChangeClick = tasksViewModel::onDateChangeClick,
         )
     }
@@ -30,8 +31,12 @@ class EventsHandler (
     fun onDataOperationEvents(): DataOperationEvents {
         return DataOperationEvents(
             onNewTaskConfirmClick = tasksViewModel::onNewTaskConfirmClick,
-            onUpdateTaskConfirmClick = tasksViewModel::onUpdateTaskConfirmClick,
+            onUpdateTaskConfirmClick = tasksViewModel::onFullEditConfirm,
             onDeleteTaskConfirmClick = tasksViewModel::onDeleteTaskConfirmClick,
+
+            onSignInClick = tasksViewModel::onSignInClick,
+            onSyncClick = tasksViewModel::onSyncButtonClick,
+            onSignOutClick = tasksViewModel::onSignOutClick,
 
             // data request events
             onMainTasksRequested = tasksViewModel::onMainTasksRequested,
@@ -41,18 +46,12 @@ class EventsHandler (
 
 data class DataOperationEvents(
     // region: newTask, UpdateTask, deleteTask, mainTasks requested
-    val onNewTaskConfirmClick: suspend(
-        clicked: TaskEntity,
-        belowClicked: TaskEntity,
-        newTaskForm: TaskFormData,
-    ) -> Result<TaskCreationOutcome>,
-
-    val onUpdateTaskConfirmClick: suspend (
-        updatedTaskFormData: TaskFormData
-    ) -> Unit,
-
+    val onNewTaskConfirmClick: suspend (newTaskForm: TaskFormData) -> TaskOperationState,
+    val onUpdateTaskConfirmClick: suspend (updatedTaskFormData: TaskFormData) -> Unit,
     val onDeleteTaskConfirmClick: suspend (task: TaskEntity) -> Unit,
-
+    val onSignInClick: (Activity) -> Unit,
+    val onSyncClick: (Context) -> Unit,
+    val onSignOutClick: (Activity) -> Unit,
     val onMainTasksRequested: suspend () -> List<TaskEntity>,
     // endregion
 )
@@ -67,14 +66,13 @@ data class StateChangeEvents(
     // Events to set UI state items as true for showing UI components
     val onShowAddNewTaskClick: suspend () -> Unit,
     val onShowQuickEditClick: suspend (TaskEntity) -> Unit,
-    val onShowFullEditClick: suspend (TaskEntity) -> Unit,
+    val onShowFullEditClick: suspend () -> Unit,
     val onShowTaskDetailsClick: (TaskEntity) -> Unit,
 
     val onShowCompletedTasksClick: () -> Unit,
     val onShowDatePickerClick: () -> Unit,
 
     // Functions to hide UI components
-    val resetTaskCreationState: () -> Unit,
     val onDismissOrReset: (TaskEntity?) -> Unit,
     // endregion
 )

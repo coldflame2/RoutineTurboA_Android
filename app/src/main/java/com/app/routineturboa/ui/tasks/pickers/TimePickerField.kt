@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -19,8 +20,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.app.routineturboa.core.dbutils.Converters.timeToString
+import com.app.routineturboa.core.dbutils.Converters.timeToUiString
 import java.time.LocalTime
 
 @Composable
@@ -37,7 +41,7 @@ fun TimePickerField(
 
     val backgroundColor = MaterialTheme.colorScheme.surfaceTint
     val textColor = MaterialTheme.colorScheme.onSurfaceVariant
-
+    val textStyle = TextStyle(fontSize = 12.sp)
 
     Box(
         modifier = modifier
@@ -61,9 +65,10 @@ fun TimePickerField(
     ) {
 
         TextField(
-            value = timeToString(value) ?: " ",
+            value = timeToUiString(value) ?: " ",
+            textStyle = textStyle,
             onValueChange = { /* Read-only field */ },
-            label = { Text(label) },
+            label = { Text(label, style = textStyle) },
             suffix = { },
             supportingText = { },
             leadingIcon = {
@@ -81,7 +86,7 @@ fun TimePickerField(
             },
             readOnly = true,
             enabled = false, // Make it look like a read-only field
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().padding(0.dp),
             colors = TextFieldDefaults.colors(
                 // **Container Colors**
                 focusedContainerColor = backgroundColor.copy(alpha = 0.09f),

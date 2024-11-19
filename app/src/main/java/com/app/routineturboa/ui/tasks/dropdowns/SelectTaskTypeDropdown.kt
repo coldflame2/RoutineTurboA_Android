@@ -15,12 +15,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import com.app.routineturboa.core.utils.TaskTypes
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.sp
+import com.app.routineturboa.core.dbutils.TaskTypes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SelectTaskTypeDropdown(
-    selectedTaskType: String,
+    selectedTaskType: String?,
     onTaskTypeSelected: (String) -> Unit,
     selectedLinkedMainTask: (Int?),
     onLinkedMainTaskSelected: (Int) -> Unit,
@@ -42,7 +44,8 @@ fun SelectTaskTypeDropdown(
                 .fillMaxWidth()
                 .menuAnchor(),
             label = { Text("Task Type") },
-            value = selectedTaskType,
+            textStyle = TextStyle(fontSize = 12.sp),
+            value = selectedTaskType ?: TaskTypes.UNDEFINED,
             onValueChange = {},
             readOnly = true,
             isError = (taskTypeErrorMessage != null),

@@ -23,7 +23,7 @@ import com.app.routineturboa.core.dbutils.RecurrenceType
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SelectRecurrenceTypeDropdown(
-    selectedRecurrenceType: RecurrenceType,
+    selectedRecurrenceType: RecurrenceType?,
     onRecurrenceTypeSelected: (RecurrenceType) -> Unit
 ) {
     val expanded = remember { mutableStateOf(false) }
@@ -38,7 +38,7 @@ fun SelectRecurrenceTypeDropdown(
         TextField(
             label = { Text("Recurrence Type") },
             readOnly = true,
-            value = selectedRecurrenceType.name,
+            value = selectedRecurrenceType?.name ?: RecurrenceType.DAILY.name,
             onValueChange = {},
             modifier = Modifier
                 .menuAnchor(),

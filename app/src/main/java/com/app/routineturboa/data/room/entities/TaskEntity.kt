@@ -6,7 +6,7 @@ import androidx.room.TypeConverters
 import com.app.routineturboa.core.dbutils.DbConstants
 import com.app.routineturboa.core.dbutils.RecurrenceType
 import com.app.routineturboa.core.dbutils.Converters
-import com.app.routineturboa.core.utils.TaskTypes
+import com.app.routineturboa.core.dbutils.TaskTypes
 import java.time.LocalDate
 import java.time.LocalTime
 
@@ -16,13 +16,13 @@ data class TaskEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val name: String = "New",
     val notes: String? = "",
-    val duration: Int? = 1,
+    val duration: Long? = 1,
     val startTime: LocalTime?,
     val endTime: LocalTime?,
     val reminder: LocalTime?,
     val type: String? = TaskTypes.UNDEFINED,
     val position: Int? = 1,
-    val mainTaskId: Int? = null,
+    val linkedMainIfHelper: Int? = null,
 
     val startDate: LocalDate? = null,
 

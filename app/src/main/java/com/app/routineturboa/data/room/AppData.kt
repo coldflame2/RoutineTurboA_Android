@@ -13,7 +13,7 @@ import com.app.routineturboa.data.room.entities.TaskEntity
         TaskEntity::class,
         TaskCompletionEntity::class,
         NonRecurringTaskEntity::class],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 @TypeConverters(Converters::class)

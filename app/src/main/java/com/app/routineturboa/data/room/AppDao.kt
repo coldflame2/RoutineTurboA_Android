@@ -14,7 +14,7 @@ import com.app.routineturboa.data.room.entities.NonRecurringTaskEntity
 import com.app.routineturboa.data.room.entities.TaskCompletionEntity
 import com.app.routineturboa.data.room.entities.TaskCompletionHistory
 import com.app.routineturboa.data.room.entities.TaskEntity
-import com.app.routineturboa.core.utils.TaskTypes
+import com.app.routineturboa.core.dbutils.TaskTypes
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
 
@@ -41,9 +41,8 @@ interface AppDao {
     """)
     suspend fun isNonRecurringTaskOnThisDate(taskId: Int, date: LocalDate): Boolean
 
-    @Query("SELECT name, position FROM ${DbConstants.TASKS_TABLE} WHERE position IS NOT NULL")
-    fun getAllTaskNamesAndPositions(): List<TaskNameAndPosition>
-
+    @Query("SELECT position FROM ${DbConstants.TASKS_TABLE} WHERE position IS NOT NULL")
+    fun getAllTaskNamesAndPositions(): List<Int>
 
     @Query("UPDATE ${DbConstants.TASKS_TABLE} SET position = position + 1 WHERE position >= :startingPosition")
     suspend fun incrementPositionsBelow(startingPosition: Int)
@@ -139,8 +138,3 @@ interface AppDao {
         return block()
     }
 }
-
-data class TaskNameAndPosition(
-    val name: String,
-    val position: Int
-)

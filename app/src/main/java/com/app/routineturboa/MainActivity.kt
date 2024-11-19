@@ -1,5 +1,3 @@
-// MainActivity.kt
-
 package com.app.routineturboa
 
 import android.os.Build
@@ -14,14 +12,16 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.toArgb
 import androidx.core.view.WindowCompat
+import androidx.lifecycle.lifecycleScope
 import com.app.routineturboa.data.repository.AppRepository
 import com.app.routineturboa.reminders.ReminderManager
-import com.app.routineturboa.core.models.ActiveUiComponent
+import com.app.routineturboa.core.models.UiScreen
 import com.app.routineturboa.ui.main.MainScreen
 import com.app.routineturboa.ui.theme.RoutineTurboATheme
 import com.app.routineturboa.core.utils.NotificationPermissionHandler
 import com.app.routineturboa.viewmodel.TasksViewModel
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -55,9 +55,12 @@ class MainActivity : ComponentActivity() {
 
         // Intercept the back press to prevent the app from closing
         onBackPressedDispatcher.addCallback(this) {
-            // Custom back button behavior
-            handleBackPress()
+            lifecycleScope.launch {
+                // Call the suspend function here
+                handleBackPress()
+            }
         }
+
     }
 
     @Composable
@@ -66,12 +69,11 @@ class MainActivity : ComponentActivity() {
         window.navigationBarColor = MaterialTheme.colorScheme.primary.toArgb()
     }
 
-
-    private fun handleBackPress() {
+    private suspend fun handleBackPress() {
         Log.d(tag, "handleBackPress...")
         val uiState = tasksViewModel.uiState.value
 
-        if (uiState.activeUiComponent !is ActiveUiComponent.None) {
+        if (uiState.uiScreen !is UiScreen.None) {
             tasksViewModel.setUiStateToDefault()
         } else {
             Log.d(tag, "Back button clicked")

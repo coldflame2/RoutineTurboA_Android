@@ -1,5 +1,6 @@
 package com.app.routineturboa.ui.tasks.fields
 
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -9,19 +10,15 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.room.util.TableInfo
+import androidx.compose.ui.unit.sp
 import com.app.routineturboa.ui.theme.LocalCustomColors
 
 @Composable
@@ -31,7 +28,6 @@ fun CustomTextField(
     onValueChange: (String) -> Unit,
     label: String?,
     placeholder: String = "",
-    isInFocus: MutableState<Boolean> = remember { mutableStateOf(false) },
     leadingIcon: ImageVector? = null,
     leadingIconResId: Int? = null,
     enabled: Boolean = true,
@@ -44,11 +40,15 @@ fun CustomTextField(
 
     val backgroundColor = MaterialTheme.colorScheme.surfaceTint
     val textColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val textStyle = TextStyle(color = textColor, fontSize = 12.sp)
+
 
     if (label != null) {
         if (value != null) {
             TextField(
+                // region: TextField
                 value = value,
+                textStyle = textStyle,
                 onValueChange = onValueChange,
                 label = if (label.isNotEmpty()) {
                     { Text(label) }
@@ -64,6 +64,7 @@ fun CustomTextField(
                 },
                 enabled = enabled,
                 modifier = modifier
+                    .padding(0.dp)
                     .then(modifier),
                 shape = RoundedCornerShape(5.dp),
                 singleLine = singleLine,
@@ -132,9 +133,9 @@ fun CustomTextField(
                     errorCursorColor = MaterialTheme.colorScheme.error
                     //endregion
                 ),
+
+             // endregion
             )
-
-
         }
     }
 }

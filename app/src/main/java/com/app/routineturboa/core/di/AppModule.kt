@@ -3,6 +3,7 @@ package com.app.routineturboa.core.di
 import android.content.Context
 import androidx.room.Room
 import com.app.routineturboa.core.dbutils.DbConstants
+import com.app.routineturboa.data.onedrive.MsalApp
 import com.app.routineturboa.data.repository.AppRepository
 import com.app.routineturboa.data.room.AppDao
 import com.app.routineturboa.data.room.AppData
@@ -50,5 +51,11 @@ object AppModule {
     @Singleton
     fun provideAppDao(appDatabase: AppData): AppDao {
         return appDatabase.appDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideMsalApp(@ApplicationContext context: Context): MsalApp {
+        return MsalApp.getInstance(context)
     }
 }

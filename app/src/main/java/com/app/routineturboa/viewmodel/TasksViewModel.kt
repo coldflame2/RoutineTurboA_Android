@@ -3,24 +3,29 @@ package com.app.routineturboa.viewmodel
 import android.app.Activity
 import android.content.Context
 import android.util.Log
+import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.routineturboa.data.room.entities.TaskEntity
 import com.app.routineturboa.data.onedrive.MsalApp
 import com.app.routineturboa.data.repository.AppRepository
 import com.app.routineturboa.data.room.entities.TaskCompletionHistory
-import com.app.routineturboa.core.models.ActiveUiComponent
-import com.app.routineturboa.core.models.TaskCreationOutcome
-import com.app.routineturboa.core.models.TaskCreationState
+import com.app.routineturboa.core.models.UiScreen
+import com.app.routineturboa.core.models.TaskContext
+import com.app.routineturboa.core.models.TaskOperationState
+import com.app.routineturboa.core.models.TaskOperationType.EDIT_TASK
+import com.app.routineturboa.core.models.TaskOperationType.NEW_TASK
 import com.app.routineturboa.core.models.UiState
 import com.app.routineturboa.ui.models.TaskFormData
-import com.app.routineturboa.core.utils.TaskTypes
+import com.app.routineturboa.core.dbutils.TaskTypes
+import com.app.routineturboa.core.models.MsalAuthState
+import com.app.routineturboa.core.models.OnedriveSyncState
+import com.app.routineturboa.core.models.SignInStatus
 import com.app.routineturboa.core.utils.getBasicTasksList
 import com.app.routineturboa.core.utils.getSampleTasksList
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -36,8 +41,10 @@ import javax.inject.Inject
 
 @HiltViewModel
 class TasksViewModel @Inject constructor(
-    private val repository: AppRepository
+    private val repository: AppRepository,
+    private val msalApp: MsalApp
 ) : ViewModel() {
+
     private val tag = "TasksViewModel"
 
     // region: ----------------------- Tasks StateFlow -------------------------
@@ -62,7 +69,7 @@ class TasksViewModel @Inject constructor(
     @OptIn(ExperimentalCoroutinesApi::class)
     val tasksByDate: StateFlow<List<TaskEntity>> = _selectedDate
         .onEach { selectedDate ->
-            Log.d(tag, "Selected date changed: $selectedDate")
+            Log.d(tag, "Selected date: $selectedDate")
         }
         .flatMapLatest { date ->
             repository.getTasksForDate(date)
@@ -78,7 +85,6 @@ class TasksViewModel @Inject constructor(
 
 
     // endregion
-
 
     // region: ----------------------- Utility Methods -------------------------
 
@@ -97,8 +103,8 @@ class TasksViewModel @Inject constructor(
             endTime = taskFormData.endTime,
             duration = taskFormData.duration,
             reminder = taskFormData.reminder,
-            type = taskFormData.taskType,
-            mainTaskId = taskFormData.linkedMainIfHelper,
+            type = taskFormData.type,
+            linkedMainIfHelper = taskFormData.linkedMainIfHelper,
             startDate = taskFormData.startDate,
             isRecurring = taskFormData.isRecurring,
             recurrenceType = taskFormData.recurrenceType,
@@ -135,22 +141,6 @@ class TasksViewModel @Inject constructor(
         }
     }
 
-    // Sync tasks from OneDrive
-    fun syncTasksFromOneDrive(context: Context) {
-        Log.d(tag, "Syncing tasks from OneDrive...")
-        viewModelScope.launch {
-            try {
-                val authManager = MsalApp.getInstance(context)
-                val authResult = authManager.signIn(context as Activity)
-                authResult.let {
-                    repository.syncTasksFromOneDrive(it, context)
-                }
-            } catch (e: Exception) {
-                Log.e(tag, "Error syncing tasks from OneDrive: ${e.message}")
-            }
-        }
-    }
-
     // Delete all tasks from the database
     fun deleteAllTasks() {
         Log.d(tag, "Deleting all tasks...")
@@ -180,6 +170,15 @@ class TasksViewModel @Inject constructor(
         return firstTask
     }
 
+    suspend fun onMainTasksRequested(): List<TaskEntity> {
+        Log.d(tag, "Main tasks requested...")
+        return repository.getAllMainTasks()
+    }
+
+    suspend fun onNameRequested(taskId: Int): String {
+        return getTaskById(taskId)?.name ?: "--"
+    }
+
     suspend fun logAllTasks() {
         Log.d(tag, "**********Logging all tasks***********")
         val allTasksList = withContext(Dispatchers.IO) {
@@ -193,216 +192,34 @@ class TasksViewModel @Inject constructor(
         }
     }
 
-
-    // endregion
-
-
-    // region: ------------- onDataOperationEvents (Add, edit, and Delete) ----------------
-
-    // Confirm a new task and add it to the database
-    suspend fun onNewTaskConfirmClick(
-        clickedTask: TaskEntity,
-        taskBelowClickedTask: TaskEntity,
-        newTaskFormData: TaskFormData,
-    ): Result<TaskCreationOutcome> {
-        Log.d(tag, "onNewTaskConfirmClick...")
-
-        val newTaskEntity = createTaskEntityFromForm(taskFormData = newTaskFormData)
-        val result = repository.beginNewTaskOperations(
-            newTaskEntity, clickedTask, taskBelowClickedTask
-        )
-
-        updateStatesAfterNewTaskOperation(result, clickedTask)
-
-        return result
-    }
-
-    /**
-     * Steps:
-     * - Create a new task entity from the form data.
-     * - Begin new task operations by interacting with the repository.
-     * - Update the UI state based on the result of the operation.
-     * - Return the result of the task creation operation.
-     */
-    private suspend fun updateStatesAfterNewTaskOperation(
-        result: Result<TaskCreationOutcome>,
-        clickedTask: TaskEntity
+    private fun updateUiState(
+        taskOperationState: TaskOperationState? = null,
+        uiScreen: UiScreen? = null,
+        msalAuthState: MsalAuthState? = null,
+        onedriveSyncState: OnedriveSyncState? = null,
+        taskContextUpdater: (TaskContext) -> TaskContext = { it }
     ) {
-        Log.d(tag, "Updating States after New Task Operation...")
-        result.fold(
-            // New Task was Successful
-            onSuccess = { taskCreationOutcome ->
-                taskCreationOutcome.newTaskId?.let { newId ->
-                    Log.d(tag, "Task confirmed successfully with ID: $newId")
-                    val newTask = getTaskById(newId)
-
-                    // Update the UI state
-                    _uiState.update { currentState ->
-                        currentState.copy(
-                            stateBasedTasks = currentState.stateBasedTasks.copy(
-                                clickedTask = newTask,
-                                inEditTask = null,
-                                latestTask = newTask,
-                                taskBelowClickedTask = null
-                            ),
-                            activeUiComponent = ActiveUiComponent.None,
-                            taskCreationState = TaskCreationState.Success(newId)
-                        )
-                    }
-
-                    Log.d(tag, "Message containing updated Task Below: ${taskCreationOutcome.message}")
-                } ?: run {
-                    _uiState.update { currentState ->
-                        currentState.copy(
-                            stateBasedTasks = currentState.stateBasedTasks.copy(
-                                clickedTask = clickedTask,
-                                inEditTask = null,
-                                latestTask = null,
-                                taskBelowClickedTask = null
-                            ),
-                            activeUiComponent = ActiveUiComponent.None, // Update as needed
-                            taskCreationState = TaskCreationState.Error("Error")
-                        )
-                    }
-                }
-            },
-
-            onFailure = { exception ->
-                _uiState.update { currentState ->
-                    currentState.copy(
-                        stateBasedTasks = currentState.stateBasedTasks.copy(
-                            clickedTask = clickedTask,
-                            inEditTask = null,
-                            latestTask = null,
-                            taskBelowClickedTask = null
-                        ),
-                        activeUiComponent = ActiveUiComponent.None, // Update as needed
-                        taskCreationState = TaskCreationState.Error(exception.message.toString())
-                    )
-                }
-            }
-        )
-    }
-
-    // Confirm an edit for an existing task
-    suspend fun onUpdateTaskConfirmClick(updatedTaskFormData: TaskFormData) {
-        Log.d(tag, "OnUpdateTaskConfirm Clicked during edit. Id: ${updatedTaskFormData.id}. Name: ${updatedTaskFormData.name}")
-
-        val updatedTaskEntity = createTaskEntityFromForm(taskFormData = updatedTaskFormData)
-        val result = repository.onEditUpdateTaskCurrentAndBelow(updatedTaskEntity)
-
-        Log.d(tag, "Id: ${updatedTaskEntity.id}")
-        if (result.isSuccess) {
-            val taskOperationResult = result.getOrNull()
-            val success = taskOperationResult?.success
-            val message = taskOperationResult?.message
-
-            Log.d(tag, "success: $success. Message: $message")
-        }
-
-        // Update the UI state
         _uiState.update { currentState ->
             currentState.copy(
-                stateBasedTasks = currentState.stateBasedTasks.copy(
-                    clickedTask = updatedTaskEntity,
-                    inEditTask = null,
-                    latestTask = null,
-                    taskBelowClickedTask = null
-                ),
-                activeUiComponent = ActiveUiComponent.None, // Update as needed
-                taskCreationState = TaskCreationState.Idle
+                taskOperationState = taskOperationState ?: currentState.taskOperationState,
+                uiScreen = uiScreen ?: currentState.uiScreen,
+                msalAuthState = msalAuthState ?: currentState.msalAuthState,
+                onedriveSyncState = onedriveSyncState ?: currentState.onedriveSyncState,
+                taskContext = taskContextUpdater(currentState.taskContext)
             )
         }
     }
 
-    // Delete a task from the database
-    suspend fun onDeleteTaskConfirmClick(task: TaskEntity) {
-        Log.d(tag, "Confirm task delete clicked...")
-        task.let {
-            Log.d(tag, "Deleting task: ${task.name}")
-            repository.deleteTask(task)
-            _uiState.update { currentState ->
-                currentState.copy(
-                    stateBasedTasks = currentState.stateBasedTasks.copy(
-                        clickedTask = getFirstTask(),
-                        inEditTask = null,
-                        latestTask = null,
-                        taskBelowClickedTask = null
-                    ),
-                    activeUiComponent = ActiveUiComponent.None, // Update as needed
-                    taskCreationState = TaskCreationState.Idle
-                )
-            }
-        }
-    }
-
-    suspend fun onMainTasksRequested(): List<TaskEntity> {
-        Log.d(tag, "Main tasks requested...")
-        return repository.getAllMainTasks()
-    }
-
-    suspend fun onNameRequested(taskId: Int): String {
-        return getTaskById(taskId)?.name ?: "--"
-    }
-
     // endregion
 
 
-    // region: ----------------------- onStateChangeEvents (UI State Handling) -------------------
-
-    // Handle task click events
-    fun onTaskClick(taskClicked: TaskEntity) {
-        Log.d(tag, "Task clicked: ${taskClicked.name}")
-        // Some task in-edit
-        if (_uiState.value.activeUiComponent is ActiveUiComponent.QuickEditOverlay) {
-            // Task in-edit is same as task clicked
-            if (taskClicked == _uiState.value.stateBasedTasks.inEditTask) {
-                return // no changes are needed
-            }
-
-            // Task in-edit is not task clicked
-            else {
-                _uiState.update { currentState ->
-                    currentState.copy(
-                        stateBasedTasks = currentState.stateBasedTasks.copy(
-                            clickedTask = taskClicked,
-                            inEditTask = null,
-                            latestTask = null,
-                            taskBelowClickedTask = null
-                        ),
-                        activeUiComponent = ActiveUiComponent.None, // Update as needed
-                        taskCreationState = TaskCreationState.Idle,
-
-                    )
-                }
-
-            }
-        }
-
-        // No Task in Edit Mode
-        else {
-            _uiState.update { currentState ->
-                currentState.copy(
-                    stateBasedTasks = currentState.stateBasedTasks.copy(
-                        clickedTask = taskClicked,
-                        inEditTask = null,
-                        latestTask = null,
-                        taskBelowClickedTask = null
-                    ),
-                    activeUiComponent = ActiveUiComponent.None, // Update as needed
-                    taskCreationState = TaskCreationState.Idle,
-
-                )
-            }
-
-        }
-    }
+    // region: ------------- Add New Task ----------------
 
     // Show the UI to add a new task
     suspend fun onShowAddNewTaskClick() {
         Log.d(tag, "Show Add New Task Clicked")
 
-        val clickedTask = _uiState.value.stateBasedTasks.clickedTask
+        val clickedTask = _uiState.value.taskContext.clickedTask
         val posOfClickedTask = clickedTask?.position
 
         val posOfTaskBelow = posOfClickedTask?.plus(1)
@@ -417,7 +234,7 @@ class TasksViewModel @Inject constructor(
                     startTime = clickedTask.endTime,
                     endTime = clickedTask.endTime?.plusMinutes(1),
                     notes = "",
-                    taskType = TaskTypes.QUICK,
+                    type = TaskTypes.QUICK,
                     linkedMainIfHelper = null,
                     position = posOfClickedTask + 1,
                     duration = 1,
@@ -429,184 +246,581 @@ class TasksViewModel @Inject constructor(
                     recurrenceEndDate = null,
                 )
 
-                _uiState.update { currentState ->
-                    currentState.copy(
-                        taskCreationState = TaskCreationState.FillingDetails(initialFormData),
-                        activeUiComponent = ActiveUiComponent.AddingNew,
-                        stateBasedTasks = currentState.stateBasedTasks.copy(
+                updateUiState(
+                    uiScreen = UiScreen.AddingNew,
+                    taskOperationState = TaskOperationState.FillingDetails(
+                        operationType = NEW_TASK,
+                        formData = initialFormData,
+                    ),
+                    taskContextUpdater = { taskContext ->
+                        taskContext.copy(
+                            clickedTask = clickedTask,
                             taskBelowClickedTask = taskBelow
                         )
-                    )
-                }
+                    }
+                )
+
+            } else {
+                Log.e(tag, "No taskBelow")
+            }
+        } else {
+            Log.e(tag, "No clicked Task.")
+        }
+    }
+
+    /**
+     * Steps:
+     * - Create a new task entity from the form data.
+     * - Begin new task operations by interacting with the repository.
+     * - Update the UI state based on the result of the operation.
+     * - Return the result of the task creation operation.
+     */
+    suspend fun onNewTaskConfirmClick(
+        newTaskFormData: TaskFormData,
+    ): TaskOperationState {
+
+        Log.d(tag, "onNewTaskConfirmClick...")
+        val clickedTask = _uiState.value.taskContext.clickedTask
+        val taskBelow = _uiState.value.taskContext.taskBelowClickedTask
+
+        if (clickedTask == null || taskBelow == null) return TaskOperationState.Error(
+            operationType = NEW_TASK, taskId = -1, message = "No clickedTask and/or to insert")
+
+        val toInsertNewTaskEntity = createTaskEntityFromForm(taskFormData = newTaskFormData)
+        val returnedOperationState = repository.addNewAndUpdateBelow(
+            toInsertNewTaskEntity, clickedTask, taskBelow
+        )
+
+        updateStatesAfterNewTaskOperation(returnedOperationState, clickedTask)
+
+        return returnedOperationState
+    }
+
+    private suspend fun updateStatesAfterNewTaskOperation(
+        returnedOperationState: TaskOperationState,
+        clickedTask: TaskEntity
+    ) {
+        Log.d(tag, "Updating States after New Task Operation...")
+
+        when (returnedOperationState) {
+
+            is TaskOperationState.Error -> {
+                Log.d(tag, "Task could not be added. Error message: ${returnedOperationState.message}")
+                updateUiState(
+                    taskOperationState = returnedOperationState,
+                    uiScreen = UiScreen.None,
+                    taskContextUpdater = { taskContext ->
+                        taskContext.copy(clickedTask = clickedTask)
+                    }
+                )
+            }
+
+            is TaskOperationState.Success -> {
+                Log.d(tag, "Task confirmed successfully with ID: ${returnedOperationState.taskId}")
+                val newTask = getTaskById(returnedOperationState.taskId)
+
+                updateUiState(
+                    taskOperationState = returnedOperationState,
+                    uiScreen = UiScreen.None,
+                    taskContextUpdater = { taskContext ->
+                        taskContext.copy(
+                            clickedTask = clickedTask,
+                            latestTasks = taskContext.latestTasks + listOfNotNull(newTask)
+                        )
+                    }
+                )
+            }
+
+            else -> {
+                Log.e(tag, "Error in taskOperationState after adding a new task,")
             }
         }
     }
 
-    // Show Full Edit UI for a task
-    suspend fun onShowFullEditClick(taskInEdit: TaskEntity) {
-        val clickedTaskPosition = _uiState.value.stateBasedTasks.clickedTask?.position
-        val taskBelowClickedTask = clickedTaskPosition?.let { getTaskAtPosition(it + 1) }
+    // endregion:
 
-        if (taskBelowClickedTask != null) {
-            Log.d(tag, "FullEdit: Task below clicked task: ${taskBelowClickedTask.name}")
-            _uiState.update { currentState ->
-                currentState.copy(
-                    stateBasedTasks = currentState.stateBasedTasks.copy(
-                        inEditTask = taskInEdit,
-                        taskBelowClickedTask = taskBelowClickedTask,
-                        clickedTask = taskInEdit
-                    ),
-                    activeUiComponent = ActiveUiComponent.FullEditing,
-                    
+
+    // region: ------------- Editing Task ----------------
+
+    // Show FullEdit Screen, Prepare TaskFormData
+    suspend fun onShowFullEditClick() {
+        val clickedTask = _uiState.value.taskContext.clickedTask
+        if (clickedTask != null) {
+            Log.d(tag, "Show Full Edit Clicked for task: ${clickedTask.name}")
+
+            val initialFormData = TaskFormData(
+                id = clickedTask.id,
+                name = clickedTask.name,
+                startTime = clickedTask.startTime,
+                endTime = clickedTask.endTime,
+                notes = clickedTask.notes,
+                type = clickedTask.type,
+                linkedMainIfHelper = clickedTask.linkedMainIfHelper,
+                position = clickedTask.position,
+                duration = clickedTask.duration,
+                reminder = clickedTask.reminder,
+                startDate = clickedTask.startDate,
+                isRecurring = clickedTask.isRecurring?:false,
+                recurrenceType = clickedTask.recurrenceType,
+                recurrenceInterval = clickedTask.recurrenceInterval,
+                recurrenceEndDate = clickedTask.recurrenceEndDate,
+            )
+
+            updateUiState(
+                uiScreen = UiScreen.FullEditing,
+                taskOperationState = TaskOperationState.FillingDetails(
+                    operationType = EDIT_TASK,
+                    formData = initialFormData
+                ),
+                taskContextUpdater = { taskContext ->
+                    taskContext.copy(
+                        clickedTask = clickedTask,
+                        inEditTask = clickedTask
+                    )
+                }
+                )
+        }
+
+
+    }
+
+    // Confirm an edit for an existing task
+    suspend fun onFullEditConfirm(updatedTaskFormData: TaskFormData) {
+        Log.d(
+            tag,
+            "OnUpdateTaskConfirm Clicked during edit. Id: ${updatedTaskFormData.id}. Name: ${updatedTaskFormData.name}"
+        )
+
+        val toUpdateTaskEntity = createTaskEntityFromForm(taskFormData = updatedTaskFormData)
+        val returnedOperationState = repository.onEditUpdateTaskCurrentAndBelow(toUpdateTaskEntity)
+
+        stateUpdateAfterFullEditing(returnedOperationState, toUpdateTaskEntity)
+    }
+
+    // Updating State after task edit
+    private suspend fun stateUpdateAfterFullEditing(
+        returnedOperationState: TaskOperationState,
+        toUpdateTaskEntity: TaskEntity
+    ) {
+        Log.d(tag, "Updating States after New Task Operation...")
+
+        when (returnedOperationState) {
+
+            is TaskOperationState.Error -> {
+                Log.d(tag, "Task could not be updated. Error message: ${returnedOperationState.message}")
+                updateUiState(
+                    taskOperationState = returnedOperationState,
+                    uiScreen = UiScreen.None,
+                    taskContextUpdater = { taskContext ->
+                        taskContext.copy(
+                            clickedTask = toUpdateTaskEntity,
+                        )
+                    }
+
                 )
             }
-        } else {
-            Log.d(tag, "FullEdit: No Task below. This is the last task.")
-            // Handle the case for the last task (could add additional logic here if needed)
-            _uiState.update { currentState ->
-                currentState.copy(
-                    stateBasedTasks = currentState.stateBasedTasks.copy(
-                        inEditTask = taskInEdit,
-                        clickedTask = taskInEdit,
+
+            is TaskOperationState.Success -> {
+                Log.d(tag, "Task confirmed successfully with ID: ${returnedOperationState.taskId}")
+                val updatedTask = getTaskById(returnedOperationState.taskId)
+                updateUiState(
+                    taskOperationState = returnedOperationState,
+                    uiScreen = UiScreen.None,
+                    taskContextUpdater = { taskContext ->
+                        taskContext.copy(
+                            clickedTask = updatedTask,
+                            latestTasks = taskContext.latestTasks + listOfNotNull(updatedTask)
+                        )
+                    }
+                )
+            }
+
+            else -> {
+                Log.e(tag, "Error in taskOperationState after adding a new task,")
+            }
+        }
+
+
+
+    }
+
+    // endregion
+
+
+    // region: ------------- Deleting Task ----------------
+    // Delete a task from the database
+    suspend fun onDeleteTaskConfirmClick(task: TaskEntity) {
+        Log.d(tag, "Confirm task delete clicked...")
+        task.let {
+            Log.d(tag, "Deleting task: ${task.name}")
+            repository.deleteTask(task)
+            updateUiState(
+                taskOperationState = TaskOperationState.Idle,
+                uiScreen = UiScreen.None,
+            )
+        }
+    }
+    // endregion
+
+
+    // region: ------------ Msal/OneDrive -----------
+
+    init {
+        viewModelScope.launch {
+            try {
+                // Start initialization
+                updateUiState(
+                    msalAuthState = MsalAuthState(
+                        signInStatus = SignInStatus.SigningIn
+                    ),
+                    onedriveSyncState = OnedriveSyncState.Idle
+                )
+
+                // Wait for MSAL to initialize
+                msalApp.waitForInitialization()
+                getCurrentMsalAccount()
+            } catch (e: Exception) {
+                // Update state if initialization fails
+                updateUiState(
+                    msalAuthState = MsalAuthState(
+                        signInStatus = SignInStatus.Error
+                    ),
+                    onedriveSyncState = OnedriveSyncState.Error("Initialization failed: ${e.message}")
+                )
+                Log.e(tag, "Error during MSAL initialization", e)
+            }
+        }
+    }
+
+
+    private fun getCurrentMsalAccount() {
+        Log.d(tag, "Fetching current MSAL account...")
+
+        viewModelScope.launch {
+            try {
+                val account = msalApp.getCurrentAccount()
+
+                if (account != null) {
+                    Log.d(tag, "Account found: ${account.username}")
+                    updateUiState(
+                        msalAuthState = MsalAuthState(
+                            isSignedIn = true,
+                            username = account.username,
+                            profileImageUrl = msalApp.getProfileImageUrl(),
+                            signInStatus = SignInStatus.SignedIn
+                        ),
+                        onedriveSyncState = OnedriveSyncState.Idle
+                    )
+                } else {
+                    Log.d(tag, "No account found.")
+                    updateUiState(
+                        msalAuthState = MsalAuthState(
+                            isSignedIn = false,
+                            signInStatus = SignInStatus.Idle
+                        ),
+                        onedriveSyncState = OnedriveSyncState.Idle
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e(tag, "Error fetching MSAL account", e)
+                updateUiState(
+                    msalAuthState = MsalAuthState(
+                        isSignedIn = false,
+                        signInStatus = SignInStatus.Error
+                    ),
+                    onedriveSyncState = OnedriveSyncState.Error("Error fetching account: ${e.message}")
+                )
+            }
+        }
+    }
+
+
+    // Function called when the user clicks the sign-in button
+    fun onSignInClick(activity: Activity) {
+        Log.d(tag, "Sign-in initiated.")
+        viewModelScope.launch {
+            try {
+                updateUiState(
+                    msalAuthState = MsalAuthState(
+                        signInStatus = SignInStatus.SigningIn
+                    ),
+                    onedriveSyncState = OnedriveSyncState.Idle
+                )
+
+                // Attempt to sign in
+                val result = msalApp.signIn(activity)
+
+                // Update state if sign-in is successful
+                updateUiState(
+                    msalAuthState = MsalAuthState(
+                        isSignedIn = true,
+                        username = result.account.username,
+                        profileImageUrl = msalApp.getProfileImageUrl(),
+                        signInStatus = SignInStatus.SignedIn
+                    ),
+                    onedriveSyncState = OnedriveSyncState.Idle
+                )
+
+                Log.d(tag, "Sign-in successful for ${result.account.username}")
+            } catch (e: Exception) {
+                Log.e(tag, "Sign-in failed", e)
+                updateUiState(
+                    msalAuthState = MsalAuthState(
+                        isSignedIn = false,
+                        signInStatus = SignInStatus.Error
+                    ),
+                    onedriveSyncState = OnedriveSyncState.Error("Sign-in failed: ${e.message}")
+                )
+            }
+        }
+    }
+
+
+    // Sync tasks from OneDrive
+    fun onSyncButtonClick(context: Context) {
+        Log.d(tag, "Syncing tasks from OneDrive...")
+        viewModelScope.launch {
+            try {
+                updateUiState(
+                    onedriveSyncState = OnedriveSyncState.Loading
+                )
+
+                // Perform the sync
+                val authResult = msalApp.signIn(context as Activity)
+                repository.syncTasksFromOneDrive(authResult, context)
+
+                updateUiState(
+                    onedriveSyncState = OnedriveSyncState.Success
+                )
+                Log.d(tag, "Task sync successful.")
+            } catch (e: Exception) {
+                Log.e(tag, "Task sync failed", e)
+                updateUiState(
+                    onedriveSyncState = OnedriveSyncState.Error("Sync failed: ${e.message}")
+                )
+            }
+        }
+    }
+
+
+    // sign out
+    fun onSignOutClick(activity: Activity) {
+        Log.d(tag, "Sign-out initiated.")
+        viewModelScope.launch {
+            try {
+                updateUiState(
+                    msalAuthState = MsalAuthState(
+                        signInStatus = SignInStatus.SigningIn // Indicating sign-out is in progress
+                    ),
+                    onedriveSyncState = OnedriveSyncState.Loading
+                )
+
+                // Perform sign-out
+                msalApp.signOut {
+                    Log.d(tag, "Sign-out successful.")
+                    updateUiState(
+                        msalAuthState = MsalAuthState(
+                            isSignedIn = false,
+                            signInStatus = SignInStatus.Idle
+                        ),
+                        onedriveSyncState = OnedriveSyncState.Idle
+                    )
+                    Toast.makeText(activity, "Signed out successfully", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                Log.e(tag, "Sign-out failed", e)
+                updateUiState(
+                    onedriveSyncState = OnedriveSyncState.Error("Sign-out failed: ${e.message}"),
+                    msalAuthState = MsalAuthState(
+                        signInStatus = SignInStatus.Error
+                    )
+                )
+                Toast.makeText(activity, "Failed to sign out: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+
+
+    // endregion
+
+
+    // region: ---------- onStateChangeEvents (UI State Handling) -----------
+
+    // Handle task click events
+    fun onTaskClick(taskClicked: TaskEntity) {
+        Log.d(tag, "Task clicked: ${taskClicked.name}")
+
+        // Some task in FullEdit
+        if (_uiState.value.uiScreen is UiScreen.FullEditing) {
+            // No changes no matter what the clicked task is
+            return // User has to click 'Cancel' Button
+        }
+
+        // Some task in quick edit
+        if (_uiState.value.uiScreen is UiScreen.QuickEditOverlay) {
+            // No changes if clicked task is same as quick edit task
+            if (taskClicked == _uiState.value.taskContext.inEditTask) {
+                return // no changes are needed
+            }
+
+            // Handle case when a different task is clicked
+            else {
+                updateUiState(
+                    uiScreen = UiScreen.None,
+                    taskOperationState = TaskOperationState.Idle,
+                    taskContextUpdater = { taskContext ->
+                        taskContext.copy(
+                            clickedTask = taskContext.inEditTask,
+                            inEditTask = null,
+                            taskBelowClickedTask = null
+                        )
+                    }
+                )
+            }
+        }
+
+
+
+        // No Task in either Full or quick Edit Mode
+        else {
+            updateUiState(
+                uiScreen = UiScreen.None,
+                taskOperationState = TaskOperationState.Idle,
+                taskContextUpdater = { taskContext ->
+                    taskContext.copy(
+                        clickedTask = taskClicked,
+                        inEditTask = null,
                         taskBelowClickedTask = null
-                    ),
-                    activeUiComponent = ActiveUiComponent.FullEditing,
-                    
-
-                )
-            }
+                    )
+                }
+            )
         }
     }
 
     // Show Quick Edit UI for a task
-    suspend fun onShowQuickEditClick(task: TaskEntity) {
-        Log.d(tag, "Quick edit click for task: ${task.name}. ID:${task.id}")
+    suspend fun onShowQuickEditClick(taskToEdit: TaskEntity) {
+        Log.d(tag, "Quick edit click for task: ${taskToEdit.name}. ID:${taskToEdit.id}")
 
-        val clickedTaskPosition = _uiState.value.stateBasedTasks.clickedTask?.position
+        val clickedTaskPosition = _uiState.value.taskContext.clickedTask?.position
         val taskBelowPosition = clickedTaskPosition?.plus(1)
         val taskBelowClickedTask = taskBelowPosition?.let { getTaskAtPosition(it) }
 
-        // Update the UI state
-        _uiState.update { currentState ->
-            currentState.copy(
-                stateBasedTasks = currentState.stateBasedTasks.copy(
-                    inEditTask = task,
-                    clickedTask = task,
+        updateUiState(
+            uiScreen = UiScreen.QuickEditOverlay,
+            taskOperationState = TaskOperationState.Idle,
+            taskContextUpdater = { taskContext ->
+                taskContext.copy(
+                    clickedTask = taskToEdit,
+                    inEditTask = taskToEdit,
                     taskBelowClickedTask = taskBelowClickedTask
-                ),
-                activeUiComponent = ActiveUiComponent.QuickEditOverlay,
-                taskCreationState = TaskCreationState.Idle,
-            )
-        }
+                )
+            }
+        )
+
     }
 
     // Show task details
     fun onTaskDetailsClick(task: TaskEntity) {
-        Log.d(tag, "Show task details clicked: $task")
-        _uiState.update { currentState ->
-            currentState.copy(
-                stateBasedTasks = currentState.stateBasedTasks.copy(
+        Log.d(tag, "Show task details clicked: ${task.name}")
+        updateUiState(
+            uiScreen = UiScreen.DetailsView, // Update as needed
+            taskContextUpdater = { taskContext ->
+                taskContext.copy(
+                    clickedTask = task,
                     showingDetailsTask = task
-                ),
-                activeUiComponent = ActiveUiComponent.DetailsView,
-            )
-        }
+                )
+            }
+        )
     }
 
-    fun onShowCompletedTasksClick() {
+    fun onShowFinishedTasksView() {
         Log.d(tag, "Show completed tasks clicked")
-        _uiState.update { currentState ->
-            currentState.copy(
-                activeUiComponent = ActiveUiComponent.FinishedTasks,
-                
-            )
-        }
+        updateUiState(
+            uiScreen = UiScreen.FinishedTasksView, // Update as needed
+        )
     }
 
     fun onTaskLongPress(task: TaskEntity) {
         Log.d(tag, "Long press on task: ${task.name}")
-        _uiState.update { currentState ->
-            currentState.copy(
-                stateBasedTasks = currentState.stateBasedTasks.copy(
+        updateUiState(
+            uiScreen = UiScreen.LongPressMenu, // Update as needed
+            taskContextUpdater = { taskContext ->
+                taskContext.copy(
                     clickedTask = task,
                     longPressMenuTask = task
-                ),
-                activeUiComponent = ActiveUiComponent.LongPressMenu,
-            )
-        }
-    }
-
-    fun resetTaskCreationState() {
-        _uiState.update { currentState ->
-            currentState.copy(
-                taskCreationState = TaskCreationState.Idle,
-                
-            )
-        }
+                )
+            }
+        )
     }
 
     fun onDismissOrReset(task:TaskEntity? = null) {
+        if (task != null) {
+            Log.d(tag, "Dismiss or Reset from task: ${task.name}")
+        } else {
+            Log.d(tag, "Dismiss or Reset (no task provided)")
+        }
 
         viewModelScope.launch {
-            val firstTask = getFirstTask()
-            Log.d(tag, "Cancel or Reset clicked or back button pressed. Resetting state to base Tasks Lazy column.")
+            val newClickedTask = when (_uiState.value.uiScreen) {
+                UiScreen.AddingNew -> _uiState.value.taskContext.clickedTask
+                UiScreen.FullEditing -> _uiState.value.taskContext.inEditTask
+                UiScreen.QuickEditOverlay -> _uiState.value.taskContext.inEditTask
+                UiScreen.DetailsView -> _uiState.value.taskContext.showingDetailsTask
+                UiScreen.FinishedTasksView -> _uiState.value.taskContext.clickedTask
+                UiScreen.None -> _uiState.value.taskContext.clickedTask
+                else -> _uiState.value.taskContext.clickedTask
+            }
 
-            _uiState.update { currentState ->
-                // Determine the clickedTask based on the active UI component
-                val newClickedTask = when (currentState.activeUiComponent) {
-                    ActiveUiComponent.AddingNew -> currentState.stateBasedTasks.clickedTask
-                    ActiveUiComponent.FullEditing -> currentState.stateBasedTasks.inEditTask // Reset to the task in edit mode
-                    ActiveUiComponent.QuickEditOverlay -> currentState.stateBasedTasks.inEditTask // Reset to task in edit mode
-                    ActiveUiComponent.DetailsView -> currentState.stateBasedTasks.showingDetailsTask // Reset to task in details view
-                    ActiveUiComponent.FinishedTasks -> currentState.stateBasedTasks.clickedTask // Reset to first task
-                    ActiveUiComponent.None -> currentState.stateBasedTasks.clickedTask // Default to first task if in base state
-                    else -> currentState.stateBasedTasks.clickedTask // Default for other components
-                }
-
-                currentState.copy(
-                    activeUiComponent = ActiveUiComponent.None,
-                    stateBasedTasks = currentState.stateBasedTasks.copy(
+            updateUiState(
+                uiScreen = UiScreen.None,
+                taskOperationState = TaskOperationState.Idle,
+                taskContextUpdater = { taskContext ->
+                    taskContext.copy(
                         clickedTask = newClickedTask,
                         longPressMenuTask = null,
                         taskBelowClickedTask = null,
                         inEditTask = null,
                         showingDetailsTask = null
-                    ),
-                )
-            }
+                    )
+                }
+            )
         }
     }
 
     // Date Picker
     fun onDatePickerClick() {
         Log.d(tag, "Date picker clicked")
-        _uiState.update { currentState ->
-            currentState.copy(
-                activeUiComponent = ActiveUiComponent.DatePicker,
-                
-            )
-        }
+        updateUiState(
+            uiScreen = UiScreen.DatePicker,
+        )
     }
 
     // set the selected Date
     fun onDateChangeClick(date: LocalDate) {
         Log.d(tag, "Date changed to: $date")
-
-        _uiState.update { currentState ->
-            currentState.copy(
-                activeUiComponent = ActiveUiComponent.None,  // Reset active component after date change
-
-                
-            )
-        }
-
         _selectedDate.value = date  // Update the selected date in the ViewModel
+        updateUiState(
+            uiScreen = UiScreen.None,
+        )
     }
 
-    fun setUiStateToDefault() {
-        _uiState.value = _uiState.value.copy(
-            activeUiComponent = ActiveUiComponent.None,
-        )
+    suspend fun setUiStateToDefault() {
+        viewModelScope.launch {
+            val firstTask = getFirstTask()
+            updateUiState(
+                uiScreen = UiScreen.None, // Update as needed
+                taskOperationState = TaskOperationState.Idle,
+                taskContextUpdater = { taskContext ->
+                    taskContext.copy(
+                        clickedTask = firstTask,
+                        inEditTask = null,
+                        latestTasks = emptyList(),
+                        taskBelowClickedTask = null
+                    )
+                }
+            )
+        }
     }
 
 

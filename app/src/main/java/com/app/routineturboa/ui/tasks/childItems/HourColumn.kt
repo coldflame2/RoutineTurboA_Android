@@ -41,7 +41,7 @@ fun HourColumn(
     isCurrentTask: Boolean,
     height: Dp,
     startTime: LocalTime?,
-    duration: Int?,
+    duration: Long?,
     topPadding: Dp
 ) {
     val formattedStartTime = startTime?.format(DateTimeFormatter.ofPattern("hh:mm a"))
@@ -101,7 +101,7 @@ fun HourColumn(
                 .width(70.dp)
                 .padding(
                     start = 6.dp,
-                    top = topPadding - 1.dp,
+                    top = topPadding,
                 )
         ) {
             Row (
@@ -146,22 +146,26 @@ fun HourColumn(
                 }
             }
 
+            // Duration
             Row (
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(3.dp),
                 modifier = Modifier.padding(start = 2.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Sharp.Timer,
-                    tint = MaterialTheme.colorScheme.surfaceTint,
-                    modifier = Modifier.size(12.dp),
-                    contentDescription = "Duration"
-                )
+                if (height > 50.dp) {
+                    Icon(
+                        imageVector = Icons.Sharp.Timer,
+                        tint = MaterialTheme.colorScheme.surfaceTint,
+                        modifier = Modifier.size(12.dp),
+                        contentDescription = "Duration"
+                    )
 
-                Text(
-                    text = "$duration m",
-                    style = durationFontStyle
-                )
+                    Text(
+                        text = "$duration m",
+                        style = durationFontStyle
+                    )
+                }
+
             }
 
         }

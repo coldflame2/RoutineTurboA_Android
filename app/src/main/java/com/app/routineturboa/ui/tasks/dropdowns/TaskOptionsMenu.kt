@@ -76,7 +76,7 @@ fun TaskOptionsMenu (
                 text = { Text("Edit") },
                 onClick = {
                     coroutineScope.launch {
-                        stateChangeEvents.onShowFullEditClick(task)
+                        stateChangeEvents.onShowFullEditClick()
                     }
                 }
             )

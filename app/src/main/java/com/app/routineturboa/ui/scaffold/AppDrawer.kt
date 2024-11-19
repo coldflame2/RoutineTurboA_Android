@@ -51,10 +51,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.app.routineturboa.R
+import com.app.routineturboa.core.models.DataOperationEvents
+import com.app.routineturboa.core.models.UiState
 import com.app.routineturboa.data.room.entities.TaskEntity
 import com.app.routineturboa.reminders.ReminderManager
 import com.app.routineturboa.ui.reusable.others.SignInAndSyncButtons
-import com.app.routineturboa.ui.reusable.animation.SmoothCircularProgressIndicator
+import com.app.routineturboa.ui.reusable.animation.LoadingSpinner
+import com.app.routineturboa.ui.theme.LocalCustomColors
 import com.app.routineturboa.viewmodel.TasksViewModel
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -64,11 +67,13 @@ import java.time.LocalDate
 fun AppDrawer(
     drawerState: DrawerState,
     tasksViewModel: TasksViewModel,
+    onDataOperationEvents: DataOperationEvents,
     reminderManager: ReminderManager,
     showExactAlarmDialog: MutableState<Boolean>,
     onShowCompletedTasks: () -> Unit,
     clickedTask: TaskEntity?,
-    selectedDate: LocalDate
+    selectedDate: LocalDate,
+    uiState: UiState
 ) {
     val tag = "MainDrawer"
     val context = LocalContext.current
@@ -78,6 +83,8 @@ fun AppDrawer(
     val configuration = LocalConfiguration.current
     val screenWidth = configuration.screenWidthDp.dp
     val screenHeight = configuration.screenHeightDp.dp
+
+    val customColors = LocalCustomColors.current
 
     ModalDrawerSheet(
         drawerTonalElevation = 1.dp,  // translucent primary color overlay
@@ -134,7 +141,12 @@ fun AppDrawer(
                 }
             }
 
-            SignInAndSyncButtons(tasksViewModel)
+            SignInAndSyncButtons(
+                uiState = uiState,
+                onSignInClick = onDataOperationEvents.onSignInClick,
+                onSyncClick = onDataOperationEvents.onSyncClick,
+                onSignOutClick = onDataOperationEvents.onSignOutClick
+            )
 
             // test reminder
             DrawerItemTemplate(
@@ -247,6 +259,8 @@ fun ScheduleRemindersButton(
     showExactAlarmDialog: MutableState<Boolean>,
     context: Context
 ) {
+    val customColors = LocalCustomColors.current
+
     val coroutineScope = rememberCoroutineScope()
     val isLoading = remember { mutableStateOf(false) } // State to manage loading
 
@@ -281,8 +295,12 @@ fun ScheduleRemindersButton(
     ) {
         // Display CircularProgressIndicator if loading, otherwise the icon
         if (isLoading.value) {
-            SmoothCircularProgressIndicator(
-                modifier = Modifier.size(24.dp) // Small circular loading indicator
+            LoadingSpinner(
+                height = 18.dp,
+                width = 18.dp,
+                strokeWidth = 3.dp,
+                color = customColors.successIndicatorColor,
+                trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
             )
         } else {
             Icon(
